@@ -136,7 +136,7 @@ test('the assets page is a card per file under its folder, with who uses it, the
   assert.match(html, /References to no file<\/div><ul class="list"><li><code class="bad">assets\/icons\/spinner\.svg<\/code> — <a href="canvas-inventory\.html#assets-demo"><u>assets-demo<\/u><\/a> <span class="hint">states\.Loading\.0\.set\.icon<\/span><\/li>/);
   assert.match(html, /Files nothing names<\/div><ul class="list"><li><a href="#a:assets\/icons\/unused\.svg">/);
   // the same shell as every page, the design system above the tree
-  assert.match(html, /<div class="base"><a class="side-link" href="index\.html">.*<div class="tree-sec">Design system<\/div><a class="side-link sub" href="style\.html">.*<a class="side-link sub" href="tokens\.html">.*<a class="side-link sub" href="components\.html">.*<a class="side-link sub current" href="assets\.html"><span class="name">Assets<\/span><span class="hint">3<\/span><\/a><\/div>/);
+  assert.match(html, /<div class="base"><a class="side-link" href="index\.html">.*<div class="tree-sec">Design system<\/div><a class="side-link sub" href="foundations\.html">.*<a class="side-link sub" href="components\.html">.*<a class="side-link sub current" href="assets\.html"><span class="name">Assets<\/span><span class="hint">3<\/span><\/a><\/div>/);
   assert.match(html, /<nav class="views"><a class="" href="canvas-home\.html">Canvas<\/a><a class="" href="proto\.html#[a-z-]+">Prototype<\/a><\/nav>/);
   // and with no assets/ at all, a hint that says where they go
   const bare = renderAssets(await loadProject(ops), { branch: 'x' });

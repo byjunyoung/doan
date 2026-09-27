@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.15.0 — 2026-09-28
+
+Foundations are the base of the design system, and the viewer says so (DESIGN.md §6.11).
+
+- **Design system › Foundations · Components · Assets.** `style.html` is `foundations.html` (the old address redirects); the tokens table is its second tab, Variables, instead of a separate entry. The board shows text styles, colours, surfaces and scales; components stay on their own page, each sample in every variant. A files proposal's board still shows components, since a contract change is judged there.
+- **The `style` prompt is `foundation`.**
+
 ## 0.14.1 — 2026-09-28
 
 - The conventions schema knows `render.fonts` (added to the renderer in 0.14.0, not to the schema — a project that used it failed lint).

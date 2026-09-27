@@ -96,8 +96,8 @@ test('propose → pending → apply with approved_by runs over MCP, and list_pro
 test('the server offers a "draw" prompt that walks the agent through decisions before propose', async () => {
   const { prompts } = await client.listPrompts();
   assert.ok(prompts.some((p) => p.name === 'draw'));
-  assert.deepEqual(prompts.map((p) => p.name).sort(), ['component', 'draw', 'style']);
-  const style = await client.getPrompt({ name: 'style', arguments: { reference: 'a burger kiosk' } });
+  assert.deepEqual(prompts.map((p) => p.name).sort(), ['component', 'draw', 'foundation']);
+  const style = await client.getPrompt({ name: 'foundation', arguments: { reference: 'a burger kiosk' } });
   assert.match(style.messages[0].content.text, /propose_files/);
   assert.match(style.messages[0].content.text, /a burger kiosk/);
   const got = await client.getPrompt({ name: 'draw', arguments: { screen: 'order-list' } });

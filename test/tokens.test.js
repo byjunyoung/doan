@@ -221,7 +221,7 @@ test('the tokens page is the variables table: a collection per file, a column pe
   assert.match(html, /&lt;code&gt;var\(--color-primary\)&lt;\/code&gt;/);
   assert.match(html, /data-token="space\.lg"[^>]*data-panel="[^"]*&lt;u&gt;[a-z-]+&lt;\/u&gt;&lt;\/a&gt; &lt;span class=&quot;hint&quot;&gt;screen/);
   assert.match(html, /data-token="color\.primary"[^>]*data-panel="[^"]*components\.html#k-button/);
-  assert.match(html, /<a class="side-link sub current" href="tokens\.html"><span class="name">Tokens<\/span><span class="hint">\d+<\/span><\/a>/);
+  assert.match(html, /<a class="side-link sub current" href="foundations\.html"><span class="name">Foundations<\/span><span class="hint">\d+<\/span><\/a>[\s\S]*<a class="tab active" href="tokens\.html">Variables<\/a>/);
   // no resolver: one collection, a single value column, no mode
   const bare = renderTokens(await loadProject(ops), { branch: 'x' });
   assert.match(bare, /<thead><tr><th>name<\/th><th>value<\/th><\/tr><\/thead>/);

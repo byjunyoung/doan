@@ -255,7 +255,7 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
   const nTokens = tokenNames(mergeTokens(DEFAULT_TOKENS, project.tokens)).length;
   const nAssets = (project.assets ?? []).length;
   const link = (page, href, label, hint) => `<a class="side-link${page === 'index' ? '' : ' sub'}${place.page === page ? ' current' : ''}" href="${href}"><span class="name">${label}</span>${hint}</a>`;
-  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('style', 'style.html', D.style, '')}${link('tokens', 'tokens.html', D.tokens, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
 }
 
@@ -773,8 +773,8 @@ export function renderFilesProposal(project, proposal, { after = null, branch = 
     .map((f) => `<div class="section-title"><code>${h(f.path)}</code> ${f.creates ? `<span class="pill cm">${D.newFile}</span>` : f.after === null ? `<span class="pill bad">${D.deletedFile}</span>` : ''}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${side(lines(f.before), lines(f.after))}</div><div><div class="hint">TO-BE</div>${side(lines(f.after), lines(f.before))}</div></div>`)
     .join('');
   const decisions = proposal.decisions?.length ? `<div class="section-title">${D.agreedBefore}</div><table class="index"><thead><tr><th>${D.item}</th><th>${D.decision}</th><th>${D.why}</th></tr></thead><tbody>${proposal.decisions.map((d) => `<tr><td>${h(d.item)}</td><td>${h(d.decision)}</td><td>${h(d.why ?? '')}</td></tr>`).join('')}</tbody></table>` : '';
-  const board = (p) => `<iframe class="board-frame" srcdoc="${h(renderStyle(p, { adapter, bare: true }))}"></iframe>`;
-  const boards = after ? `<div class="section-title">${D.style}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${board(project)}</div><div><div class="hint">TO-BE</div>${board(after)}</div></div>` : '';
+  const board = (p) => `<iframe class="board-frame" srcdoc="${h(renderFoundations(p, { adapter, bare: true }))}"></iframe>`;
+  const boards = after ? `<div class="section-title">${D.foundations}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${board(project)}</div><div><div class="hint">TO-BE</div>${board(after)}</div></div>` : '';
   const la = proposal.lint?.after ?? {};
   const findings = (la.findings ?? []).length ? `<ul class="list">${la.findings.map((f) => `<li><span class="${f.severity === 'blocking' ? 'bad' : 'hint'}">${h(f.id)}</span> <code>${h(f.file ?? '')}</code> ${h(f.message)}</li>`).join('')}</ul>` : '';
   const actions = proposal.status === 'pending' && api ? `<div class="actions"><input id="by" placeholder="${h(D.yourName)}"> <button class="btn btn-primary" id="apply">${D.apply}</button> <button class="btn" id="reject">${D.reject}</button></div><script>(function(){var id=${JSON.stringify(proposal.id)};function go(a){var by=document.getElementById('by').value.trim();if(a==='apply'&&!by){document.getElementById('by').focus();return;}fetch('/api/proposals/'+id+'/'+a,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({by:by})}).then(function(r){return r.json()}).then(function(){location.href='index.html'});}document.getElementById('apply').onclick=function(){go('apply')};document.getElementById('reject').onclick=function(){go('reject')};})();</script>` : '';
@@ -782,7 +782,7 @@ export function renderFilesProposal(project, proposal, { after = null, branch = 
   const body = shellOf(project, D, {
     title: `${h(proposal.label)} <span class="hint">${D.proposal}</span>`,
     meta: `${h(proposal.status)} · ${proposal.files.length} ${D.filesN}${branch ? ` · ${h(branch)}` : ''}`,
-    place: { page: 'style' },
+    place: { page: 'foundations' },
     content,
   });
   return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, lang });
@@ -964,10 +964,10 @@ export function renderTokens(project, { branch = null, api = false } = {}) {
   const content = problems + (set.source === 'none' ? `<div class="hint">${D.noTokens}</div>` : '') + `<div class="vars">${side}${main}</div>`;
   const body =
     shellOf(project, D, {
-      title: D.tokens,
+      title: D.foundations,
       meta: `${tokenNames(merged).length} · ${h(set.source)}${set.resolver ? ` · ${h(set.resolver)}` : ''}${branch ? ` · ${h(branch)}` : ''}`,
-      place: { page: 'tokens' },
-      content,
+      place: { page: 'foundations' },
+      content: foundationTabs(D, 'vars') + content,
     }) +
     VARS_SCRIPT +
     PICK_SCRIPT;
@@ -1053,11 +1053,14 @@ export function renderAssets(project, { branch = null, api = false } = {}) {
   return page({ title: D.assets, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: '', comments: [], lang });
 }
 
-// The style board: what the product looks like, on one page — every text style set in its own
+// The foundations board: what the product looks like, on one page — every text style set in its own
 // type, the colours by group, the surfaces as boxes, the scales, and every component's sample in
 // each of its variants. All of it inside `.board`, one of the product roots, so it is drawn with
 // the project's tokens while the page around it keeps the viewer's (DESIGN.md §6.11).
-export function renderStyle(project, { branch = null, adapter = null, api = false, bare = false } = {}) {
+// the two faces of the foundations — the board, and the variables it is drawn from
+const foundationTabs = (D, on) => `<div class="tabs-row fnd-tabs"><a class="tab${on === 'board' ? ' active' : ''}" href="foundations.html">${D.boardTab}</a><a class="tab${on === 'vars' ? ' active' : ''}" href="tokens.html">${D.varsTab}</a></div>`;
+
+export function renderFoundations(project, { branch = null, adapter = null, api = false, bare = false } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);
   setLanguage(lang);
@@ -1128,13 +1131,13 @@ export function renderStyle(project, { branch = null, adapter = null, api = fals
 <div class="section-title">${D.colorsLabel}</div>${colours}
 <div class="section-title">${D.surfacesLabel}</div>${surfaceBoxes}
 <div class="section-title">${D.scalesLabel}</div>${scales}
-<div class="section-title">${D.componentsLabel}</div>${comps}
+${bare ? `<div class="section-title">${D.componentsLabel}</div>${comps}` : ''}
 </div>`;
   const extraCss = adapter?.styles ? adapter.styles() : '';
-  if (bare) return page({ title: D.style, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body: `<main class="bare">${content}</main>`, api, lang });
+  if (bare) return page({ title: D.foundations, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body: `<main class="bare">${content}</main>`, api, lang });
   const body =
-    shellOf(project, D, { title: D.style, meta: `${h(D.styleMeta)}${branch ? ` · ${h(branch)}` : ''}`, place: { page: 'style' }, content }) + PICK_SCRIPT;
-  return page({ title: D.style, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body, api, screen: '', comments: [], lang });
+    shellOf(project, D, { title: D.foundations, meta: `${h(D.styleMeta)}${branch ? ` · ${h(branch)}` : ''}`, place: { page: 'foundations' }, content: foundationTabs(D, 'board') + content }) + PICK_SCRIPT;
+  return page({ title: D.foundations, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body, api, screen: '', comments: [], lang });
 }
 
 const screenLinkOf = (project, screen) => {
@@ -1232,3 +1235,6 @@ ${spec.notes.length ? `<div class="section-title">${D.notes}</div><ul class="lis
 <script>(function () { var b = document.getElementById('spec-copy-md'), t = document.getElementById('spec-md'); if (!b || !t) return; b.addEventListener('click', function () { var text = t.content ? t.content.textContent : t.textContent; navigator.clipboard.writeText(text).then(function () { var was = b.textContent; b.textContent = '✓'; setTimeout(function () { b.textContent = was; }, 1200); }); }); })();</script>`;
   return page({ title: `${doc.screen} · ${D.spec}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: doc.screen, comments: [], lang });
 }
+
+// the page was called the style board in 0.14
+export const renderStyle = renderFoundations;

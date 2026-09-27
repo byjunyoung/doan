@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/index.js';
-import { renderScreen, renderIndex, layoutStyle, renderStyle } from '../src/render/index.js';
+import { renderScreen, renderIndex, layoutStyle, renderFoundations } from '../src/render/index.js';
 
 const orders = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
@@ -272,13 +272,14 @@ test('a screen whose one element is a modal sits on a dimmed backdrop with the m
 
 test('the style board: every text style set in its own type, colours, surfaces, scales, and each component sample in each variant — inside .board, a product root', async () => {
   const project = await loadProject(orders);
-  const html = renderStyle(project, { branch: 'x' });
-  assert.match(html, /<a class="side-link sub current" href="style.html">/);
+  const html = renderFoundations(project, { branch: 'x' });
+  assert.match(html, /<a class="side-link sub current" href="foundations.html">/);
   assert.match(html, /<div class="b-sample" style="font-family:var\(--text-heading-font-family\);font-size:var\(--text-heading-font-size\);font-weight:var\(--text-heading-font-weight\);line-height:var\(--text-heading-line-height\)">/);
   assert.match(html, /class="b-surface" style="background:var\(--surface-raised-bg\);border-color:var\(--surface-raised-border\);border-radius:var\(--surface-raised-radius\);box-shadow:var\(--surface-raised-shadow\)"/);
   assert.match(html, /<code>primary<\/code>/);
-  assert.match(html, /<a href="components.html#k-button"><code>button<\/code><\/a>/);
-  assert.match(html, /variant = danger/);
+  assert.match(html, /<a class="tab active" href="foundations.html">Board<\/a><a class="tab" href="tokens.html">Variables<\/a>/);
+  assert.doesNotMatch(html, /components.html#k-button/, 'components live on their own page; the bare board in a proposal keeps them');
+  assert.match(renderFoundations(project, { bare: true }), /<a href="components.html#k-button"><code>button<\/code><\/a>[\s\S]*variant = danger/);
   assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{/);
 });
 

@@ -436,13 +436,14 @@ Decided 2026-09-27, when the owner looked at a burger-kiosk reference beside the
 
 | Stage | Interview | File | Page | Lint | Propose → apply |
 |---|---|---|---|---|---|
-| Style | `style` prompt | `tokens/` — colour roles, `text.*` text styles (DTCG typography), `surface.*`, scales, fonts | `style.html`, the board | L18–L20, L28 | `propose_files` |
-| Components | `component` prompt | `components/<kind>.yaml` | components, the board | L21, L22, L28 | `propose_files` |
+| Foundations | `foundation` prompt | `tokens/` — colour roles, `text.*` text styles (DTCG typography), `surface.*`, scales, fonts | `foundations.html` — board and variables tabs | L18–L20, L28 | `propose_files` |
+| Components | `component` prompt | `components/<kind>.yaml` | components (samples in every variant) | L21, L22, L28 | `propose_files` |
 | Assets | — | `assets/**` (svg through proposals) | assets | L25 | `propose_files` |
 | Screens | `draw` prompt | `screens/*.yaml` | screen, canvas | all | `propose` |
 
 - **Text styles and surfaces.** A text style is one DTCG typography token and five CSS values (`text.heading.font-size` …); a surface is a group — bg, border, radius, shadow, text, padding. A contract binds a whole one with `font: text.heading` or `surface: surface.tile`, on the kind or on a part (`label.font:`). The bundled set ships display · heading · title · body · label · caption and page · card · raised · sunken.
 - **Fonts.** `assets/fonts/<Family>-<Weight>.woff2` becomes `@font-face`; a stylesheet URL in `conventions.render.fonts` becomes a link.
+- **Foundations are the base of the design system (0.15).** The owner pointed out that style is not a stage beside the design system but its bottom layer: foundations (tokens) → components (contracts) → screens, assets beside. The viewer says so — Design system › Foundations (the board, with the variables table as its second tab), Components (each sample in every variant), Assets; the old style and tokens entries are one. The interview is `foundation`.
 - **The board.** One page: each text style set in its own type, colours, surfaces, scales, every component's sample in every variant — drawn with the project's tokens, inside the viewer's own chrome.
 - **Icons follow their element.** An svg icon is a mask filled with the text colour, so a selected tile's icon turns white with its label.
 - **Comments on a frame.** A comment may be on a screen as a whole, with the state it was left on; the canvas frame panel lists them and takes one.
