@@ -12,7 +12,7 @@ const EN = {
   item: 'item', decision: 'decision', why: 'why', blocking: 'blocking', warning: 'warning', clean: 'clean', states: 'states', openComments: 'open comments',
   comment: 'comment', commentsN: 'comments', tbd: '$tbd', components: 'components', on: 'on',
   flowMap: 'Flow map', deadFlows: 'Flows to nowhere', orphanScreens: 'Screens no flow reaches', domains: 'Domains', sectionsN: 'sections', fitLabel: 'fit', viewCanvas: 'Canvas', arrowsLabel: 'arrows', searchTree: 'Search screens  \u2318F', shortcutsHint: 'Shift 1 fit \u00b7 Shift 2 zoom to selection \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 zoom \u00b7 Esc clear', proto: 'Prototype', hotspots: 'hotspots', back: 'back',
-  sayWhatScreen: 'say what should change on this screen',
+  sayWhatScreen: 'say what should change on this screen', commonComments: 'Comments on the whole', sayWhatAll: 'a note on the whole — nothing needs to be selected',
   newFile: 'new', deletedFile: 'deleted', agreedBefore: 'Agreed before this version',
   foundations: 'Foundations', boardTab: 'Board', varsTab: 'Variables',
   style: 'Style', styleMeta: 'what the product looks like — every style in one place', textStyles: 'Text styles', colorsLabel: 'Colours', surfacesLabel: 'Surfaces', scalesLabel: 'Scales', componentsLabel: 'Components', sampleText: 'The quick brown fox jumps over the lazy dog 0123', noStyles: 'none defined — add text.* to the tokens', noSurfaces: 'none defined — add surface.* to the tokens',
@@ -44,7 +44,7 @@ const KO = {
   item: '항목', decision: '결정', why: '이유', blocking: '차단', warning: '경고', clean: '이상 없음', states: '상태', openComments: '열린 코멘트',
   comment: '코멘트', commentsN: '코멘트', components: '컴포넌트', on: '·',
   flowMap: '흐름도', deadFlows: '갈 곳 없는 흐름', orphanScreens: '흐름이 닿지 않는 화면', domains: '도메인', sectionsN: '섹션', fitLabel: '맞춤', viewCanvas: '캔버스', arrowsLabel: '화살표', searchTree: '화면 검색  \u2318F', shortcutsHint: 'Shift 1 맞춤 \u00b7 Shift 2 선택에 맞춤 \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 줌 \u00b7 Esc 해제', proto: '프로토타입', hotspots: '핫스팟', back: '뒤로',
-  sayWhatScreen: '이 화면에서 바꿀 점을 적어주세요',
+  sayWhatScreen: '이 화면에서 바꿀 점을 적어주세요', commonComments: '공통 의견', sayWhatAll: '전체에 대한 의견 — 아무것도 고르지 않아도 돼요',
   newFile: '새 파일', deletedFile: '삭제', agreedBefore: '이 판 전에 정한 것',
   foundations: '파운데이션', boardTab: '보드', varsTab: '변수',
   style: '스타일', styleMeta: '제품이 어떻게 생겼나 — 스타일 전부를 한 장에', textStyles: '텍스트 스타일', colorsLabel: '색', surfacesLabel: '면', scalesLabel: '스케일', componentsLabel: '컴포넌트', sampleText: '다람쥐 헌 쳇바퀴에 타고파 0123 ABC', noStyles: '정의 없음 — 토큰에 text.* 를 추가', noSurfaces: '정의 없음 — 토큰에 surface.* 를 추가',
@@ -75,6 +75,6 @@ export function languageOf(project) {
 // The subset the page's own JavaScript needs, as plain strings.
 export function pageStrings(lang) {
   const d = dictionary(lang);
-  const keys = ['clickToInspect', 'codeLabel', 'specFor', 'sayWhatScreen', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
+  const keys = ['clickToInspect', 'codeLabel', 'specFor', 'sayWhatScreen', 'commonComments', 'sayWhatAll', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
   return Object.fromEntries(keys.map((k) => [k, d[k]]));
 }

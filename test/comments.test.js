@@ -4,7 +4,7 @@ import { mkdtempSync, cpSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { addComment, listComments, resolveComment } from '../src/comments.js';
+import { addComment, listComments, resolveComment, authorOf } from '../src/comments.js';
 
 const examples = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const sandbox = () => { const d = mkdtempSync(join(tmpdir(), 'dc-cm-')); cpSync(examples, d, { recursive: true }); return d; };
@@ -83,4 +83,18 @@ test('a comment on a screen as a whole — a canvas frame — has no element and
   const { PAGE_SCRIPTS } = await import('../src/render/page.js').then((m) => ({ PAGE_SCRIPTS: Object.values(m).filter((x) => typeof x === 'string').join('\n') }));
   assert.match(PAGE_SCRIPTS, /function frameComments\(screen, state\)/);
   assert.match(PAGE_SCRIPTS, /path: '', state: state, text: text/);
+});
+
+test('a comment on the whole project — no screen — is kept beside the screens, listed with them, resolved like them; the author defaults to the git user', async () => {
+  const dir = sandbox();
+  const c = await addComment(dir, { text: 'the greys are too cold everywhere' });
+  assert.equal(c.screen, null);
+  assert.equal(c.author, authorOf(dir));
+  const all = await listComments(dir);
+  assert.ok(all.some((x) => x.id === c.id));
+  assert.equal((await listComments(dir, { screen: 'order-list' })).some((x) => x.id === c.id), false, 'a screen asks for its own only');
+  const done = await resolveComment(dir, { id: c.id });
+  assert.equal(done.resolved, true);
+  const named = await addComment(dir, { screen: 'order-list', path: 'elements.1', text: 'x' });
+  assert.equal(named.author, authorOf(dir));
 });

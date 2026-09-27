@@ -10,7 +10,7 @@ import { resolveAdapter } from './render/adapters/index.js';
 import { lintProject, currentBranch, specScreen } from './verbs.js';
 import { listProposals, applyProposal, rejectProposal, projectWith } from './proposals.js';
 import { rm } from 'node:fs/promises';
-import { addComment, listComments, resolveComment } from './comments.js';
+import { authorOf, addComment, listComments, resolveComment } from './comments.js';
 
 // The local viewer: the same pages `render` writes, served live from the files, plus the
 // three things a static page cannot do — take a comment, apply or reject a proposal, and
@@ -122,8 +122,8 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       if (method === 'POST' && (m = path.match(/^\/api\/comments\/(c_[a-z0-9]+)\/resolve$/))) return json(res, 200, await resolveComment(dir, { id: m[1], ...(await readBody(req)) }));
       if (method === 'POST' && (m = path.match(/^\/api\/proposals\/(p_[a-z0-9]+)\/apply$/))) {
         const body = await readBody(req);
-        if (!body.by) return json(res, 400, { error: 'apply needs "by": the person who said yes' });
-        return json(res, 200, await applyProposal(dir, { id: m[1], approved_by: body.by }));
+        // who said yes: the name sent, or the project's git author — the viewer has no login
+        return json(res, 200, await applyProposal(dir, { id: m[1], approved_by: body.by || authorOf(dir) }));
       }
       if (method === 'POST' && (m = path.match(/^\/api\/proposals\/(p_[a-z0-9]+)\/reject$/))) return json(res, 200, await rejectProposal(dir, { id: m[1], ...(await readBody(req)) }));
       return json(res, 404, { error: 'no such api' });

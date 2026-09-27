@@ -523,7 +523,7 @@ export const INSPECTOR_JS = `
       '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(file) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
       '<p><button class="btn" id="copy">' + t('copy', 'copy path:line') + '</button></p>' +
       '<h4>' + t('comments', 'Comments') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
-      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><input id="cwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>');
+      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>');
     shell.classList.add('drawer-open');
     document.getElementById('close').addEventListener('click', function () { window.doanClearSelection(); });
     document.dispatchEvent(new CustomEvent('doan:select', { detail: { el: el } }));
@@ -534,20 +534,39 @@ export const INSPECTOR_JS = `
     });
     var send = document.getElementById('csend');
     if (send) send.addEventListener('click', function () {
-      var text = document.getElementById('ctext').value.trim(); var who = document.getElementById('cwho').value.trim();
+      var text = document.getElementById('ctext').value.trim();
       if (!text) return;
-      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: (window.DOAN_CURRENT_EL && window.DOAN_CURRENT_EL.closest('[data-screen]') ? window.DOAN_CURRENT_EL.closest('[data-screen]').getAttribute('data-screen') : window.DOAN_SCREEN), path: path, line: Number(line) || null, text: text, author: who || 'anonymous' }) })
+      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: (window.DOAN_CURRENT_EL && window.DOAN_CURRENT_EL.closest('[data-screen]') ? window.DOAN_CURRENT_EL.closest('[data-screen]').getAttribute('data-screen') : window.DOAN_SCREEN), path: path, line: Number(line) || null, text: text }) })
         .then(function (r) { return r.ok ? location.reload() : r.json().then(function (j) { document.getElementById('cstate').textContent = j.error; }); });
     });
     fit();
   }
   // the workspace (a canvas page) keeps the panel open with an empty state instead of hiding it
   var emptyPanel = panel ? panel.innerHTML : '';
+  // nothing selected: the panel holds the project's common comments — about the whole thing, no screen
+  function general() {
+    var box = document.getElementById('general');
+    if (!box || !window.DOAN_API) return;
+    fetch('/api/comments').then(function (r) { return r.json(); }).then(function (j) {
+      var mine = (j.comments || []).filter(function (c) { return !c.screen; });
+      box.innerHTML = '<h4>' + t('commonComments', 'Comments on the whole') + '</h4>' +
+        (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '') +
+        '<textarea id="gtext" rows="3" placeholder="' + t('sayWhatAll', 'a note on the whole — nothing needs to be selected') + '"></textarea><button class="btn btn-primary" id="gsend">' + t('send', 'Comment') + '</button> <span class="hint" id="gstate"></span>';
+    });
+  }
+  document.addEventListener('click', function (e) {
+    if (!e.target || e.target.id !== 'gsend') return;
+    var text = document.getElementById('gtext').value.trim();
+    if (!text) return;
+    fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text: text }) })
+      .then(function (r) { return r.ok ? general() : r.json().then(function (j) { document.getElementById('gstate').textContent = j.error; }); });
+  });
+  general();
   window.doanSelect = openDrawer;
   window.doanClearSelection = function () {
     if (selected) selected.classList.remove('selected');
     selected = null;
-    if (shell.classList.contains('workspace')) { panel.innerHTML = emptyPanel; } else { shell.classList.remove('drawer-open'); }
+    if (shell.classList.contains('workspace')) { panel.innerHTML = emptyPanel; general(); } else { shell.classList.remove('drawer-open'); }
     document.dispatchEvent(new CustomEvent('doan:select', { detail: { el: null } }));
     fit();
   };
@@ -635,7 +654,6 @@ export const INSPECTOR_JS = `
   function verdict(kind) {
     var by = (document.getElementById('by') || {}).value || '';
     var id = (approve || reject).getAttribute('data-id');
-    if (kind === 'apply' && !by.trim()) { document.getElementById('verdict').textContent = t('nameFirst', 'your name first'); return; }
     fetch('/api/proposals/' + id + '/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(kind === 'apply' ? { by: by } : { reason: by }) })
       .then(function (r) { return r.json(); }).then(function (j) { document.getElementById('verdict').textContent = j.error ? j.error : j.status; if (!j.error) setTimeout(function () { location.href = '/'; }, 600); });
   }
@@ -934,9 +952,9 @@ export const CANVAS_JS = `
     var close = document.getElementById('close'); if (close) close.addEventListener('click', clearAll);
     var send = document.getElementById('fsend');
     if (send) send.addEventListener('click', function () {
-      var text = document.getElementById('ftext').value.trim(); var who = document.getElementById('fwho').value.trim();
+      var text = document.getElementById('ftext').value.trim();
       if (!text) return;
-      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: screen, path: '', state: state, text: text, author: who || 'anonymous' }) })
+      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: screen, path: '', state: state, text: text }) })
         .then(function (r) { return r.ok ? location.reload() : r.json().then(function (j) { document.getElementById('fstate').textContent = j.error; }); });
     });
   }
@@ -945,7 +963,7 @@ export const CANVAS_JS = `
     var mine = (window.DOAN_COMMENTS || []).filter(function (c) { return c.screen === screen && !c.element && !c.path; });
     return '<h4>' + t('comments', 'Comments') + '</h4>' +
       (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + (c.state ? '<span class="hint">' + esc(c.state) + '</span> ' : '') + esc(c.text) + '</li>'; }).join('') + '</ul>' : '') +
-      (window.DOAN_API ? '<textarea id="ftext" rows="3" placeholder="' + t('sayWhatScreen', 'say what should change on this screen') + '"></textarea><input id="fwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="fsend">' + t('send', 'Comment') + '</button> <span class="hint" id="fstate"></span>' : '');
+      (window.DOAN_API ? '<textarea id="ftext" rows="3" placeholder="' + t('sayWhatScreen', 'say what should change on this screen') + '"></textarea><button class="btn btn-primary" id="fsend">' + t('send', 'Comment') + '</button> <span class="hint" id="fstate"></span>' : '');
   }
   // a frame whose screen has comments of its own carries a blue dot on its title
   (window.DOAN_COMMENTS || []).forEach(function (c) {

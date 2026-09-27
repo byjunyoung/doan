@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
 import { loadProject } from './project.js';
 import { walkElements, findElement } from './elements.js';
 
@@ -17,6 +18,18 @@ import { walkElements, findElement } from './elements.js';
 const dirOf = (dir) => join(dir, '.comments');
 const fileOf = (dir, screen) => join(dirOf(dir), `${screen}.json`);
 const newId = () => `c_${Date.now().toString(36)}${randomBytes(2).toString('hex')}`;
+// a comment on the project as a whole — nothing selected — lives beside the per-screen files
+const PROJECT = '_project';
+
+// who is writing: the git author of the project, since the viewer has no login and asking for a
+// name on every comment was friction for the one person who uses it
+export function authorOf(dir) {
+  try {
+    return execFileSync('git', ['config', 'user.name'], { cwd: dir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() || 'anonymous';
+  } catch {
+    return 'anonymous';
+  }
+}
 
 async function read(dir, screen) {
   const f = fileOf(dir, screen);
@@ -56,8 +69,15 @@ function refresh(screen, c) {
 
 // A comment with no element is on the screen as a whole — a frame on the canvas — and may name
 // the state it was left on.
-export async function addComment(dir, { screen, path, element = null, text, author, line = null, state = null }) {
-  if (!screen || !text) throw new Error('a comment needs a screen and a text');
+export async function addComment(dir, { screen = null, path, element = null, text, author, line = null, state = null }) {
+  if (!text) throw new Error('a comment needs a text');
+  if (!screen) {
+    const comment = { id: newId(), screen: null, element: null, path: '', line: null, text, author: author || authorOf(dir), created: new Date().toISOString(), resolved: false };
+    const list = await read(dir, PROJECT);
+    list.push(comment);
+    await write(dir, PROJECT, list);
+    return comment;
+  }
   const project = await loadProject(dir);
   const found = project.screens.find((s) => s.doc.screen === screen);
   if (!found) throw new Error(`no screen named "${screen}" in ${dir}`);
@@ -67,7 +87,7 @@ export async function addComment(dir, { screen, path, element = null, text, auth
   if (id && !findElement(found.doc.elements ?? [], id)) throw new Error(`no element "${id}" on screen "${screen}"`);
   if (!id) id = elementAtPath(found, path ?? '');
   const at = id ? whereIs(found, id) : { path: path ?? '', line };
-  const comment = { id: newId(), screen, element: id, path: at.path, line: at.line ?? line, ...(state && !id ? { state: String(state) } : {}), text, author: author ?? 'anonymous', created: new Date().toISOString(), resolved: false };
+  const comment = { id: newId(), screen, element: id, path: at.path, line: at.line ?? line, ...(state && !id ? { state: String(state) } : {}), text, author: author || authorOf(dir), created: new Date().toISOString(), resolved: false };
   const list = await read(dir, screen);
   list.push(comment);
   await write(dir, screen, list);
@@ -79,17 +99,18 @@ export async function listComments(dir, { screen = null, status = 'open' } = {})
   const screens = screen ? project.screens.filter((s) => s.doc.screen === screen) : project.screens;
   const all = [];
   for (const s of screens) all.push(...(await read(dir, s.doc.screen)).map((c) => refresh(s, c)));
+  if (!screen) all.push(...(await read(dir, PROJECT)));
   return all.filter((c) => status === 'all' || (status === 'open' ? !c.resolved : c.resolved)).sort((a, b) => a.created.localeCompare(b.created));
 }
 
 export async function resolveComment(dir, { id, by, note = '' }) {
   const project = await loadProject(dir);
-  for (const s of project.screens) {
+  for (const s of [...project.screens, { doc: { screen: PROJECT, elements: [] }, lineOf: () => null }]) {
     const list = await read(dir, s.doc.screen);
     const c = list.find((x) => x.id === id);
     if (!c) continue;
     if (c.resolved) throw new Error(`comment "${id}" is already resolved`);
-    Object.assign(c, { resolved: true, resolved_by: by ?? 'unknown', resolved_at: new Date().toISOString(), resolution: note });
+    Object.assign(c, { resolved: true, resolved_by: by || authorOf(dir), resolved_at: new Date().toISOString(), resolution: note });
     await write(dir, s.doc.screen, list);
     return refresh(s, c);
   }
@@ -100,7 +121,7 @@ export async function resolveComment(dir, { id, by, note = '' }) {
 // record keeps when it was reopened.
 export async function reopenComment(dir, { id }) {
   const project = await loadProject(dir);
-  for (const s of project.screens) {
+  for (const s of [...project.screens, { doc: { screen: PROJECT, elements: [] }, lineOf: () => null }]) {
     const list = await read(dir, s.doc.screen);
     const c = list.find((x) => x.id === id);
     if (!c) continue;

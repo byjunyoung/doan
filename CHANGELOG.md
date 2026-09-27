@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.15.1 — 2026-09-28
+
+- **No name to type.** The comment boxes and the Apply buttons ask for no name; the author and the approver are the project's git user (`git config user.name`), since the viewer has no login and one person uses it.
+- **Comments on the whole.** With nothing selected the panel lists the project's common comments and takes one — no screen, no element. They live in `.comments/_project.json`, list and resolve like the rest.
+
 ## 0.15.0 — 2026-09-28
 
 Foundations are the base of the design system, and the viewer says so (DESIGN.md §6.11).

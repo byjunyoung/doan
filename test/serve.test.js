@@ -32,15 +32,16 @@ test('comments can be posted from the page and read back per screen', async () =
   assert.match(page, /drop the line column/, 'the rendered page shows open comments');
 });
 
-test('a pending proposal can be applied from its page with a name, and refused without one', async () => {
+test('a pending proposal is applied from its page with no name to type — the git author approves; the page asks for none', async () => {
   const before = readFileSync(join(dir, 'screens', 'payment-list.yaml'), 'utf8');
   const p = await propose(dir, { screen: 'payment-list', after: before.replace('columns: [nickname, order_no, store, method, amount, status, paid_at]', 'columns: [nickname, amount]') }, { branch: 'feature/x', today: '2026-09-24' });
   const page = await (await fetch(`${base}/proposal-${p.id}.html`)).text();
   assert.match(page, /id="approve"/);
-  const denied = await fetch(`${base}/api/proposals/${p.id}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
-  assert.equal(denied.status, 400);
-  const ok = await fetch(`${base}/api/proposals/${p.id}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ by: 'junyoung' }) });
+  assert.doesNotMatch(page, /id="by"/);
+  const ok = await fetch(`${base}/api/proposals/${p.id}/apply`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
   assert.equal(ok.status, 200);
+  const { authorOf } = await import('../src/comments.js');
+  assert.equal((await ok.json()).approved_by, authorOf(dir));
   assert.match(readFileSync(join(dir, 'screens', 'payment-list.yaml'), 'utf8'), /\[nickname, amount\]/);
 });
 

@@ -269,7 +269,7 @@ function topBar(project, D, { title, meta = '', mode = null, place = {}, tools =
 function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
   // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint.
   // The prototype selects nothing — its panel says so and lists the flows instead (PROTO_JS)
-  const empty = mode === 'proto' ? `<div class="hint">${D.protoHelp}</div>` : `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}`;
+  const empty = mode === 'proto' ? `<div class="hint">${D.protoHelp}</div>` : `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}<div id="general"></div>`;
   return `<div class="shell workspace">
 ${navSidebar(project, D, place, { findings, comments, proposals })}
 <main class="main${mainClass ? ` ${mainClass}` : ''}">
@@ -777,7 +777,7 @@ export function renderFilesProposal(project, proposal, { after = null, branch = 
   const boards = after ? `<div class="section-title">${D.foundations}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${board(project)}</div><div><div class="hint">TO-BE</div>${board(after)}</div></div>` : '';
   const la = proposal.lint?.after ?? {};
   const findings = (la.findings ?? []).length ? `<ul class="list">${la.findings.map((f) => `<li><span class="${f.severity === 'blocking' ? 'bad' : 'hint'}">${h(f.id)}</span> <code>${h(f.file ?? '')}</code> ${h(f.message)}</li>`).join('')}</ul>` : '';
-  const actions = proposal.status === 'pending' && api ? `<div class="actions"><input id="by" placeholder="${h(D.yourName)}"> <button class="btn btn-primary" id="apply">${D.apply}</button> <button class="btn" id="reject">${D.reject}</button></div><script>(function(){var id=${JSON.stringify(proposal.id)};function go(a){var by=document.getElementById('by').value.trim();if(a==='apply'&&!by){document.getElementById('by').focus();return;}fetch('/api/proposals/'+id+'/'+a,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({by:by})}).then(function(r){return r.json()}).then(function(){location.href='index.html'});}document.getElementById('apply').onclick=function(){go('apply')};document.getElementById('reject').onclick=function(){go('reject')};})();</script>` : '';
+  const actions = proposal.status === 'pending' && api ? `<div class="actions"><button class="btn btn-primary" id="apply">${D.apply}</button> <button class="btn" id="reject">${D.reject}</button></div><script>(function(){var id=${JSON.stringify(proposal.id)};function go(a){fetch('/api/proposals/'+id+'/'+a,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(){location.href='index.html'});}document.getElementById('apply').onclick=function(){go('apply')};document.getElementById('reject').onclick=function(){go('reject')};})();</script>` : '';
   const content = `<p>${h(proposal.summary)}</p>${decisions}<div class="section-title">lint</div><p class="hint">${proposal.lint?.before?.blocking ?? 0} → <b class="${la.blocking ? 'bad' : ''}">${la.blocking ?? 0}</b> ${D.blocking}, ${la.warning ?? 0} ${D.warning}</p>${findings}${actions}${boards}${files}`;
   const body = shellOf(project, D, {
     title: `${h(proposal.label)} <span class="hint">${D.proposal}</span>`,
@@ -825,7 +825,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} ${D.blocking}, ${proposal.lint.before.warning}→${proposal.lint.after.warning} ${D.warning}`;
   const verdict =
     api && proposal.status === 'pending'
-      ? `<p><input id="by" placeholder="${D.yourName}" style="width:160px;display:inline-block"> <button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
+      ? `<p><button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
       : `<p class="hint">${D.toAccept}: <code>doan apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>doan reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
 
   const body = shellOf(project, D, {
