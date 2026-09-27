@@ -189,6 +189,20 @@
             "string",
             "null"
           ]
+        },
+        "fonts": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "webfont stylesheet URLs (https) the viewer links; files under assets/fonts/ load on their own"
         }
       }
     },

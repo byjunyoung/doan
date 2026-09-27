@@ -201,8 +201,10 @@ export async function proposeFiles(dir, { files, summary = '', decisions = [], c
   const now = await loadProject(dir);
   const { project: next, tmp } = await projectWith(dir, list);
   try {
-    const lintBefore = summarize([...problemsOf(now), ...lint(now, opts)]);
-    const afterFindings = [...problemsOf(next), ...lint(next, opts)].map((f) => ({ ...f, file: f.file ? relative(tmp, f.file) : null }));
+    // the whole check the CLI runs — schema of every file first, then the rules — before and after
+    const { lintProject } = await import('./verbs.js');
+    const lintBefore = summarize((await lintProject(dir, { ...opts, cwd: dir })).findings);
+    const afterFindings = (await lintProject(tmp, { ...opts, cwd: tmp })).findings.map((f) => ({ ...f, file: f.file ?? null }));
     const proposal = {
       id: newId(),
       kind: 'files',

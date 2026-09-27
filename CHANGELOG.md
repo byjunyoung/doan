@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.14.1 — 2026-09-28
+
+- The conventions schema knows `render.fonts` (added to the renderer in 0.14.0, not to the schema — a project that used it failed lint).
+- A files proposal lints like the CLI: the schema of every file first, then the rules, before and after. It said 0 blocking for a change the CLI then blocked.
+
 ## 0.14.0 — 2026-09-28
 
 The style stage, and the rest of the design through the edit loop (DESIGN.md §6.11, §7.4). A review found that only screens had an interview, a file, a page, lint and propose→apply; style, components and assets were written by hand.

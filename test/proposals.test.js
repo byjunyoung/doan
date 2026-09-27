@@ -236,3 +236,13 @@ test('files: the proposal page shows the style board as it is beside as it would
   assert.match(html, /<span class="chg">\{&quot;color&quot;:\{&quot;primary&quot;:&quot;#e4572e&quot;\}\}<\/span>/);
   assert.match(html, /id="apply"/);
 });
+
+test('files: lint after runs the schema of every file — a conventions key the schema does not know blocks', async () => {
+  const dir = sandbox();
+  const conv = readFileSync(join(dir, 'conventions.yaml'), 'utf8');
+  const bad = await proposeFiles(dir, { files: [{ path: 'conventions.yaml', content: conv + '\nrender:\n  nonsense: 1\n' }] }, opts);
+  assert.ok(bad.lint.after.blocking > 0);
+  assert.ok(bad.lint.after.findings.some((f) => f.id === 'SCHEMA' && f.file === 'conventions.yaml'));
+  const good = await proposeFiles(dir, { files: [{ path: 'conventions.yaml', content: conv + '\nrender:\n  fonts: [ "https://cdn.example.com/f.css" ]\n' }] }, opts);
+  assert.equal(good.lint.after.blocking, 0);
+});
