@@ -13,6 +13,13 @@ props:
     type: string
   alt:
     type: string
+  fit:
+    type: enum
+    options:
+      - cover
+      - contain
+    default: cover
+    description: cover fills the box and crops; contain shows the whole picture
 tokens:
   bg: color.surface
   border: color.border

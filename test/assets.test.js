@@ -118,7 +118,7 @@ test('the bundled set draws an asset as the picture itself: an image from its sr
   const project = await loadProject(dir);
   const screen = project.screens.find((s) => s.doc.screen === 'assets-demo');
   const html = renderScreen(project, screen, { branch: 'x' });
-  assert.match(html, /<div class="img size-md"><img src="assets\/photos\/hero\.jpg" alt="The shop"><\/div>/);
+  assert.match(html, /<div class="img size-md fit-cover"><img src="assets\/photos\/hero\.jpg" alt="The shop"><\/div>/);
   assert.match(html, /<span class="ico"><img class="ico-img" src="assets\/icons\/cart\.svg" alt=""><\/span>/);
   assert.match(html, /<span class="ico">★<\/span>/);
   // the Loading state names a file that is not there: the tag still points at it, lint says so

@@ -183,9 +183,19 @@
             },
             {
               "const": "auto"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
             }
           ],
-          "description": "a count, or auto: as many as fit, each at least `min` wide"
+          "description": "a count; auto: as many as fit, each at least `min` wide; or the tracks themselves — \"1fr auto auto\" or [1fr, auto, auto]"
         },
         "gap": {
           "type": "string"
@@ -194,7 +204,8 @@
           "type": "string"
         },
         "align": {
-          "type": "string"
+          "type": "string",
+          "description": "horizontal: start · center · end · space-between · stretch — whatever the direction"
         },
         "grow": {
           "type": "boolean"
@@ -215,6 +226,10 @@
             "horizontal"
           ],
           "description": "children keep their width and the container scrolls sideways"
+        },
+        "justify": {
+          "type": "string",
+          "description": "vertical: start · center · end · space-between · stretch — whatever the direction"
         }
       },
       "additionalProperties": false

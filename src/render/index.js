@@ -24,11 +24,49 @@ import { SLOT_CSS } from '../slots.js';
 // Finite by rule: the states tabs render each state with no variant chosen; each variant
 // axis renders every option in the Default state. No cross product.
 
-const ALIGN = { start: 'flex-start', end: 'flex-end', center: 'center', 'space-between': 'space-between', stretch: 'stretch' };
+const ALIGN = { start: 'flex-start', end: 'flex-end', center: 'center', 'space-between': 'space-between', 'space-around': 'space-around', stretch: 'stretch' };
+
+// Where things sit, in two words on fixed axes: `align` is horizontal, `justify` is vertical,
+// whatever the container's direction — that is how a person reads a screen (0.13.0). A column
+// with `align: center` centres its children; a row with `justify: center` lines them up on
+// their middle; `space-between` spreads along an axis, `stretch` fills across it. A leaf's
+// rule aligns the leaf's own box and its text.
+function axisCss(rule) {
+  const s = [];
+  const a = rule.align ? ALIGN[rule.align] ?? rule.align : null;
+  const j = rule.justify ? ALIGN[rule.justify] ?? rule.justify : null;
+  const grid = rule.kind === 'grid' || rule.kind === 'columns';
+  const row = rule.kind === 'row' || (rule.kind === 'stack' && rule.direction === 'row');
+  if (grid) {
+    if (a) s.push(`justify-items:${a}`, `justify-content:${a}`);
+    if (j) s.push(`align-items:${j}`, `align-content:${j}`);
+  } else if (row) {
+    if (a) s.push(`justify-content:${a}`);
+    if (j) s.push(`align-items:${j}`);
+  } else if (rule.kind === 'stack') {
+    if (a) s.push(`align-items:${a}`);
+    if (j) s.push(`justify-content:${j}`);
+  } else {
+    if (a) s.push('display:flex', `justify-content:${a}`, ...(['start', 'end', 'center'].includes(rule.align) ? [`text-align:${rule.align}`] : []));
+    if (j) s.push('display:flex', `align-items:${j}`);
+  }
+  return s;
+}
+
+// `columns` is a count, `auto` (as many as fit, each at least `min` wide), or the columns
+// themselves as a css track list — `"1fr auto auto"` or `[1fr, auto, auto]` — for a row whose
+// cells must line up: a cart line with its name, a stepper and a delete button.
+function gridColumns(rule) {
+  const c = rule.columns;
+  if (c === 'auto') return `grid-template-columns:repeat(auto-fill,minmax(var(--size-${rule.min ?? 'sm'}),1fr))`;
+  if (Array.isArray(c)) return `grid-template-columns:${c.join(' ')}`;
+  if (typeof c === 'string') return `grid-template-columns:${c}`;
+  return `grid-template-columns:repeat(${c ?? 2},minmax(0,1fr))`;
+}
 
 // A layout rule's container part (stack/grid) applies only to elements that hold children;
 // a leaf kind (a table, a tile grid) draws its own inside and only takes gap/padding/size.
-function layoutStyle(rule, { container = true } = {}) {
+export function layoutStyle(rule, { container = true } = {}) {
   if (!rule) return '';
   const s = [];
   if (container) {
@@ -36,11 +74,11 @@ function layoutStyle(rule, { container = true } = {}) {
     if (rule.kind === 'row') s.push('display:flex', 'flex-direction:row', 'align-items:center');
     // `columns: auto` fits as many as the width allows, each at least `min` wide — the grid
     // adapts on its own, before any breakpoint says so
-    if (rule.kind === 'grid' || rule.kind === 'columns')
-      s.push('display:grid', rule.columns === 'auto' ? `grid-template-columns:repeat(auto-fill,minmax(var(--size-${rule.min ?? 'sm'}),1fr))` : `grid-template-columns:repeat(${rule.columns ?? 2},minmax(0,1fr))`);
+    if (rule.kind === 'grid' || rule.kind === 'columns') s.push('display:grid', gridColumns(rule));
     if (rule.gap) s.push(`gap:${tokenVar(rule.gap)}`);
-    if (rule.align) s.push(`justify-content:${ALIGN[rule.align] ?? rule.align}`, rule.kind ? '' : 'display:flex');
   }
+  // a container places its children; a leaf's rule places the leaf's own box and text
+  if (container || !rule.kind) s.push(...axisCss(rule));
   // wrapping and sideways scrolling apply to a leaf kind that draws its own row — a stat strip —
   // as much as to a container: page.js passes them down to the kind's inner row
   if (rule.wrap) s.push('flex-wrap:wrap');
@@ -119,7 +157,10 @@ function renderView(project, screen, merged, maps, adapter = null, { width = nul
   const root = layoutStyle(view.layout.root);
   const inner = `<div class="view-root" style="${root}">${body}</div>`;
   const platform = platformOf(project, screen);
-  const content = screen.doc.type === 'modal' ? `<div class="backdrop"><div class="modal-box">${inner}</div></div>` : inner;
+  // a modal screen, or a screen whose one element is a modal, sits on a dimmed backdrop; when
+  // the element is the box, the view root draws none of its own
+  const only = screen.doc.type !== 'modal' && view.elements.length === 1 && view.elements[0].kind === 'modal' ? view.elements[0] : null;
+  const content = screen.doc.type === 'modal' || only ? `<div class="backdrop${only ? ' by-element' : ''}"><div class="modal-box size-${h(only?.size ?? 'md')}">${inner}</div></div>` : inner;
   const device = platform.frame && platform.frame !== 'none';
   const chrome = platform.frame === 'phone' ? { top: `<div class="status-bar"><span>9:41</span><span class="notch"></span><span>●●●</span></div>`, bottom: `<div class="home-indicator"><span></span></div>` } : { top: '', bottom: '' };
   // a breakpoint draws the same screen narrower: the width is the breakpoint's, the frame the platform's

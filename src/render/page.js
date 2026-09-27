@@ -65,7 +65,8 @@ a { color: inherit; text-decoration: none; }
 .index td:last-child { overflow-wrap: anywhere; }
 .dead { color: var(--color-danger); text-decoration: line-through; }
 .backdrop { background: rgba(31,35,40,.45); padding: var(--space-xl); display: flex; justify-content: center; min-height: 480px; }
-.backdrop .modal-box { width: var(--size-md); }
+.backdrop .modal-box { width: var(--size-md); } .backdrop .modal-box.size-sm { width: var(--size-sm); } .backdrop .modal-box.size-lg { width: var(--size-lg); }
+.backdrop.by-element .view-root { border: 0; box-shadow: none; padding: 0; background: none; }
 .backdrop .view-root { border: 0; box-shadow: 0 8px 32px rgba(0,0,0,.25); padding: var(--space-lg); background: var(--color-bg); border-radius: var(--radius-md); min-height: 0; }
 
 /* device frames */
@@ -278,7 +279,7 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .tile { aspect-ratio: 1; border-radius: 2px; background: var(--color-border); } .t1 { background: #9bd1a5; } .t2 { background: #5aa86b; } .t3 { background: #e0b64a; } .t4 { background: #d1434b; }
 .sortable { display: flex; flex-direction: column; gap: var(--space-xs); } .sort-item { padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
 .img { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; height: 80px; color: var(--color-muted); box-shadow: var(--k-image-shadow, none); }
-.img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; }
+.img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; } .img.fit-contain img { object-fit: contain; }
 .ico-img { width: 1em; height: 1em; vertical-align: -0.15em; }
 /* the tokens page: a variables table per collection; the assets page: a card per file */
 .tok { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: var(--space-lg); }

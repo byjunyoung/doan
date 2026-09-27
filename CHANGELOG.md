@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.13.0 — 2026-09-27
+
+Where things sit. The kiosk's frames looked unfinished not for their colours but for their composition, and composition was outside the layout vocabulary (DESIGN.md §4.7).
+
+- **`align` is horizontal, `justify` is vertical — whatever the direction.** A column with `align: center` centres its children; a row with `justify: center` lines them up on their middle; `space-between` spreads along an axis, `stretch` fills across it; a leaf's rule places its own box and text. Before, `align` followed the flex main axis, so `align: center` on a column moved things down, not to the middle.
+- **`columns` can be the tracks themselves** — `"1fr auto auto"` or `[1fr, auto, auto]` — for a row whose cells must line up: a cart line with its name, a stepper and a delete button.
+- **`fit: contain`** on an image shows the whole picture instead of cropping it.
+- **A screen whose one element is a modal** sits on a dimmed backdrop, the modal as the box, at its `size`.
+
 ## 0.12.2 — 2026-09-27
 
 - **A project's tokens reach only what it draws.** They used to sit on `:root`, so a kiosk with a 20px body and 56px controls blew the viewer's own sidebar, tabs and buttons up with it — unseen while every project's tokens matched the bundled ones. The chrome now runs on the bundled defaults; the project's tokens, and the theme switch, apply inside a screen frame, a canvas frame, a prototype view and a library sample.

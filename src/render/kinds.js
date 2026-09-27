@@ -177,7 +177,7 @@ export const kinds = {
   image(el) {
     // a real picture when src names a file under assets/, the placeholder otherwise
     const pic = isAssetRef(el.src) ? `<img src="${h(el.src)}" alt="${h(el.alt ?? '')}">` : D.image;
-    return `<div class="img size-${h(el.size ?? 'md')}">${pic}</div>`;
+    return `<div class="img size-${h(el.size ?? 'md')} fit-${h(el.fit ?? 'cover')}">${pic}</div>`;
   },
   'kv-table'(el) {
     const rows = Array.isArray(el.rows) ? el.rows : [];

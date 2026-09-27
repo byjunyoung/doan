@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/index.js';
-import { renderScreen, renderIndex } from '../src/render/index.js';
+import { renderScreen, renderIndex, layoutStyle } from '../src/render/index.js';
 
 const orders = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
@@ -244,4 +244,28 @@ test('a project with no token resolver gets no mode select and no per-context cs
   const { html } = await page(orders, 'order-list');
   assert.doesNotMatch(html, /data-mode=/);
   assert.doesNotMatch(html, /:root\[data-/);
+});
+
+test('align is horizontal and justify vertical whatever the direction; columns can be a track list; a leaf aligns its box and text', () => {
+  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center', justify: 'space-between' }), /^display:flex;flex-direction:column;align-items:center;justify-content:space-between$/);
+  assert.match(layoutStyle({ kind: 'stack', direction: 'row', align: 'space-between', justify: 'center' }), /flex-direction:row;justify-content:space-between;align-items:center/);
+  assert.match(layoutStyle({ kind: 'grid', columns: '1fr auto auto', gap: 'space.md', justify: 'center' }), /display:grid;grid-template-columns:1fr auto auto;gap:var\(--space-md\);align-items:center;align-content:center/);
+  assert.match(layoutStyle({ kind: 'grid', columns: ['1fr', 'auto'] }), /grid-template-columns:1fr auto/);
+  assert.match(layoutStyle({ kind: 'grid', columns: 3 }), /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
+  assert.match(layoutStyle({ align: 'end' }, { container: false }), /display:flex;justify-content:flex-end;text-align:end/);
+  assert.equal(layoutStyle({ align: 'space-between' }, { container: false }).includes('text-align'), false);
+});
+
+test('a screen whose one element is a modal sits on a dimmed backdrop with the modal as the box; an image can contain its picture', async () => {
+  const { mkdtemp, cp, writeFile, readFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'doan-layout-'));
+  await cp(orders, dir, { recursive: true });
+  const f = join(dir, 'screens', 'order-list.yaml');
+  await writeFile(f, (await readFile(f, 'utf8')).replace(/elements:[\s\S]*?\nlayout:/, 'elements:\n  - id: dlg\n    kind: modal\n    title: Edit\n    size: lg\n    children:\n      - { id: pic, kind: image, src: assets/photos/x.svg, fit: contain }\n\nlayout:').replace(/states:[\s\S]*?\nflows:/, 'states:\n  Empty: []\n  Loading: []\n  Error: []\n\nflows:'));
+  const { html } = await page(dir, 'order-list');
+  assert.match(html, /<div class="backdrop by-element"><div class="modal-box size-lg">/);
+  assert.match(html, /class="img size-md fit-contain"/);
+  assert.match(html, /\.img\.fit-contain img \{ object-fit: contain; \}/);
 });

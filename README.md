@@ -265,6 +265,8 @@ Two things make the file worth reading in a pull request. **States are patches**
 
 `variants:` uses the same patch shape for what a screen *is* — an edit dialog for a counted item vs a cup, a form in Create vs Edit mode — as opposed to what it is *doing* (Empty, Loading). The distinction came out of transcribing six real screens; it is in `DESIGN.md` §12.
 
+Placement is two words — `align` is horizontal, `justify` vertical, whatever the direction — and `columns` may be the tracks themselves (`"1fr auto auto"`).
+
 `breakpoints:` uses it once more for width: `conventions.breakpoints` names the widths (mobile 390, tablet 768, desktop 1280 in the example), and a screen that must work at several lists per name what changes — a tile grid that goes from 25 columns to 10, a stat strip that wraps and then scrolls — applied last, on top of the state. Layout adapts on its own before that: `columns: auto` with a `min` size class, `wrap: true`, `scroll: horizontal`.
 
 ## The viewer

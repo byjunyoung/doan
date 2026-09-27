@@ -265,6 +265,8 @@ args = ["-y", "@junyoung735/doan", "mcp", "design"]
 
 `variants:`는 화면이 *무엇인지*에 같은 패치 꼴을 씁니다 — 개수 세는 품목과 컵의 수정 대화상자, 등록 모드와 수정 모드의 폼 — 화면이 *무엇을 하는지*(Empty, Loading)와는 다른 축입니다. 실제 화면 여섯 장을 옮겨 보다 나온 구분이고, `DESIGN.md` §12에 있습니다.
 
+배치는 두 단어로 말합니다 — `align`은 가로, `justify`는 세로, 방향과 무관하게. `columns`엔 열 폭을 그대로 적을 수 있습니다(`"1fr auto auto"`).
+
 `breakpoints:`는 같은 패치를 폭에 한 번 더 씁니다. `conventions.breakpoints`가 폭에 이름을 붙이고(예제는 mobile 390 · tablet 768 · desktop 1280), 여러 폭에서 써야 하는 화면은 이름마다 달라지는 것만 적습니다 — 25열이던 타일이 10열로, 스탯 스트립이 줄바꿈하다 가로 스크롤로 — 상태 위에 마지막으로 얹힙니다. 그 전에 레이아웃 스스로도 맞춥니다: `columns: auto`와 `min` 크기 클래스, `wrap: true`, `scroll: horizontal`.
 
 ## 뷰어
