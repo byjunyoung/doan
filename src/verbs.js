@@ -127,7 +127,8 @@ export async function renderProject(dir, opts = {}) {
   await mkdir(out, { recursive: true });
   const pages = [];
   const pending = await listProposals(dir, { status: 'pending' });
-  await writeFile(join(out, 'index.html'), await renderIndex(project, { branch, today: today(opts.today), proposals: pending, adapter }));
+  project.pending = pending;
+  await writeFile(join(out, 'index.html'), await renderIndex(project));
   pages.push(join(out, 'index.html'));
   await writeFile(join(out, 'components.html'), renderLibrary(project, { branch, adapter }));
   await writeFile(join(out, 'foundations.html'), renderFoundations(project, { branch, adapter }));
@@ -286,7 +287,7 @@ export async function listComponents(dir) {
 }
 
 // The flows of the whole product as one list — edges that resolve, dead ends, orphans — for an
-// agent that wants the structure without the picture. The flow map page draws the same graph.
+// agent that wants the structure without the picture. The canvas draws the same graph as arrows.
 export async function listFlows(dir) {
   const { flowGraph } = await import('./flowmap.js');
   const project = await loadProject(dir);

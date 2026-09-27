@@ -14,9 +14,11 @@ const server = await startServer(dir, { port: 0, branch: 'feature/x', today: '20
 const base = `http://127.0.0.1:${server.port}`;
 after(() => server.close());
 
-test('the server renders the index and a screen page on request, with the comment box wired in', async () => {
+test('the server opens on the first canvas and renders a screen page on request, with the comment box wired in', async () => {
   const index = await (await fetch(`${base}/`)).text();
-  assert.match(index, /inventory-list\.html/);
+  assert.match(index, /location\.replace\("canvas-[^"]+\.html"/);
+  const canvas = await (await fetch(`${base}/${index.match(/url=(canvas-[^"]+\.html)/)[1]}`)).text();
+  assert.match(canvas, /inventory-list/);
   const page = await (await fetch(`${base}/inventory-list.html`)).text();
   assert.match(page, /data-path="elements\.1\.children\.1"/);
   assert.match(page, /DOAN_API/);

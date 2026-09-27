@@ -79,13 +79,12 @@ test('renderCanvas draws one frame per screen state in its section box, at real 
   assert.match(html, /<aside id="inspector" class="drawer"><div class="hint">Click an element to inspect it\.<\/div>/);
 });
 
-test('the overview and the prototype arrive with no placed domain and fold the tree from their hash; the canvas is placed by the server', async () => {
-  const { renderIndex, renderProto } = await import('../src/render/index.js');
+test('the prototype arrives with no placed domain and folds the tree from its hash; the canvas is placed by the server', async () => {
+  const { renderProto } = await import('../src/render/index.js');
   const project = await loadProject(mobile);
   const [shop] = canvasPages(project);
-  const flows = await renderIndex(project, { branch: 'x' });
   const proto = await renderProto(project, { branch: 'x' });
-  for (const html of [flows, proto]) {
+  for (const html of [proto]) {
     assert.doesNotMatch(html, /class="tree-domain open current"/);
     assert.match(html, /window\.doanTreeFollow = treeFollow/);
   }
@@ -97,8 +96,8 @@ test('the overview and the prototype arrive with no placed domain and fold the t
 test('the shell folds for narrow windows: a menu button and a panel button on every page, and media queries that hide the sidebar and the panel', async () => {
   const project = await loadProject(mobile);
   const [shop] = canvasPages(project);
-  const { renderIndex, renderTokens } = await import('../src/render/index.js');
-  for (const html of [renderCanvas(project, shop, { branch: 'x' }), await renderIndex(project, { branch: 'x' }), renderTokens(project, { branch: 'x' })]) {
+  const { renderFoundations, renderTokens } = await import('../src/render/index.js');
+  for (const html of [renderCanvas(project, shop, { branch: 'x' }), renderFoundations(project, { branch: 'x' }), renderTokens(project, { branch: 'x' })]) {
     assert.match(html, /<header class="top"><div class="where"[^>]*><button class="btn side-toggle" id="side-toggle" type="button" aria-label="Menu">☰<\/button><h1>/);
     assert.match(html, /<div class="tools"><button class="btn panel-toggle" id="panel-toggle" type="button">Panel<\/button>/);
     assert.match(html, /@media \(max-width: 1180px\) \{\s*\.shell\.workspace \{ grid-template-columns: var\(--side-w\) minmax\(0, 1fr\) 0; \}/);

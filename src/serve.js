@@ -59,12 +59,11 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
         }
       }
       const project = await loadProject(dir);
+      // the sidebar lists what waits on a person on every page
+      project.pending = await listProposals(dir, { status: 'pending' });
       const adapter = await resolveAdapter(project, components);
-      if (path === '/' || path === '/index.html') {
-        const pending = await listProposals(dir, { status: 'pending' });
-        const open = await listComments(dir);
-        return html(res, await renderIndex(project, { ...opts, adapter, proposals: pending, comments: open, api: true }));
-      }
+      // no overview: the viewer opens on the first domain's canvas
+      if (path === '/' || path === '/index.html') return html(res, await renderIndex(project));
       if (path === '/tokens.html') return html(res, renderTokens(project, { branch: opts.branch, api: true }));
       if (path === '/assets.html') return html(res, renderAssets(project, { branch: opts.branch, api: true }));
       if (path === '/style.html') { res.writeHead(301, { location: 'foundations.html' }); return res.end(); }

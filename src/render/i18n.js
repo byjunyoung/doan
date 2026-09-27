@@ -3,15 +3,15 @@
 // buttons, hints — and the sample values that stand in for empty cells.
 
 const EN = {
-  screens: 'screens', overview: 'Overview', waiting: 'waiting', compare: 'compare states', paths: 'paths', variants: 'variants',
+  screens: 'screens', compare: 'compare states', paths: 'paths', variants: 'variants',
   flows: 'Flows', notes: 'Notes', comments: 'Comments', open: 'open', references: 'References', none: 'none',
-  waitingForPerson: 'Waiting for a person', proposal: 'proposal', screen: 'screen', tier: 'tier', summary: 'summary', lintAfter: 'lint after',
+  waitingForPerson: 'Waiting for a person', proposal: 'proposal', screen: 'screen', tier: 'tier',
   decided: 'Decided before this version', noDecisions: 'no decisions recorded — the agent proposed without the interview',
   whatChanges: 'What changes', where: 'where', asisTobe: 'AS-IS · TO-BE', asis: 'AS-IS', tobe: 'TO-BE', notInAsis: 'not in AS-IS', removedInTobe: 'removed in TO-BE',
   apply: 'Apply', reject: 'Reject', yourName: 'your name', toAccept: 'to accept', toDecline: 'to decline', noSummary: '(no summary)',
   item: 'item', decision: 'decision', why: 'why', blocking: 'blocking', warning: 'warning', clean: 'clean', states: 'states', openComments: 'open comments',
   comment: 'comment', commentsN: 'comments', tbd: '$tbd', components: 'components', on: 'on',
-  flowMap: 'Flow map', deadFlows: 'Flows to nowhere', orphanScreens: 'Screens no flow reaches', domains: 'Domains', sectionsN: 'sections', fitLabel: 'fit', viewCanvas: 'Canvas', arrowsLabel: 'arrows', searchTree: 'Search screens  \u2318F', shortcutsHint: 'Shift 1 fit \u00b7 Shift 2 zoom to selection \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 zoom \u00b7 Esc clear', proto: 'Prototype', hotspots: 'hotspots', back: 'back',
+  sectionsN: 'sections', fitLabel: 'fit', viewCanvas: 'Canvas', arrowsLabel: 'arrows', searchTree: 'Search screens  \u2318F', shortcutsHint: 'Shift 1 fit \u00b7 Shift 2 zoom to selection \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 zoom \u00b7 Esc clear', proto: 'Prototype', hotspots: 'hotspots', back: 'back',
   usedHere: 'Used in this project', unusedBundled: 'Bundled, not used here', propsAndStyle: 'Props and styles', catCompound: 'Made of parts', catAction: 'Actions', catInput: 'Inputs', catDisplay: 'Content', catContainer: 'Containers', catNav: 'Navigation', catFeedback: 'Feedback', catOther: 'Other', roleBase: 'Base', roleBrand: 'Brand', roleState: 'Status', roleSystem: 'System',
   goToComponent: 'Go to main component', selectIt: 'Select', sayWhatScreen: 'say what should change on this screen', commonComments: 'Comments on the whole', sayWhatAll: 'a note on the whole — nothing needs to be selected',
   newFile: 'new', deletedFile: 'deleted', agreedBefore: 'Agreed before this version',
@@ -36,15 +36,15 @@ const EN = {
 
 const KO = {
   ...EN,
-  screens: '화면', overview: '개요', waiting: '대기', compare: '상태 비교', paths: '경로', variants: '변형',
+  screens: '화면', compare: '상태 비교', paths: '경로', variants: '변형',
   flows: '흐름', notes: '메모', comments: '코멘트', open: '열림', references: '참조', none: '없음',
-  waitingForPerson: '사람의 결정을 기다리는 제안', proposal: '제안', screen: '화면', tier: '종류', summary: '요약', lintAfter: '적용 후 lint',
+  waitingForPerson: '사람의 결정을 기다리는 제안', proposal: '제안', screen: '화면', tier: '종류',
   decided: '이 판 전에 정한 것', noDecisions: '기록된 결정이 없음 — 인터뷰 없이 제안됨',
   whatChanges: '바뀌는 것', where: '어디', asisTobe: 'AS-IS · TO-BE', notInAsis: 'AS-IS 에 없음', removedInTobe: 'TO-BE 에서 빠짐',
   apply: '적용', reject: '반려', yourName: '이름', toAccept: '적용하려면', toDecline: '반려하려면', noSummary: '(요약 없음)',
   item: '항목', decision: '결정', why: '이유', blocking: '차단', warning: '경고', clean: '이상 없음', states: '상태', openComments: '열린 코멘트',
   comment: '코멘트', commentsN: '코멘트', components: '컴포넌트', on: '·',
-  flowMap: '흐름도', deadFlows: '갈 곳 없는 흐름', orphanScreens: '흐름이 닿지 않는 화면', domains: '도메인', sectionsN: '섹션', fitLabel: '맞춤', viewCanvas: '캔버스', arrowsLabel: '화살표', searchTree: '화면 검색  \u2318F', shortcutsHint: 'Shift 1 맞춤 \u00b7 Shift 2 선택에 맞춤 \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 줌 \u00b7 Esc 해제', proto: '프로토타입', hotspots: '핫스팟', back: '뒤로',
+  sectionsN: '섹션', fitLabel: '맞춤', viewCanvas: '캔버스', arrowsLabel: '화살표', searchTree: '화면 검색  \u2318F', shortcutsHint: 'Shift 1 맞춤 \u00b7 Shift 2 선택에 맞춤 \u00b7 Shift 0 100% \u00b7 \u2318\u00b1 줌 \u00b7 Esc 해제', proto: '프로토타입', hotspots: '핫스팟', back: '뒤로',
   usedHere: '이 프로젝트에서 쓰는 것', unusedBundled: '안 쓰는 기본 컴포넌트', propsAndStyle: '속성·스타일', catCompound: '조합 컴포넌트', catAction: '액션', catInput: '입력', catDisplay: '표시', catContainer: '컨테이너', catNav: '탐색', catFeedback: '피드백', catOther: '기타', roleBase: '기본', roleBrand: '브랜드', roleState: '상태', roleSystem: '시스템',
   goToComponent: '원본 컴포넌트로 이동', selectIt: '선택', sayWhatScreen: '이 화면에서 바꿀 점을 적어주세요', commonComments: '공통 의견', sayWhatAll: '전체에 대한 의견 — 아무것도 고르지 않아도 돼요',
   newFile: '새 파일', deletedFile: '삭제', agreedBefore: '이 판 전에 정한 것',

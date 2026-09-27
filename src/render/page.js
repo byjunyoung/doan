@@ -218,27 +218,6 @@ body.cv-no-arrows .cv-arrows { display: none; }
 .hotspot { cursor: pointer; }
 body.show-hotspots .hotspot { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 body.show-hotspots .hotspot-cond { outline-style: dashed; }
-.flow-go { position: absolute; top: 8px; right: 8px; color: var(--color-muted); font-size: 11px; padding: 0 4px; text-decoration: none; } .flow-go:hover { color: var(--color-primary); }
-/* the flow map */
-.flow-scroll { overflow: auto; max-height: 70vh; margin-bottom: var(--space-lg); border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); }
-.flowmap { position: relative; }
-.flow-head { display: block; color: inherit; text-decoration: none; } .flow-head:hover b { color: var(--color-primary); }
-.flow-sec { position: absolute; border: 1px dashed var(--color-border); border-radius: var(--radius-md); }
-.flow-sec.current { border-color: var(--color-primary); background: rgba(47,111,237,.04); }
-.flow-sec-title { position: absolute; top: 10px; left: 14px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-muted); white-space: nowrap; }
-.flow-node { position: absolute; display: block; box-sizing: border-box; padding: 8px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); color: inherit; text-decoration: none; overflow: hidden; }
-.flow-node:hover { border-color: var(--color-primary); }
-.flow-head { height: 26px; line-height: 18px; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.thumb { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 4px; }
-.thumb-scale { transform-origin: 0 0; width: max-content; pointer-events: none; }
-.thumb-stage { display: inline-block; }
-.thumb-stage .frame { margin: 0; box-shadow: none; }
-.flow-state { position: absolute; left: 8px; right: 8px; height: 18px; line-height: 18px; font-size: 11px; color: var(--color-muted); border-top: 1px solid var(--color-surface); }
-.flow-edges { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
-.flow-edge { fill: none; stroke: var(--color-muted); stroke-width: 1.5; pointer-events: stroke; }
-.flow-edge.conditional { stroke-dasharray: 5 4; }
-.flow-label { font-size: 10px; fill: var(--color-muted); paint-order: stroke; stroke: var(--color-surface); stroke-width: 3px; }
-#flow-arrow path { fill: var(--color-muted); }
 /* the component library page */
 .lib { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md) var(--space-lg); margin-bottom: var(--space-md); }
 .lib h3 { margin: 0 0 2px; font-size: 15px; } .lib-meta { margin-bottom: var(--space-sm); font-size: 12px; }
@@ -690,7 +669,7 @@ export const INSPECTOR_JS = `
     });
   }
 
-  // a page whose place is only in its hash (index.html#domain, proto.html#screen.State) folds
+  // a page whose place is only in its hash (proto.html#screen.State) folds
   // the tree the way a server-placed page arrives: that domain open and current, on the
   // prototype the screen and its state too. Pages the server placed (canvas, screen) keep theirs.
   // narrow windows (page.js media queries): the menu button shows the sidebar, the panel button
@@ -724,8 +703,7 @@ export const INSPECTOR_JS = `
       fr = screen.querySelector('.tree-frame[data-state="' + state.replace(/"/g, '') + '"]');
       if (fr) fr.classList.add('current');
     }
-    // the modes keep this place too: the canvas at the frame (or the domain), the flow map at
-    // the domain, the prototype at this screen and state (or the domain's first screen)
+    // the modes keep this place too: the canvas at the frame (or the domain), the prototype at this screen and state (or the domain's first screen)
     var views = document.querySelector('nav.views');
     if (!views) return;
     var cv = views.querySelector('a[href^="canvas-"]'), pr = views.querySelector('a[href^="proto.html"]');

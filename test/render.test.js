@@ -70,11 +70,13 @@ test('variants render one row per axis, each option in Default; a modal sits on 
   assert.match(list, /shown when: a row is selected/);
 });
 
-test('the index lists every screen with its blocking and $tbd counts', async () => {
+test('there is no overview: index.html sends the viewer to the first domain canvas, hash kept', async () => {
   const project = await loadProject(ops);
-  const html = await renderIndex(project, { branch: 'feature/x', today: '2026-09-23' });
-  for (const s of project.screens) assert.match(html, new RegExp(`href="${s.doc.screen}\\.html"`));
-  assert.match(html, /\$tbd/);
+  const html = await renderIndex(project);
+  const [first] = (await import('../src/canvas.js')).canvasPages(project);
+  assert.match(html, new RegExp(`url=canvas-${first.slug}\\.html`));
+  assert.match(html, /location\.replace\("canvas-[^"]+\.html" \+ location\.hash\)/);
+  assert.doesNotMatch(html, /class="side"/);
 });
 
 test('a pending proposal renders AS-IS and TO-BE per state, with its decisions and diff on top', async () => {
@@ -103,7 +105,7 @@ test('a pending proposal renders AS-IS and TO-BE per state, with its decisions a
   assert.match(asis, /<th>branch</);
 });
 
-test('the index lists pending proposals with a link to their page', async () => {
+test('every page lists the pending proposals in the sidebar, each a link to its page', async () => {
   const { mkdtempSync, cpSync, readFileSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join } = await import('node:path');
@@ -113,8 +115,12 @@ test('the index lists pending proposals with a link to their page', async () => 
   const before = readFileSync(join(dir, 'screens', 'order-list.yaml'), 'utf8');
   const p = await propose(dir, { screen: 'order-list', after: before.replace('kind: pagination', 'kind: pager') }, { branch: 'x', today: '2026-09-23' });
   const project = await loadProject(dir);
-  const html = await renderIndex(project, { branch: 'x', today: '2026-09-23', proposals: await listProposals(dir) });
-  assert.match(html, new RegExp(`href="proposal-${p.id}\\.html"`));
+  project.pending = await listProposals(dir);
+  const { renderFoundations } = await import('../src/render/index.js');
+  const html = renderFoundations(project, { branch: 'x' });
+  assert.match(html, new RegExp(`<a class="side-link sub" href="proposal-${p.id}\\.html"><span class="name">order-list</span>`));
+  project.pending = [];
+  assert.doesNotMatch(renderFoundations(project, { branch: 'x' }), /proposal-p_/);
 });
 
 test('with the antd adapter, mapped kinds render as real antd components and unmapped kinds fall back', async () => {
@@ -179,14 +185,6 @@ test('empty cells carry sample values made from the column name, and a leaf elem
   assert.doesNotMatch(tiles, /grid-template-columns:repeat\(25/);
 });
 
-test('the index is the same shell: sections in the sidebar, cards per section in the main area', async () => {
-  const project = await loadProject(ops);
-  const html = await renderIndex(project, { branch: 'x', today: '2026-09-24' });
-  assert.match(html, /class="side"/);
-  assert.match(html, /class="card-grid"/);
-  assert.match(html, /02\. Inventory/);
-});
-
 test('with the mui adapter, mapped kinds render as MUI components and unmapped kinds fall back', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);
@@ -209,8 +207,8 @@ test('the viewer speaks the language conventions.meta.language names, samples in
   assert.match(html, /상태 비교/);
   assert.match(html, /흐름/);
   assert.match(html, /<td>항목 1<\/td>/);
-  const index = await renderIndex(project, { branch: 'x', today: '2026-09-24' });
-  assert.match(index, /개요/);
+  const { renderFoundations } = await import('../src/render/index.js');
+  assert.match(renderFoundations(project, { branch: 'x' }), /디자인 시스템/);
 });
 
 test('an ios screen draws inside a phone frame at the platform width; a tablet screen in a tablet frame; web has no frame', async () => {

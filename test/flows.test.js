@@ -74,35 +74,6 @@ test('without elkjs the map says so and still lists edges, dead ends and orphans
   assert.ok(map.edges.length >= 2);
 });
 
-test('the overview draws the flow map: section boxes, one node per screen with its thumbnail and state rows, and the edges as right-angle paths with labels', async () => {
-  const project = await loadProject(mobile);
-  const html = await renderIndex(project, { branch: 'x' });
-  assert.equal((html.match(/class="flow-node"/g) ?? []).length, 3);
-  assert.match(html, /class="flow-sec"[^>]*>\s*<div class="flow-sec-title">/);
-  assert.match(html, /class="flow-node"[^>]*><a class="flow-head" href="feed\.html"/);
-  assert.match(html, /class="flow-state"[^>]*>Default</);
-  assert.match(html, /<path class="flow-edge[^"]*" d="M[\d.]+ [\d.]+ L/);
-  assert.match(html, /<text class="flow-label"/);
-  assert.match(html, /thumb-stage/);
-  assert.match(html, /<nav class="views"><a class="" href="canvas-shop\.html">Canvas<\/a><a class="" href="proto\.html#feed">Prototype<\/a><\/nav>/);
-  assert.match(html, /<div class="flow-sec" data-domain="shop"/);
-});
-
-test('a project with dead ends and orphans lists them under the map; a conditional flow is dashed', async () => {
-  const dir = await dirWith({
-    'conventions.yaml': 'meta: { language: en }\nflows: { gestures: [tap], navs: [push] }\n',
-    'sections.yaml': '- A\n- B\n',
-    'screens/a.yaml': 'schema: doan/0.2\nid: scr_A\nscreen: a\nsection: A\ntype: page\nelements: [{ id: go, kind: button, label: Go }]\nflows:\n  - { from: go, to: b.Error, when: server down, style: conditional }\n  - { from: go, to: nowhere }\n',
-    'screens/b.yaml': 'schema: doan/0.2\nid: scr_B\nscreen: b\nsection: B\ntype: page\nelements: [{ id: x, kind: caption, text: hi }]\nstates: { Error: [{ target: x, set: { text: oops } }] }\n',
-    'screens/lonely.yaml': 'schema: doan/0.2\nid: scr_L\nscreen: lonely\nsection: B\ntype: page\nelements: []\n',
-  });
-  const project = await loadProject(dir);
-  const html = await renderIndex(project);
-  assert.match(html, /flow-edge conditional/);
-  assert.match(html, /flow-dead[\s\S]*nowhere/);
-  assert.match(html, /flow-orphans[\s\S]*lonely/);
-});
-
 // --- the click-through prototype ---------------------------------------------------------
 
 import { renderProto } from '../src/render/index.js';
@@ -121,13 +92,11 @@ test('renderProto holds every screen in every state, hidden, with the flows as d
   assert.match(html, /<nav class="views">[^<]*<a class="" href="canvas-shop\.html">Canvas<\/a><a class="current" href="proto\.html#feed">Prototype<\/a><\/nav>/);
 });
 
-test('the flow map and the screen page link into the prototype at that screen', async () => {
+test('the screen page links into the prototype at that screen', async () => {
   const project = await loadProject(mobile);
   const { renderScreen } = await import('../src/render/index.js');
   const feed = project.screens.find((s) => s.doc.screen === 'feed');
   assert.match(renderScreen(project, feed), /<nav class="views">[^<]*<a class="" href="canvas-shop\.html#feed">Canvas<\/a><a class="" href="proto\.html#feed">Prototype<\/a>/);
-  const flows = await renderIndex(project);
-  assert.match(flows, /<a class="flow-go" href="proto\.html#feed"/);
 });
 
 test('the prototype selects nothing: its panel explains and lists the flows, the inspector click handler stands down, an element with several flows asks which', async () => {

@@ -11,7 +11,7 @@ import { CSS, INSPECTOR_JS, PROTO_JS, CANVAS_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
-import { layoutFlows, flowGraph } from '../flowmap.js';
+import { flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
 import { SLOT_CSS, TYPE_SLOTS, expandBinding } from '../slots.js';
@@ -204,7 +204,7 @@ function flowLink(project, screen, flow) {
 // ---------------------------------------------------------------------------------------------
 // The navigation, defined once and worn by every page (DESIGN.md §6.8):
 //
-//   left   content — the project; the overview, then the design system (tokens · components ·
+//   left   content — the project; proposals waiting, then the design system (tokens · components ·
 //          assets) since the screens are built from them; then a search box and the domain tree (domain › section
 //          › screen › state; the current domain open, the others folded). Never modes.
 //   top    [where you are] [the modes: canvas · prototype] [this page's tools · theme]
@@ -260,14 +260,20 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
     })
     .join('');
   const nComponents = Object.keys(project.components ?? {}).length;
-  // the overview and the design system — tokens, components, assets — sit above the tree:
+  // what waits on a person and the design system — tokens, components, assets — sit above the tree:
   // the screens are built from them
   const nTokens = tokenNames(mergeTokens(DEFAULT_TOKENS, project.tokens)).length;
   const nAssets = (project.assets ?? []).length;
   // the sections of the page you are on, one level under its entry
   const subs = (list) => (list ?? []).map((x) => `<a class="side-link subsub" href="${h(x.href)}"><span class="name">${h(x.label)}</span>${x.n !== undefined ? `<span class="hint">${x.n}</span>` : ''}</a>`).join('');
   const link = (page, href, label, hint) => `<a class="side-link${page === 'index' ? '' : ' sub'}${place.page === page ? ' current' : ''}" href="${href}"><span class="name">${label}</span>${hint}</a>`;
-  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  // what waits on a person: every pending proposal, on every page, while there is one
+  const pending = proposals.length ? proposals : project.pending ?? [];
+  const waiting = pending.length
+    ? `<div class="tree-sec">${D.waitingForPerson} <span class="pill cm">${pending.length}</span></div>` +
+      pending.map((p) => `<a class="side-link sub${place.proposal === p.id ? ' current' : ''}" href="proposal-${h(p.id)}.html"><span class="name">${h(p.screen ?? p.label ?? p.id)}</span><span class="hint">${h(p.id)}</span></a>`).join('')
+    : '';
+  const base = `<div class="base">${waiting}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
 }
 
@@ -498,65 +504,10 @@ ${refs ? `<div class="section-title">${D.references}</div><div class="hint" styl
   return page({ title: doc.screen, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
-export async function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false, adapter = null } = {}) {
-  const lang = languageOf(project);
-  const D = dictionary(lang);
-  setLanguage(lang);
-  const findings = lint(project, { branch, today });
-  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
-  const total = summarize(findings);
-  const bySection = {};
-  for (const s of project.screens) (bySection[s.doc.section] ??= []).push(s);
-  const order = [...project.sections.filter((x) => bySection[x]), ...Object.keys(bySection).filter((x) => !project.sections.includes(x))];
-  const cards = order
-    .map((section) => {
-      const items = bySection[section]
-        .map((s) => {
-          const mine = findings.filter((f) => f.file === s.file);
-          const sum = summarize(mine);
-          const tbd = mine.filter((f) => f.id === 'L08').length;
-          const open = comments.filter((c) => c.screen === s.doc.screen).length;
-          const pills = [
-            s.doc.status === 'ready' ? `<span class="pill ok">${D.statusReady}</span>` : s.doc.status === 'done' ? `<span class="pill ok">${D.statusDone}</span>` : '',
-            sum.blocking ? `<span class="pill block">${sum.blocking} ${D.blocking}</span>` : `<span class="pill ok">${D.clean}</span>`,
-            sum.warning ? `<span class="pill ok">${sum.warning} ${D.warning}</span>` : '',
-            tbd ? `<span class="pill tbd">${tbd} ${D.tbd}</span>` : '',
-            open ? `<span class="pill cm">${open} ${open > 1 ? D.commentsN : D.comment}</span>` : '',
-          ].join('');
-          const states = ['Default', ...Object.keys(s.doc.states ?? {})];
-          return `<a class="scard" href="${h(s.doc.screen)}.html"><div class="t">${h(s.doc.screen)}</div><div class="m">${h(s.doc.type)} · ${states.length} ${D.states}: ${h(states.join(', '))}</div><div class="pills">${pills}</div></a>`;
-        })
-        .join('');
-      return `<div class="section-title">${h(section)}</div><div class="card-grid">${items}</div>`;
-    })
-    .join('');
-  const waiting = proposals.length
-    ? `<div class="section-title">${D.waitingForPerson}</div><table class="index"><thead><tr><th>${D.proposal}</th><th>${D.screen}</th><th>${D.tier}</th><th>${D.summary}</th><th>${D.lintAfter}</th></tr></thead><tbody>${proposals
-        .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen ?? p.label)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} ${D.blocking}, ${p.lint?.after?.warning ?? 0} ${D.warning}</td></tr>`)
-        .join('')}</tbody></table>`
-    : '';
-  // the domains first — each a canvas, the page a Figma file had per domain
-  const domainCards = canvasPages(project)
-    .map((p) => {
-      const n = p.sections.reduce((k, s) => k + s.screens.length, 0);
-      return `<a class="scard" href="canvas-${h(p.slug)}.html"><div class="t">${h(p.domain)}</div><div class="m">${p.sections.map((s) => h(s.feature ?? s.name)).join(' · ')}</div><div class="pills"><span class="pill ok">${n} ${D.screens}</span></div></a>`;
-    })
-    .join('');
-  const flows = await flowMapSection(project, D, adapter);
-  const body = shellOf(project, D, {
-    title: D.overview,
-    meta: `${project.screens.length} ${D.screens}${branch ? ` ${D.on} ${h(branch)}` : ''} — ${total.blocking} ${D.blocking}, ${total.warning} ${D.warning}${comments.length ? `, ${comments.length} ${D.openComments}` : ''}`,
-    place: { page: 'index' },
-    findings,
-    comments,
-    proposals,
-    // then the map of every domain's flows, then the screens by section
-    content: `${waiting}
-${domainCards ? `<div class="section-title">${D.domains}</div><div class="card-grid">${domainCards}</div>` : ''}
-${flows.html}
-${cards}`,
-  }) + flows.script;
-  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+export async function renderIndex(project) {
+  const [first] = canvasPages(project);
+  const to = first ? `canvas-${first.slug}.html` : 'foundations.html';
+  return `<!doctype html><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=${h(to)}"><script>location.replace(${JSON.stringify(to)} + location.hash)</script><a href="${h(to)}">${h(to)}</a>`;
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
@@ -667,10 +618,10 @@ const basenameOf = (p) => String(p).split('/').pop();
 // the frames and elements it measures, by fig's arrow rules (edge midpoint or the trigger
 // element's height, right-angle elbow, a gap before the head, a corridor above for a flow that
 // goes back). A flow to another domain becomes a stub with a link.
-// The modes of looking at the same content — canvas · flow map · prototype — on the top bar,
-// the way Figma keeps Design / Prototype / Dev Mode there. They keep their context: the flow
-// map opens on this domain, the prototype on this screen. Content navigation (domains, the
-// overview, the component library) is the left sidebar's, never duplicated up here.
+// The modes of looking at the same content — canvas · prototype — on the top bar, the way
+// Figma keeps Design / Prototype / Dev Mode there. They keep their context: the canvas opens
+// on this domain, the prototype on this screen. Content navigation (domains, the component
+// library) is the left sidebar's, never duplicated up here.
 function viewTabs(project, current, D, { domain = null, screen = null } = {}) {
   const pages = canvasPages(project);
   const spec = pages.find((p) => p.slug === domain) ?? pages[0];
@@ -760,56 +711,6 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
   return page({ title: D.proto, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 
-// The flow map (src/flowmap.js): sections as boxes, screens as nodes — a scaled Default with a
-// row per state — and flows as right-angle paths that land on the row of the state they name.
-// Nodes are HTML so the thumbnails are the same drawing the screen page shows; edges are one
-// SVG on top. Async because ELK is.
-// The flow map: every domain on one page, laid out by ELK (src/flowmap.js). A section of the
-// overview since 2026-09-24 — the canvas holds a domain's flows at real size, the overview is
-// where all of them are seen at once — so this returns a section, not a page, plus the script
-// that lights the domain named in the hash (index.html#<domain>) and scrolls the map to it.
-async function flowMapSection(project, D, adapter) {
-  const maps = mapsFor(project);
-  const map = await layoutFlows(project);
-  const r1 = (n) => Math.round(n * 10) / 10;
-  const thumbOf = (n) => {
-    const screen = project.screens.find((s) => s.doc.screen === n.screen);
-    const html = renderView(project, screen, mergeState(screen.doc, 'Default'), maps, adapter).replace('<div class="stage', '<div class="thumb-stage');
-    return `<div class="thumb" style="width:${n.thumb.w}px;height:${n.thumb.h}px"><div class="thumb-scale" style="transform:scale(${n.thumb.scale})">${html}</div></div>`;
-  };
-  const lists = `
-${map.dead.length ? `<div class="section-title">${D.deadFlows}</div><ul class="list flow-dead">${map.dead.map((d) => `<li><code>${h(d.screen)}</code> ${h(d.from)} → <span class="bad">${h(d.to)}</span></li>`).join('')}</ul>` : ''}
-${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul class="list flow-orphans">${map.orphans.map((o) => `<li><a href="${h(o)}.html"><u>${h(o)}</u></a></li>`).join('')}</ul>` : ''}`;
-  let picture;
-  if (!map.ok) picture = `<div class="hint">${h(map.reason)}</div>`;
-  else {
-    const slugOfSection = Object.fromEntries(canvasPages(project).flatMap((p) => p.sections.map((s) => [s.name, p.slug])));
-    // #<domain> in the URL — the way the canvas opens this map — lights that domain's sections
-    const secs = map.sections
-      .map((s) => `<div class="flow-sec" data-domain="${h(slugOfSection[s.title] ?? '')}" style="left:${r1(s.x)}px;top:${r1(s.y)}px;width:${r1(s.w)}px;height:${r1(s.h)}px"><div class="flow-sec-title">${slugOfSection[s.title] ? `<a href="canvas-${h(slugOfSection[s.title])}.html">${h(s.title)}</a>` : h(s.title)}</div></div>`)
-      .join('');
-    const nodes = map.nodes
-      .map(
-        (n) =>
-          // a div, not a link: a thumbnail drawn by a library adapter may hold <a> of its own (antd's pagination does), and a link inside a link closes the outer one
-          `<div class="flow-node" style="left:${r1(n.x)}px;top:${r1(n.y)}px;width:${n.w}px;height:${n.h}px"><a class="flow-head" href="${h(n.screen)}.html"><b>${h(n.screen)}</b> <span class="hint">${h(n.type ?? '')} · ${h(n.platform)}</span></a><a class="flow-go" href="proto.html#${h(n.screen)}" title="${D.proto}">▶</a>${thumbOf(n)}${n.rows.map((row) => `<div class="flow-state" style="top:${row.y}px">${h(row.name)}</div>`).join('')}</div>`,
-      )
-      .join('');
-    const edges = map.edges
-      .map((e) => {
-        const d = 'M' + e.points.map((p) => `${r1(p.x)} ${r1(p.y)}`).join(' L');
-        const label = e.labelAt ? `<text class="flow-label" x="${r1(e.labelAt.x)}" y="${r1(e.labelAt.y + 11)}">${h(e.label)}</text>` : '';
-        return `<path class="flow-edge${e.style === 'conditional' ? ' conditional' : ''}" d="${d}" marker-end="url(#flow-arrow)"><title>${h(e.screen)} · ${h(e.label)} → ${h(e.to)}</title></path>${label}`;
-      })
-      .join('');
-    const svg = `<svg class="flow-edges" width="${Math.ceil(map.width)}" height="${Math.ceil(map.height)}"><defs><marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs>${edges}</svg>`;
-    picture = `<div class="flow-scroll"><div class="flowmap" style="width:${Math.ceil(map.width)}px;height:${Math.ceil(map.height)}px">${secs}${nodes}${svg}</div></div>`;
-  }
-  const title = `<div class="section-title" id="flows">${D.flowMap} <span class="hint">${map.edges.length} ${D.flows.toLowerCase()}${map.dead.length ? ` · <span class="bad">${map.dead.length} ${D.deadFlows.toLowerCase()}</span>` : ''}</span></div>`;
-  const script = `<script>(function () { var d = decodeURIComponent(location.hash.slice(1)); if (!d) return; var first = null; document.querySelectorAll('.flow-sec[data-domain]').forEach(function (s) { if (s.getAttribute('data-domain') === d) { s.classList.add('current'); first = first || s; } }); var box = document.querySelector('.flow-scroll'); if (first && box) { box.scrollLeft = Math.max(0, first.offsetLeft - (box.clientWidth - first.offsetWidth) / 2); box.scrollTop = Math.max(0, first.offsetTop - 24); } })();</script>`;
-  return { html: `${title}${picture}${lists}`, script };
-}
-
 // A proposal of files — tokens, contracts, assets: what was agreed, each file's text AS-IS beside
 // TO-BE with the changed lines marked, and the style board as it is beside the board as it
 // would be, each in its own frame so the two token sets never meet (DESIGN.md §7.4).
@@ -836,7 +737,7 @@ export function renderFilesProposal(project, proposal, { after = null, branch = 
   const body = shellOf(project, D, {
     title: `${h(proposal.label)} <span class="hint">${D.proposal}</span>`,
     meta: `${h(proposal.status)} · ${proposal.files.length} ${D.filesN}${branch ? ` · ${h(branch)}` : ''}`,
-    place: { page: 'foundations' },
+    place: { page: 'proposal', proposal: proposal.id },
     content,
   });
   return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, lang });
@@ -885,7 +786,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const body = shellOf(project, D, {
     title: `${h(proposal.screen)} <span class="hint">${D.proposal}</span>`,
     meta: `${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}`,
-    place: placeOf(project, proposal.screen),
+    place: { ...placeOf(project, proposal.screen), proposal: proposal.id },
     tools: `<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
     content: `<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
 <div class="section-title">${D.decided}</div>${decisions}

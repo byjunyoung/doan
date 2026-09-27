@@ -243,8 +243,8 @@ test('font.size is a scale since 0.12 — with weights, control heights and shad
 
 test("a project's tokens reach only what it draws: the frame gets the 20px body, the viewer's chrome keeps the bundled 14px", async () => {
   const dir = await dirWith({ 'tokens.json': { font: { size: { md: '20px' } }, color: { primary: '#e4572e' } }, 'conventions.yaml': 'meta: { language: en }\n', 'sections.yaml': '[]\n', 'screens/.keep': '' });
-  const { renderIndex } = await import('../src/render/index.js');
-  const html = await renderIndex(await loadProject(dir), { branch: 'x' });
+  const { renderTokens } = await import('../src/render/index.js');
+  const html = renderTokens(await loadProject(dir), { branch: 'x' });
   assert.match(html, /:root \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --font-size-md: 14px;/, 'chrome: the bundled size');
   assert.match(html, /:root \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --color-primary: #2f6fed;/, 'chrome: the bundled colour');
   assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --font-size-md: 20px;/, 'product: the project size');

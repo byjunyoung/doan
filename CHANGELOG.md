@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.0 — 2026-09-28
+
+- **No overview.** The viewer opens on the first domain's canvas (`index.html` forwards there, hash kept). The overview repeated the sidebar (domains, screens) and the canvas (the flow map); what only it had — the proposals waiting on a person — is in the sidebar on every page now, one link per proposal, while there is one. The flow map and its ELK layout leave the viewer; `layoutFlows` stays exported and `list_flows` still names flows to nowhere and screens no flow reaches.
+- **The README is short** — the loop, five minutes, a screen file, the viewer in four pictures of the kiosk, the verbs. The long reference is in DESIGN.md and `doan --help`.
+
 ## 0.15.3 — 2026-09-28
 
 - **`scroll: vertical`** — a list longer than the frame scrolls inside it (a kiosk menu board) and the bar below stays on screen. `grow` may now shrink; everything else keeps its height.
