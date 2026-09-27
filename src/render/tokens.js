@@ -29,6 +29,22 @@ export const DEFAULT_TOKENS = {
   // the height of a control — antd's small/middle/large plus one; a kiosk raises these
   control: { sm: '24px', md: '32px', lg: '40px', xl: '48px' },
   shadow: { sm: '0px 1px 2px 0px #00000014', md: '0px 4px 12px 0px #0000001f', lg: '0px 12px 32px 0px #00000029' },
+  // text styles (0.14): a size, weight and line height that go together; a contract binds one with `font:`
+  text: {
+    display: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '28px', 'font-weight': '700', 'line-height': '1.25' },
+    heading: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '20px', 'font-weight': '700', 'line-height': '1.3' },
+    title: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '16px', 'font-weight': '700', 'line-height': '1.4' },
+    body: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '14px', 'font-weight': '400', 'line-height': '1.5' },
+    label: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '14px', 'font-weight': '500', 'line-height': '1.4' },
+    caption: { 'font-family': 'system-ui, -apple-system, "Segoe UI", sans-serif', 'font-size': '12px', 'font-weight': '400', 'line-height': '1.4' },
+  },
+  // surfaces: what a box is made of — a contract binds one with `surface:`
+  surface: {
+    page: { bg: '#f7f7f8' },
+    card: { bg: '#ffffff', border: '#d9dbe0', radius: '8px' },
+    raised: { bg: '#ffffff', border: '#ffffff', radius: '8px', shadow: '0px 4px 12px 0px #0000001f' },
+    sunken: { bg: '#f7f7f8', border: '#f7f7f8', radius: '8px' },
+  },
 };
 
 // the body size, whichever shape `font.size` has

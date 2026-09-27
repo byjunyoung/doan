@@ -19,7 +19,11 @@ export const isTbd = (x) => x && typeof x === 'object' && !Array.isArray(x) && '
 // an icon prop is a glyph, or a file when it names one under assets/. The test is repeated from
 // src/assets.js on purpose: init copies this file into a project, where ../assets.js is not.
 const isAssetRef = (x) => typeof x === 'string' && /^assets\/\S+\.(svg|png|jpe?g|gif|webp|avif)$/i.test(x);
-export const ico = (x) => (isAssetRef(x) ? `<img class="ico-img" src="${h(x)}" alt="">` : v(x));
+// An svg icon is drawn as a mask filled with the text colour, so it follows the element it sits in —
+// white on a selected tile, red on a danger button; any other picture stays an <img>.
+export const isIcon = (x) => isAssetRef(x) && /\.svg$/i.test(x);
+export const iconMask = (x, cls = 'ico-mask') => `<span class="${cls}" role="img" style="--ico:url('${h(x)}')"></span>`;
+export const ico = (x) => (isIcon(x) ? iconMask(x) : isAssetRef(x) ? `<img class="ico-img" src="${h(x)}" alt="">` : v(x));
 export function v(value) {
   if (value === undefined || value === null) return '';
   if (isTbd(value)) {
@@ -176,6 +180,8 @@ export const kinds = {
   },
   image(el) {
     // a real picture when src names a file under assets/, the placeholder otherwise
+    // an svg under assets/icons/ is an icon: a mask in the text colour, on no box of its own
+    if (isIcon(el.src) && /(^|\/)icons\//.test(el.src)) return `<div class="img is-icon size-${h(el.size ?? 'md')}">${iconMask(el.src, 'ico-mask ico-fill')}</div>`;
     const pic = isAssetRef(el.src) ? `<img src="${h(el.src)}" alt="${h(el.alt ?? '')}">` : D.image;
     return `<div class="img size-${h(el.size ?? 'md')} fit-${h(el.fit ?? 'cover')}">${pic}</div>`;
   },

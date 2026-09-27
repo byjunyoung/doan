@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.14.0 — 2026-09-28
+
+The style stage, and the rest of the design through the edit loop (DESIGN.md §6.11, §7.4). A review found that only screens had an interview, a file, a page, lint and propose→apply; style, components and assets were written by hand.
+
+- **Text styles and surfaces.** `text.*` are DTCG typography tokens — one token, five CSS values; `surface.*` are groups of bg, border, radius, shadow, text, padding. A contract binds a whole one: `font: text.heading`, `surface: surface.tile`, or on a part, `label.font: text.caption`. New slots `font-family`, `line-height`, `letter-spacing`. The bundled set and `init` ship six text styles and four surfaces.
+- **Fonts** — `assets/fonts/<Family>-<Weight>.woff2` becomes `@font-face`; `conventions.render.fonts` URLs become stylesheet links.
+- **The style board, `style.html`** — every text style in its own type, colours, surfaces, scales, and each component's sample in each variant, drawn with the project's tokens. First under "Design system".
+- **`propose_files`** (MCP) and `propose <dir> --files path=local,…` (CLI) — tokens, contracts, svg assets, conventions in one proposal; linted on a temporary copy; the page shows the board AS-IS beside TO-BE and each file's text; apply and undo cover every file.
+- **`style` and `component` prompts** — interviews before tokens and before a contract; `draw` sends you to `style` first when the look is still the bundled one.
+- **Icons follow their element** — an svg icon is a mask in the text colour.
+- **Comments on a frame** — the canvas frame panel lists a screen's own comments and takes one, with the state; the frame title carries a dot.
+
 ## 0.13.1 — 2026-09-27
 
 Compound kinds that look like something (DESIGN.md §4.5).

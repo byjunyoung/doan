@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/index.js';
-import { renderScreen, renderIndex, layoutStyle } from '../src/render/index.js';
+import { renderScreen, renderIndex, layoutStyle, renderStyle } from '../src/render/index.js';
 
 const orders = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const ops = fileURLToPath(new URL('../examples/store-ops', import.meta.url));
@@ -268,4 +268,25 @@ test('a screen whose one element is a modal sits on a dimmed backdrop with the m
   assert.match(html, /<div class="backdrop by-element"><div class="modal-box size-lg">/);
   assert.match(html, /class="img size-md fit-contain"/);
   assert.match(html, /\.img\.fit-contain img \{ object-fit: contain; \}/);
+});
+
+test('the style board: every text style set in its own type, colours, surfaces, scales, and each component sample in each variant — inside .board, a product root', async () => {
+  const project = await loadProject(orders);
+  const html = renderStyle(project, { branch: 'x' });
+  assert.match(html, /<a class="side-link sub current" href="style.html">/);
+  assert.match(html, /<div class="b-sample" style="font-family:var\(--text-heading-font-family\);font-size:var\(--text-heading-font-size\);font-weight:var\(--text-heading-font-weight\);line-height:var\(--text-heading-line-height\)">/);
+  assert.match(html, /class="b-surface" style="background:var\(--surface-raised-bg\);border-color:var\(--surface-raised-border\);border-radius:var\(--surface-raised-radius\);box-shadow:var\(--surface-raised-shadow\)"/);
+  assert.match(html, /<code>primary<\/code>/);
+  assert.match(html, /<a href="components.html#k-button"><code>button<\/code><\/a>/);
+  assert.match(html, /variant = danger/);
+  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{/);
+});
+
+test('an svg icon is a mask in the text colour — on a button, and as an image under assets/icons/ — so it follows its element; a photo stays an <img>', async () => {
+  const { ico } = await import('../src/render/kinds.js');
+  assert.equal(ico('assets/icons/card.svg'), '<span class="ico-mask" role="img" style="--ico:url(\'assets/icons/card.svg\')"></span>');
+  assert.equal(ico('assets/photos/x.png'), '<img class="ico-img" src="assets/photos/x.png" alt="">');
+  const { kinds } = await import('../src/render/kinds.js');
+  assert.match(kinds.image({ id: 'i', kind: 'image', src: 'assets/icons/card.svg', size: 'sm' }), /<div class="img is-icon size-sm"><span class="ico-mask ico-fill"/);
+  assert.match(kinds.image({ id: 'i', kind: 'image', src: 'assets/photos/a.svg' }), /<img src="assets\/photos\/a.svg"/);
 });

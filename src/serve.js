@@ -2,12 +2,14 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec } from './render/index.js';
+import { renderFilesProposal } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderStyle } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { assetFile, assetType } from './assets.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { lintProject, currentBranch, specScreen } from './verbs.js';
-import { listProposals, applyProposal, rejectProposal } from './proposals.js';
+import { listProposals, applyProposal, rejectProposal, projectWith } from './proposals.js';
+import { rm } from 'node:fs/promises';
 import { addComment, listComments, resolveComment } from './comments.js';
 
 // The local viewer: the same pages `render` writes, served live from the files, plus the
@@ -65,6 +67,7 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       }
       if (path === '/tokens.html') return html(res, renderTokens(project, { branch: opts.branch, api: true }));
       if (path === '/assets.html') return html(res, renderAssets(project, { branch: opts.branch, api: true }));
+      if (path === '/style.html') return html(res, renderStyle(project, { branch: opts.branch, adapter, api: true }));
       if (path === '/components.html') return html(res, renderLibrary(project, { branch: opts.branch, adapter, api: true }));
       if (path === '/proto.html') return html(res, renderProto(project, { branch: opts.branch, adapter, api: true }));
       let m = path.match(/^\/canvas-(.+)\.html$/);
@@ -76,6 +79,14 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       m = path.match(/^\/proposal-(p_[a-z0-9]+)\.html$/);
       if (m) {
         const full = JSON.parse(await readFile(join(dir, '.proposals', `${m[1]}.json`), 'utf8'));
+        if (full.kind === 'files') {
+          const { project: after, tmp } = await projectWith(dir, full.status === 'pending' ? full.files : []);
+          try {
+            return html(res, renderFilesProposal(project, full, { after: full.status === 'pending' ? after : null, branch: opts.branch, adapter, api: true }));
+          } finally {
+            await rm(tmp, { recursive: true, force: true });
+          }
+        }
         return html(res, renderProposal(project, full, { branch: opts.branch, adapter, api: true }));
       }
       m = path.match(/^\/spec-(.+)\.html$/);

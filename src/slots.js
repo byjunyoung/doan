@@ -1,13 +1,13 @@
 // The slots a contract may bind a token to, and the CSS property each one is in the picture.
-// Seven since 0.4 — colour, radius, spacing — and four since 0.12: type size and weight, the
-// minimum height of a control, shadow. The last four are what a kiosk needs to look like a
-// kiosk rather than an admin page: big type and tall touch targets (DESIGN.md §4.5).
+// Seven since 0.4 — colour, radius, spacing — four since 0.12 (type size and weight, control
+// height, shadow), and since 0.14 the rest of a text style (family, line height, letter
+// spacing) plus two composite slots that bind a whole style at once:
+//
+//   font:    text.heading   → font-family · font-size · font-weight · line-height · letter-spacing
+//   surface: surface.tile   → bg · border · radius · shadow · text · padding
 //
 // A binding becomes `--k-<kind>-<slot>` on the element's wrapper (src/render/index.js
-// componentCss). The bundled set reads those variables itself, with the value it drew before
-// contracts existed as the fallback; a root an adapter drew (antd, MUI) gets them applied from
-// outside, property by property, through this table. L28 warns on a slot not listed here —
-// a typo would otherwise be ignored without a word.
+// componentCss). L28 warns on a slot not listed here.
 export const SLOT_CSS = {
   bg: 'background-color',
   text: 'color',
@@ -16,12 +16,29 @@ export const SLOT_CSS = {
   padding: 'padding',
   gap: 'gap',
   accent: 'accent-color',
+  'font-family': 'font-family',
   'font-size': 'font-size',
   'font-weight': 'font-weight',
+  'line-height': 'line-height',
+  'letter-spacing': 'letter-spacing',
   'min-height': 'min-height',
   shadow: 'box-shadow',
 };
 
+export const TYPE_SLOTS = ['font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing'];
+export const COMPOSITE = {
+  font: TYPE_SLOTS,
+  surface: ['bg', 'border', 'radius', 'shadow', 'text', 'padding'],
+};
+
 // `muted` is a second text colour eleven bundled kinds read for their small print (--k-<kind>-muted);
 // it is no one css property, so an adapter root does not take it from outside.
-export const SLOTS = [...Object.keys(SLOT_CSS), 'muted'];
+export const SLOTS = [...Object.keys(SLOT_CSS), 'muted', ...Object.keys(COMPOSITE)];
+
+// One binding as the plain slots it stands for: `font: text.heading` is five, each bound to the
+// part the style defines (`text.heading.font-size`); a part the style leaves out is left out.
+export function expandBinding(slot, token, has) {
+  const parts = COMPOSITE[slot];
+  if (!parts) return [[slot, token]];
+  return parts.filter((p) => has(`${token}.${p}`)).map((p) => [p, `${token}.${p}`]);
+}

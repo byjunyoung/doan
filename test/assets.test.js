@@ -119,10 +119,10 @@ test('the bundled set draws an asset as the picture itself: an image from its sr
   const screen = project.screens.find((s) => s.doc.screen === 'assets-demo');
   const html = renderScreen(project, screen, { branch: 'x' });
   assert.match(html, /<div class="img size-md fit-cover"><img src="assets\/photos\/hero\.jpg" alt="The shop"><\/div>/);
-  assert.match(html, /<span class="ico"><img class="ico-img" src="assets\/icons\/cart\.svg" alt=""><\/span>/);
+  assert.match(html, /<span class="ico"><span class="ico-mask" role="img" style="--ico:url\('assets\/icons\/cart\.svg'\)"><\/span><\/span>/);
   assert.match(html, /<span class="ico">★<\/span>/);
   // the Loading state names a file that is not there: the tag still points at it, lint says so
-  assert.match(html, /src="assets\/icons\/spinner\.svg"/);
+  assert.match(html, /--ico:url\('assets\/icons\/spinner\.svg'\)/);
 });
 
 test('the assets page is a card per file under its folder, with who uses it, then the references to no file and the files nothing names', async () => {
@@ -136,7 +136,7 @@ test('the assets page is a card per file under its folder, with who uses it, the
   assert.match(html, /References to no file<\/div><ul class="list"><li><code class="bad">assets\/icons\/spinner\.svg<\/code> — <a href="canvas-inventory\.html#assets-demo"><u>assets-demo<\/u><\/a> <span class="hint">states\.Loading\.0\.set\.icon<\/span><\/li>/);
   assert.match(html, /Files nothing names<\/div><ul class="list"><li><a href="#a:assets\/icons\/unused\.svg">/);
   // the same shell as every page, the design system above the tree
-  assert.match(html, /<div class="base"><a class="side-link" href="index\.html">.*<div class="tree-sec">Design system<\/div><a class="side-link sub" href="tokens\.html">.*<a class="side-link sub" href="components\.html">.*<a class="side-link sub current" href="assets\.html"><span class="name">Assets<\/span><span class="hint">3<\/span><\/a><\/div>/);
+  assert.match(html, /<div class="base"><a class="side-link" href="index\.html">.*<div class="tree-sec">Design system<\/div><a class="side-link sub" href="style\.html">.*<a class="side-link sub" href="tokens\.html">.*<a class="side-link sub" href="components\.html">.*<a class="side-link sub current" href="assets\.html"><span class="name">Assets<\/span><span class="hint">3<\/span><\/a><\/div>/);
   assert.match(html, /<nav class="views"><a class="" href="canvas-home\.html">Canvas<\/a><a class="" href="proto\.html#[a-z-]+">Prototype<\/a><\/nav>/);
   // and with no assets/ at all, a hint that says where they go
   const bare = renderAssets(await loadProject(ops), { branch: 'x' });

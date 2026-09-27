@@ -71,3 +71,16 @@ test('a comment can be added by element id, and one from before ids gets its id 
   const legacy = (await listComments(dir, { screen: 'order-list' })).find((x) => x.id === 'c_legacy1');
   assert.equal(legacy.element, 'table');
 });
+
+test('a comment on a screen as a whole — a canvas frame — has no element and keeps its state; the canvas panel lists it with a box to add one', async () => {
+  const dir = sandbox();
+  const c = await addComment(dir, { screen: 'order-list', path: '', state: 'Empty', text: 'too much air', author: 'me' });
+  assert.equal(c.element, null);
+  assert.equal(c.path, '');
+  assert.equal(c.state, 'Empty');
+  const [back] = await listComments(dir, { screen: 'order-list' });
+  assert.equal(back.state, 'Empty');
+  const { PAGE_SCRIPTS } = await import('../src/render/page.js').then((m) => ({ PAGE_SCRIPTS: Object.values(m).filter((x) => typeof x === 'string').join('\n') }));
+  assert.match(PAGE_SCRIPTS, /function frameComments\(screen, state\)/);
+  assert.match(PAGE_SCRIPTS, /path: '', state: state, text: text/);
+});

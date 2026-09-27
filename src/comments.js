@@ -54,7 +54,9 @@ function refresh(screen, c) {
   return out;
 }
 
-export async function addComment(dir, { screen, path, element = null, text, author, line = null }) {
+// A comment with no element is on the screen as a whole — a frame on the canvas — and may name
+// the state it was left on.
+export async function addComment(dir, { screen, path, element = null, text, author, line = null, state = null }) {
   if (!screen || !text) throw new Error('a comment needs a screen and a text');
   const project = await loadProject(dir);
   const found = project.screens.find((s) => s.doc.screen === screen);
@@ -65,7 +67,7 @@ export async function addComment(dir, { screen, path, element = null, text, auth
   if (id && !findElement(found.doc.elements ?? [], id)) throw new Error(`no element "${id}" on screen "${screen}"`);
   if (!id) id = elementAtPath(found, path ?? '');
   const at = id ? whereIs(found, id) : { path: path ?? '', line };
-  const comment = { id: newId(), screen, element: id, path: at.path, line: at.line ?? line, text, author: author ?? 'anonymous', created: new Date().toISOString(), resolved: false };
+  const comment = { id: newId(), screen, element: id, path: at.path, line: at.line ?? line, ...(state && !id ? { state: String(state) } : {}), text, author: author ?? 'anonymous', created: new Date().toISOString(), resolved: false };
   const list = await read(dir, screen);
   list.push(comment);
   await write(dir, screen, list);

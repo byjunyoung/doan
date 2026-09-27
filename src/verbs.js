@@ -12,7 +12,8 @@ import { lint, summarize } from './lint.js';
 import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec } from './render/index.js';
+import { renderFilesProposal } from './render/index.js';
+import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderStyle } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { specOf, specMarkdown } from './spec.js';
 import { tokensCss, tokensTailwind } from './export.js';
@@ -129,6 +130,8 @@ export async function renderProject(dir, opts = {}) {
   await writeFile(join(out, 'index.html'), await renderIndex(project, { branch, today: today(opts.today), proposals: pending, adapter }));
   pages.push(join(out, 'index.html'));
   await writeFile(join(out, 'components.html'), renderLibrary(project, { branch, adapter }));
+  await writeFile(join(out, 'style.html'), renderStyle(project, { branch, adapter }));
+  pages.push(join(out, 'style.html'));
   pages.push(join(out, 'components.html'));
   await writeFile(join(out, 'tokens.html'), renderTokens(project, { branch }));
   pages.push(join(out, 'tokens.html'));
@@ -157,7 +160,13 @@ export async function renderProject(dir, opts = {}) {
   for (const meta of wanted) {
     const full = JSON.parse(await readFile(join(dir, '.proposals', `${meta.id}.json`), 'utf8'));
     const file = join(out, `proposal-${meta.id}.html`);
-    await writeFile(file, renderProposal(project, full, { branch, adapter }));
+    if (full.kind === 'files') {
+      const { projectWith } = await import('./proposals.js');
+      const { rm } = await import('node:fs/promises');
+      const { project: after, tmp } = await projectWith(dir, full.status === 'pending' ? full.files : []);
+      await writeFile(file, renderFilesProposal(project, full, { after: full.status === 'pending' ? after : null, branch, adapter }));
+      await rm(tmp, { recursive: true, force: true });
+    } else await writeFile(file, renderProposal(project, full, { branch, adapter }));
     pages.push(file);
   }
   return { out, pages };

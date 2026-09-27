@@ -3,7 +3,8 @@ import { resolveFlowTarget } from './flows.js';
 import { walkElements, findElement, elementIds } from './elements.js';
 import { basename, join } from 'node:path';
 import { elementProps, RESERVED_KEYS } from './components.js';
-import { hasToken } from './tokens.js';
+import { hasToken, getGroup } from './tokens.js';
+import { COMPOSITE } from './slots.js';
 import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 import { SLOTS } from './slots.js';
@@ -278,7 +279,13 @@ const rules = {
     }
     // a contract's bindings name tokens too
     for (const c of Object.values(registryOf(ctx)))
-      if (c.file) for (const { path, token } of bindingsOf(c)) if (!hasToken(tokens, token)) out.push(fileFinding('L18', 'warning', c.file, path, `${path.join('.')} "${token}" names no token`));
+      if (c.file)
+        for (const { path, token } of bindingsOf(c)) {
+          // `font:` and `surface:` name a style — a group of tokens — not one token
+          const slot = String(path[path.length - 1]).split('.').pop();
+          const found = COMPOSITE[slot] ? getGroup(tokens, token) !== undefined : hasToken(tokens, token);
+          if (!found) out.push(fileFinding('L18', 'warning', c.file, path, `${path.join('.')} "${token}" names no ${COMPOSITE[slot] ? 'style' : 'token'}`));
+        }
     return out;
   },
   L19(ctx) {

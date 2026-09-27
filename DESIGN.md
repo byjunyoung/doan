@@ -430,6 +430,23 @@ doan's answer is a spec, not a picture: `spec-<screen>.html` for a person, `doan
 
 Not built, on purpose: code generation. An agent that has the spec writes better code than a generator that has the picture, and Figma's own generated code is labelled "not production-ready". Measurements (E2) come next; the HTML being real makes them less urgent here than in Figma.
 
+### 6.11 The style stage: what the product looks like, decided before screens
+
+Decided 2026-09-27, when the owner looked at a burger-kiosk reference beside the sample and said the tool was good at structure but had no step where a style is defined. A review of the loop found the same shape everywhere: every stage needs an interview, a file, a page, lint and propose→apply, and only screens had all five. Style, components and assets were files the agent wrote by hand — which is why round after round looked like the agent's taste.
+
+| Stage | Interview | File | Page | Lint | Propose → apply |
+|---|---|---|---|---|---|
+| Style | `style` prompt | `tokens/` — colour roles, `text.*` text styles (DTCG typography), `surface.*`, scales, fonts | `style.html`, the board | L18–L20, L28 | `propose_files` |
+| Components | `component` prompt | `components/<kind>.yaml` | components, the board | L21, L22, L28 | `propose_files` |
+| Assets | — | `assets/**` (svg through proposals) | assets | L25 | `propose_files` |
+| Screens | `draw` prompt | `screens/*.yaml` | screen, canvas | all | `propose` |
+
+- **Text styles and surfaces.** A text style is one DTCG typography token and five CSS values (`text.heading.font-size` …); a surface is a group — bg, border, radius, shadow, text, padding. A contract binds a whole one with `font: text.heading` or `surface: surface.tile`, on the kind or on a part (`label.font:`). The bundled set ships display · heading · title · body · label · caption and page · card · raised · sunken.
+- **Fonts.** `assets/fonts/<Family>-<Weight>.woff2` becomes `@font-face`; a stylesheet URL in `conventions.render.fonts` becomes a link.
+- **The board.** One page: each text style set in its own type, colours, surfaces, scales, every component's sample in every variant — drawn with the project's tokens, inside the viewer's own chrome.
+- **Icons follow their element.** An svg icon is a mask filled with the text colour, so a selected tile's icon turns white with its label.
+- **Comments on a frame.** A comment may be on a screen as a whole, with the state it was left on; the canvas frame panel lists them and takes one.
+
 ## 7. The edit loop — "by conversation only"
 
 A change enters as a comment or a chat message, anchored to what the person is looking at.
@@ -449,6 +466,11 @@ Since 2026-09-25 `propose` also takes a screen the project does not have: the pr
 Shipped later the same day — the sketch step. `fig:draw` agrees the direction in the conversation before a single node is written: the list of what must be decided, one question at a time with a recommendation, a table once settled, a text wireframe per state. The first cut dropped the wireframe on the theory that the real thing could replace it, since nothing is written until `apply`. The owner reversed that on 2026-09-24 after the first session that drew screens without one: the agent went straight from the decisions table to a rendered proposal, and the person had to argue with a diff and a picture instead of a sketch. So the wireframe stays, in the conversation, before any YAML — a box drawing of Default at the platform's proportions and one line per state — and the person says yes to it first. A wireframe is cheaper to argue with than a diff. After the yes, a proposal carries `decisions: [{ item, decision, why }]`, and `render` draws every pending proposal as a page — decisions, then the diff, then every state AS-IS beside TO-BE, with the inspector. The interview itself is agent behaviour, so the MCP server publishes it as the `draw` prompt: any agent that connects gets the same seven steps (anchor → list decisions → ask one at a time → table → wireframe and a yes → propose with decisions → render and wait). A proposal that arrives with no decisions renders with a line saying so — the page shows when the interview was skipped.
 
 The agent behind the loop is not part of this project. The tool exposes MCP verbs (§9) and a comment feed; Claude Code, Codex or a hosted agent drives them. This keeps the tool small and lets a team bring the agent it already pays for.
+
+
+### 7.4 Files: the style, the components, the assets
+
+The loop reaches the rest of the design the same way (0.14). `propose_files` (CLI `propose <dir> --files path=local,…`) carries whole new texts for `tokens.json`, `tokens/*.json`, `components/*.yaml`, `assets/**/*.svg`, `conventions.yaml` and `sections.yaml` — several in one proposal. The project as it would be is loaded from a temporary copy and linted; nothing is written until a person applies it; apply refuses if any file changed since; undo puts every file back and removes the ones it created. Always pending: a style change is never "text only". The proposal page shows the style board as it is beside as it would be, each in its own frame so the two token sets never meet, then each file AS-IS beside TO-BE with changed lines marked.
 
 ## 8. Lifecycle
 
@@ -540,7 +562,8 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Proposal records | decided | a proposal names its file relative to the project (0.12.1). With an absolute path, applying a proposal inside a copy of the project wrote into the original — found while previewing the kiosk screens in a scratch copy |
 | Slots | design | 0.12 added type size and weight, control height and shadow, because a kiosk is big type and tall targets. Still no line-height, letter-spacing, width, opacity or transition: each is a line in `src/slots.js` plus a read in the bundled css, added when a project needs it, not before |
 | Handoff: measurements and generation | design | the spec (§6.10, 0.11.0) carries no measured sizes — E2 inspect measurements come next; code generation stays out on purpose, an agent with the spec writes it. An adapter still maps enum options to its own props in code, not from `maps_to.code` |
-| Inline SVG icons | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
+| Inline SVG icons | decided | 0.14: an svg icon is drawn as a css mask in the text colour (no inlining, no script to strip); a multi-colour svg under icons/ loses its colours — put it under photos/ |
+| Inline SVG icons (old) | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
 | Name | user | `doan` undersells a product; GitHub redirects after a rename |
 | Core language | decided | Node (2026-09-23): MCP ecosystem, the viewer is web, `fig`'s scripts are JS. Deps: `yaml` (keeps line positions for findings) and `ajv` |
 | Default component set | design | which `kind`s ship a bundled component and how far their styling goes |

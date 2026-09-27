@@ -6,7 +6,7 @@ import { lintProject, renderProject, initProject, componentBases, importFigma, m
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
-import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
+import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const USAGE = `doan — screens as files; the agent draws, you say what to change.
@@ -57,6 +57,8 @@ usage: doan <verb> …
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--comments <id,id>] [--json]
+  propose <project-dir> --files <path>=<local>[,<path>=<local>…] [--summary "…"] [--decisions <file.json>]
+        the style, contracts or assets: tokens/*.json, components/*.yaml, assets/**/*.svg, conventions.yaml. <path>= alone deletes.
         queue a new version of a screen (or a new screen): diff, lint before/after, tier. text-only + clean lint applies at once.
         --comments names the open comments it answers; apply resolves them, undo reopens them.
   proposals <project-dir> [--status pending|applied|all]
@@ -131,9 +133,17 @@ function mcpCommand(opts) {
 
 async function proposeCommand(opts) {
   const [dir, screen] = opts._;
-  if (!dir || !screen || !opts.with) throw Object.assign(new Error(USAGE), { exit: 2 });
   const decisions = opts.decisions ? JSON.parse(readFileSync(opts.decisions, 'utf8')) : [];
   const comments = opts.comments ? String(opts.comments).split(',').map((x) => x.trim()).filter(Boolean) : [];
+  // --files project/path=local/file,… proposes the style, contracts or assets instead of a screen
+  if (dir && opts.files) {
+    const files = String(opts.files).split(',').map((pair) => { const [path, local] = pair.split('='); return { path: path.trim(), content: local === undefined || local.trim() === '' ? null : readFileSync(local.trim(), 'utf8') }; });
+    const p = await proposeFiles(dir, { files, summary: opts.summary ?? '', decisions, comments }, { branch: opts.branch, today: opts.today });
+    if (opts.json) process.stdout.write(JSON.stringify(p, null, 2) + '\n');
+    else process.stdout.write(`${p.id}  ${p.status}  ${p.label}  lint ${p.lint.before.blocking}→${p.lint.after.blocking} blocking\n`);
+    return 0;
+  }
+  if (!dir || !screen || !opts.with) throw Object.assign(new Error(USAGE), { exit: 2 });
   const p = await propose(dir, { screen, after: readFileSync(opts.with, 'utf8'), summary: opts.summary ?? '', decisions, comments }, { branch: opts.branch, today: opts.today });
   if (opts.json) process.stdout.write(JSON.stringify(p, null, 2) + '\n');
   else process.stdout.write(`${p.id}  ${p.status}  tier=${p.tier}  lint ${p.lint.before.blocking}→${p.lint.after.blocking} blocking\n${p.markdown}`);
@@ -143,7 +153,7 @@ async function proposalsCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
   const list = await listProposals(dir, { status: opts.status ?? 'pending' });
-  for (const p of list) process.stdout.write(`${p.id}  ${p.status}  ${p.screen}  tier=${p.tier}  ${p.summary}\n`);
+  for (const p of list) process.stdout.write(`${p.id}  ${p.status}  ${p.screen ?? p.label}  tier=${p.tier}  ${p.summary}\n`);
   if (!list.length) process.stdout.write('no proposals\n');
   return 0;
 }

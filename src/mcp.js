@@ -4,7 +4,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 import { resolve } from 'node:path';
 import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, specScreen, listFlows } from './verbs.js';
-import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
+import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
@@ -187,6 +187,22 @@ server.registerTool(
 );
 
 server.registerTool(
+  'propose_files',
+  {
+    description:
+      'Propose new texts for the rest of the design — tokens/*.json (the style: colours, text styles, surfaces, scales), components/<kind>.yaml (a contract), assets/**/*.svg, conventions.yaml, sections.yaml — several files in one proposal. ' +
+      'Always pending: the person sees each file AS-IS beside TO-BE and the style board as it is beside as it would be, then applies or rejects. content: null deletes a file. See the "style" and "component" prompts for how to get there.',
+    inputSchema: {
+      files: z.array(z.object({ path: z.string().describe('relative to the project: tokens/light.tokens.json, components/tile.yaml, assets/icons/x.svg'), content: z.string().nullable().describe('the complete new text; null deletes') })).min(1),
+      summary: z.string().default(''),
+      decisions: z.array(z.object({ item: z.string(), decision: z.string(), why: z.string().optional() })).default([]),
+      comments: z.array(z.string()).default([]),
+    },
+  },
+  guard((input) => proposeFiles(dir, input, common)),
+);
+
+server.registerTool(
   'list_proposals',
   { description: 'Proposals waiting for a person, oldest first (or all with status "all").', inputSchema: { status: z.string().default('pending') } },
   guard(async (input) => ({ proposals: await listProposals(dir, input) })),
@@ -261,6 +277,76 @@ server.registerTool(
 // The discipline behind a new or changed screen. fig:draw carried this as a skill document;
 // here the server hands it to whichever agent connects, so every agent draws the same way.
 server.registerPrompt(
+  'style',
+  {
+    title: 'Define how the product looks',
+    description: 'Before screens: from a reference the person gives, settle tone, palette, text styles, surfaces, density and pictures one at a time, then propose the tokens and see them on the style board.',
+    argsSchema: { reference: z.string().optional().describe('what the person gave: an image, a link, a product, words'), request: z.string().optional() },
+  },
+  ({ reference, request }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `You are about to define the product's visual language${reference ? ` from this reference: "${reference}"` : ''}${request ? `, because the person asked: "${request}"` : ''}. Screens only arrange things; this step decides what the things look like. Work in this order and do not skip a step.
+
+1. Anchor. Call list_tokens and list_components. Open style.html in the viewer (render if needed) and say in two lines what the product looks like now — the bundled defaults are not a decision.
+
+2. Read the reference, if there is one, and name what it decides, in words a designer would use: the surfaces (what a box is made of — fill, border or none, radius, shadow), the type (families, the contrast of weights and sizes, line height), the colour roles (brand, the one call to action, promotion, danger, text, muted), density (how much air), how pictures are treated (cut-out, full bleed, on a tint), icons (stroke or fill, weight). Separate what is the reference's brand from what is its system — copy the system, not the brand.
+
+3. List what has to be decided, numbered, before asking anything: palette and roles, text styles (display, heading, title, body, label, caption — sizes, weights, line heights), surfaces (page, card, tile, raised, sunken — whichever the product needs), radius and space scales, control heights, shadows, fonts to load, pictures and icons.
+
+4. Ask one at a time, each with a recommendation from the reference or the platform's conventions (touch targets 44pt / 48dp or more on a kiosk; body text 16px or more at arm's length) and a line on why. Wait for each answer.
+
+5. Show the decisions as a table — item | decision | why — and, as text, a small specimen: each text style on one line with its numbers, each surface in words.
+
+6. Only then write the token files — primitives (the palette and scales) in one file, the semantic names (color roles, text.* as DTCG typography, surface.* as groups of bg, border, radius, shadow, text, padding, control.*) in others, per theme when there are themes — and call propose_files with all of them, the summary in the person's words and the decisions. If contracts should bind the new styles (font: text.label, surface: surface.tile), include those files in the same proposal.
+
+7. Tell the person to open the proposal page: the style board as it is beside as it would be. Wait. They apply or reject; you do not call apply. For changes, go back to the step the change belongs to.
+
+Never invent a brand the person did not give. Where a value is a guess, say so in the decisions table.`,
+        },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
+  'component',
+  {
+    title: 'Design or change a component',
+    description: 'From a need to a contract the person can judge: anchor on the kinds there are, settle parts, props, variants, bindings and a sample one at a time, then propose the contract and see it on the style board.',
+    argsSchema: { kind: z.string().describe('the kind to design or change'), request: z.string().optional() },
+  },
+  ({ kind, request }) => ({
+    messages: [
+      {
+        role: 'user',
+        content: {
+          type: 'text',
+          text: `You are about to design or change the component "${kind}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
+
+1. Anchor. Call list_components and list_tokens. If a kind close to this one exists, say which and whether extending it (a new variant, a new prop) is better than a new kind — ask before making a new one.
+
+2. List what has to be decided, numbered: what it is for, one line; its parts (which existing kinds it is built from — a compound contract draws the tree it declares); its props, with types, defaults and enum options; the variants and what each changes; the slots other elements fill; the bindings — for the box (bg, border, radius, padding, gap, shadow, min-height, or a whole surface: surface.x) and for each part (label.text, label.font: text.x); how it maps to the team's code (maps_to.code: import, name, props, values); its sample.
+
+3. Ask one at a time, each with a recommendation from the sibling kinds and the style board, and a line on why. Wait for each answer.
+
+4. Show the decisions as a table, and the component as a text sketch — one per variant that looks different.
+
+5. Only then write components/${kind}.yaml — props, slots, tokens, variants, elements and layout for a compound, sample — and call propose_files with it (and any token it needs), the summary in the person's words and the decisions.
+
+6. Tell the person to open the proposal page: the style board shows the component in each variant, as it is beside as it would be. Wait for their answer; you do not call apply.
+
+A binding names a semantic token, never a primitive (L19); a part named in a binding must be one the contract declares (L28).`,
+        },
+      },
+    ],
+  }),
+);
+
+server.registerPrompt(
   'draw',
   {
     title: 'Draw or change a screen',
@@ -275,7 +361,7 @@ server.registerPrompt(
           type: 'text',
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
-1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element; maps_to.code is what a kind is in the team's code, which the handoff spec will quote — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
+1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). If the product's look is not defined yet (style.html shows only the bundled defaults), say so and suggest the style prompt first. Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element; maps_to.code is what a kind is in the team's code, which the handoff spec will quote — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 

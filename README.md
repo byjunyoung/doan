@@ -81,6 +81,16 @@ design/
 
 Register the server in `.mcp.json` (see "Your first five minutes") and the agent has doan's tools.
 
+### ①½ Style — once, before screens
+
+```
+you      I want it to feel like this kiosk [reference image]
+agent    (style interview) surfaces · text styles · colour roles · density · pictures, one at a time,
+         then tokens/ and contracts through propose_files → the proposal page: style board AS-IS | TO-BE
+you      Apply
+```
+`style.html` (Design system › Style) is what the product looks like, on one page. A contract binds a whole style with `font: text.heading` or `surface: surface.tile`. A new component takes the same road through the `component` interview.
+
 ### ② Draw — by talking to the agent
 
 ```

@@ -179,6 +179,16 @@ export function resolveTokens(docs) {
     meta[at] = { type, alias: typeof e.value === 'string' && ALIAS.test(e.value) ? ALIAS.exec(e.value)[1] : null, description: e.description ?? null };
     if (value === undefined) continue;
     setIn(raw, e.path, value);
+    // a text style (DTCG typography) is one token in the file and five css values in the picture:
+    // text.heading → text.heading.font-size, .font-weight, … — a contract binds the whole with `font:`
+    if (type === 'typography' && isObj(value)) {
+      const parts = { 'font-family': ['fontFamily', 'fontFamily'], 'font-size': ['fontSize', 'dimension'], 'font-weight': ['fontWeight', 'fontWeight'], 'line-height': ['lineHeight', 'number'], 'letter-spacing': ['letterSpacing', 'dimension'] };
+      for (const [css, [key, t]] of Object.entries(parts)) {
+        const v = value[key] === undefined ? null : toCss(t, value[key]);
+        if (v !== null) setIn(tokens, [...e.path, css], v);
+      }
+      continue;
+    }
     const css = toCss(type, value);
     if (css !== null) setIn(tokens, e.path, css);
   }
@@ -197,6 +207,12 @@ export function tokenNames(tokens, path = [], out = []) {
 export function getToken(tokens, name) {
   const v = lookup(tokens, String(name).split('.'));
   return isObj(v) ? undefined : v;
+}
+
+// A group of tokens — a text style, a surface — or undefined.
+export function getGroup(tokens, name) {
+  const v = lookup(tokens, String(name).split('.'));
+  return isObj(v) ? v : undefined;
 }
 
 export function hasToken(tokens, name) {
@@ -288,6 +304,7 @@ const color = (hex) => ({ $value: srgb(hex) });
 const px = (n) => ({ $value: { value: n, unit: 'px' } });
 const alias = (name) => ({ $value: `{${name}}` });
 const dim = (n) => ({ $type: 'dimension', ...px(n) });
+const tstyle = (size, w, lh) => ({ $value: { fontFamily: '{type.sans}', fontSize: `{type.${size}}`, fontWeight: `{type.${w}}`, lineHeight: lh } });
 const weight = (n) => ({ $type: 'fontWeight', $value: n });
 // a black shadow of the given offset, blur and opacity — DTCG's composite, which resolves to one css value
 const shadow = (y, blur, alpha) => ({ $value: { color: { colorSpace: 'srgb', components: [0, 0, 0], alpha, hex: '#000000' }, offsetX: { value: 0, unit: 'px' }, offsetY: { value: y, unit: 'px' }, blur: { value: blur, unit: 'px' }, spread: { value: 0, unit: 'px' } } });
@@ -317,6 +334,23 @@ export const DEFAULT_TOKEN_FILES = {
     },
     // the height of a control: sm · md · lg · xl. Bind `min-height` in a contract to one of these.
     control: { $type: 'dimension', sm: alias('size.6'), md: alias('size.8'), lg: alias('size.10'), xl: alias('size.12') },
+    // text styles: one token each, five css values in the picture. Bind one in a contract with `font: text.heading`.
+    text: {
+      $type: 'typography',
+      display: tstyle('2xl', 'bold', 1.25),
+      heading: tstyle('xl', 'bold', 1.3),
+      title: tstyle('lg', 'bold', 1.4),
+      body: tstyle('base', 'regular', 1.5),
+      label: tstyle('base', 'medium', 1.4),
+      caption: tstyle('sm', 'regular', 1.4),
+    },
+    // surfaces: what a box is made of. Bind one in a contract with `surface: surface.card`.
+    surface: {
+      page: { bg: alias('color.surface') },
+      card: { bg: alias('color.bg'), border: alias('color.border'), radius: alias('radius.md') },
+      raised: { bg: alias('color.bg'), border: alias('color.bg'), radius: alias('radius.md'), shadow: alias('shadow.md') },
+      sunken: { bg: alias('color.surface'), border: alias('color.surface'), radius: alias('radius.md') },
+    },
   },
   'light.tokens.json': {
     $description: 'Colour in the light theme.',

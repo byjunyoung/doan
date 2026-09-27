@@ -40,7 +40,7 @@ function themeFrom(tokens) {
 // (for children), and each returns a React element.
 const components = {
   // size: sm · md · full → antd small · middle · large, and full is a block button, as the bundled set draws it
-  Button: (el) => e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : undefined }, text(el.label ?? el.title ?? el.id)),
+  Button: (el) => e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : undefined }, text(el.label ?? el.title ?? el.id)),
   Table: (el) => {
     const columns = list(el.columns).map((c, i) => ({ title: text(label(c)), dataIndex: `c${i}`, sorter: typeof c === 'object' && !!c?.sortable }));
     return e(antd.Table, { size: 'small', columns, dataSource: dummyRows(columns), pagination: false, rowSelection: el.selectable ? {} : undefined });

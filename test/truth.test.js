@@ -90,7 +90,7 @@ test('L28: a binding to a slot the picture does not read is a warning that names
   const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
   assert.equal(l28.length, 1);
   assert.deepEqual(l28[0].path, ['tokens', 'colour']);
-  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, min-height, shadow, muted\)/);
+  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, line-height, letter-spacing, min-height, shadow, muted, font, surface\)/);
 });
 
 test('the bundled set reads type from the contract where it used to fix a size: the page-header title, a field label, a hint; a segment and a stepper take a control height', async () => {
@@ -169,4 +169,35 @@ test('L28 on a compound: a part the contract does not declare, or a slot it does
   const { lint } = await import('../src/lint.js');
   const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
   assert.deepEqual(l28.map((f) => f.message.split('"')[1]).sort(), ['colour', 'nope']);
+});
+
+test('a text style and a surface bind whole: font: text.heading is five slots, surface: surface.raised is four; a style that does not exist is L18', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'components', 'button.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('tokens:\n', 'tokens:\n  font: text.label\n  surface: surface.raised\n'));
+    await writeFile(join(d, 'components', 'card.yaml'), 'kind: card\ndescription: A box.\nprops:\n  title: { type: string }\ntokens:\n  font: text.nope\n');
+  });
+  const html = await screenHtml(dir, 'order-list');
+  assert.match(html, /\.el-button \{[^}]*--k-button-font-family: var\(--text-label-font-family\); --k-button-font-size: var\(--text-label-font-size\); --k-button-font-weight: var\(--text-label-font-weight\); --k-button-line-height: var\(--text-label-line-height\); --k-button-bg: var\(--surface-raised-bg\); --k-button-border: var\(--surface-raised-border\); --k-button-radius: var\(--surface-raised-radius\); --k-button-shadow: var\(--surface-raised-shadow\)/);
+  assert.match(html, /\.el-button:not\(\[data-drawn\]\) \{ font-family: var\(--k-button-font-family\); font-size: var\(--k-button-font-size\); font-weight: var\(--k-button-font-weight\); line-height: var\(--k-button-line-height\); \}/);
+  assert.match(html, /--text-heading-font-size: 20px;/);
+  const { lint } = await import('../src/lint.js');
+  const l18 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L18');
+  assert.equal(l18.length, 1);
+  assert.match(l18[0].message, /"text.nope" names no style/);
+});
+
+test('fonts: assets/fonts/<Family>-<Weight>.woff2 becomes @font-face, a stylesheet url in conventions.render.fonts a link', async () => {
+  const { mkdir } = await import('node:fs/promises');
+  const dir = await copyOf(orders, async (d) => {
+    await mkdir(join(d, 'assets', 'fonts'), { recursive: true });
+    await writeFile(join(d, 'assets', 'fonts', 'Pretendard-Bold.woff2'), 'x');
+    await writeFile(join(d, 'assets', 'fonts', 'Pretendard-Regular.woff2'), 'x');
+    const c = join(d, 'conventions.yaml');
+    await writeFile(c, (await readFile(c, 'utf8')) + '\nrender:\n  fonts: [ "https://cdn.example.com/fonts.css" ]\n');
+  });
+  const html = await screenHtml(dir, 'order-list');
+  assert.match(html, /@font-face \{ font-family: "Pretendard"; src: url\("assets\/fonts\/Pretendard-Bold.woff2"\) format\("woff2"\); font-weight: 700; font-style: normal; font-display: swap; \}/);
+  assert.match(html, /font-weight: 400; font-style: normal/);
+  assert.match(html, /<link rel="stylesheet" href="https:\/\/cdn.example.com\/fonts.css">/);
 });

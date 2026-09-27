@@ -6,7 +6,7 @@ import { walkElements } from './elements.js';
 // by path: `src: assets/photos/menu.jpg` on an image, `icon: assets/icons/cart.svg` on any
 // kind with an icon. Anything else in `icon` stays a glyph. The files are the person's; the
 // tool reads them, serves them and says which screen uses which (DESIGN.md §4.6).
-export const ASSET_TYPES = { svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif' };
+export const ASSET_TYPES = { svg: 'image/svg+xml', png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', woff2: 'font/woff2', woff: 'font/woff', ttf: 'font/ttf', otf: 'font/otf' };
 const EXT = new RegExp(`\\.(${Object.keys(ASSET_TYPES).join('|')})$`, 'i');
 
 export const isAssetRef = (v) => typeof v === 'string' && /^assets\/\S+$/.test(v) && EXT.test(v);

@@ -1,4 +1,6 @@
-import { readFile, writeFile, mkdir, readdir, unlink } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, readdir, unlink, mkdtemp, cp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { dirname, normalize } from 'node:path';
 import { existsSync } from 'node:fs';
 import { createHash, randomBytes } from 'node:crypto';
 import { join, relative, isAbsolute, basename } from 'node:path';
@@ -149,10 +151,106 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
   return store(dir, proposal);
 }
 
+// --- files: the style, the components, the assets -------------------------------------------
+// The edit loop reaches the rest of the design the same way it reaches a screen (DESIGN.md §7.4):
+// a proposal carries whole new texts for files under tokens/, components/, assets/ (svg) and
+// conventions.yaml; lint runs on the project as it would be; nothing is written until a person
+// applies it; undo puts every file back. Always pending — a style change is never "text only".
+const EDITABLE = /^(tokens\.json|tokens\/[^/].*\.json|components\/[^/]+\.yaml|assets\/.+\.svg|conventions\.yaml|sections\.yaml)$/;
+
+function cleanPath(p) {
+  const n = normalize(String(p ?? '')).split('\\').join('/');
+  if (n.startsWith('..') || n.startsWith('/') || !EDITABLE.test(n)) throw new Error(`"${p}" is not a file a proposal may change (tokens.json, tokens/*.json, components/*.yaml, assets/**/*.svg, conventions.yaml, sections.yaml)`);
+  return n;
+}
+
+// The project as it would be with these files — a copy in a temporary directory, loaded.
+export async function projectWith(dir, files) {
+  const tmp = await mkdtemp(join(tmpdir(), 'doan-files-'));
+  await cp(dir, tmp, { recursive: true, filter: (src) => !/[\\/]\.(proposals|comments)([\\/]|$)/.test(src.slice(dir.length)) });
+  for (const f of files) {
+    const at = join(tmp, f.path);
+    if (f.after === null) await rm(at, { force: true });
+    else {
+      await mkdir(dirname(at), { recursive: true });
+      await writeFile(at, f.after);
+    }
+  }
+  const project = await loadProject(tmp);
+  return { project, tmp };
+}
+
+const problemsOf = (project) => [...(project.componentSet?.problems ?? []), ...(project.tokenSet?.problems ?? [])].map((p) => ({ id: 'SCHEMA', severity: 'blocking', file: p.file ?? null, message: p.message }));
+
+export async function proposeFiles(dir, { files, summary = '', decisions = [], comments = [] }, opts = {}) {
+  if (!Array.isArray(files) || !files.length) throw new Error('propose files needs at least one { path, content }');
+  const list = [];
+  for (const f of files) {
+    const path = cleanPath(f.path);
+    if (list.some((x) => x.path === path)) throw new Error(`"${path}" is named twice`);
+    const at = join(dir, path);
+    const before = existsSync(at) ? await readFile(at, 'utf8') : null;
+    const after = f.content === null || f.delete ? null : String(f.content);
+    if (path.endsWith('.json') && after !== null) {
+      try { JSON.parse(after); } catch (e) { throw new Error(`${path} is not JSON: ${e.message}`); }
+    }
+    if (before === after) continue;
+    list.push({ path, before, after, creates: before === null });
+  }
+  if (!list.length) throw new Error('nothing changes: every file is as it is');
+  const now = await loadProject(dir);
+  const { project: next, tmp } = await projectWith(dir, list);
+  try {
+    const lintBefore = summarize([...problemsOf(now), ...lint(now, opts)]);
+    const afterFindings = [...problemsOf(next), ...lint(next, opts)].map((f) => ({ ...f, file: f.file ? relative(tmp, f.file) : null }));
+    const proposal = {
+      id: newId(),
+      kind: 'files',
+      screen: null,
+      label: list.length === 1 ? list[0].path : `${list[0].path} +${list.length - 1}`,
+      files: list,
+      summary,
+      decisions,
+      comments: [...new Set(comments)],
+      created: new Date().toISOString(),
+      tier: 'structure',
+      status: 'pending',
+      auto: false,
+      lint: { before: lintBefore, after: { ...summarize(afterFindings), findings: afterFindings.filter((f) => f.severity === 'blocking' || list.some((x) => f.file === x.path)) } },
+    };
+    return store(dir, proposal);
+  } finally {
+    await rm(tmp, { recursive: true, force: true });
+  }
+}
+
+async function writeFiles(dir, files, side) {
+  for (const f of files) {
+    const at = join(dir, f.path);
+    const text = f[side];
+    if (text === null) await rm(at, { force: true });
+    else {
+      await mkdir(dirname(at), { recursive: true });
+      await writeFile(at, text);
+    }
+  }
+}
+
+async function readOrNull(at) {
+  return existsSync(at) ? readFile(at, 'utf8') : null;
+}
+
 export async function applyProposal(dir, { id, approved_by }) {
   if (!approved_by) throw new Error('apply needs approved_by: the person who said yes');
   const p = await load(dir, id);
   if (p.status !== 'pending') throw new Error(`proposal "${id}" is ${p.status}, not pending`);
+  if (p.kind === 'files') {
+    for (const f of p.files) if ((await readOrNull(join(dir, f.path))) !== f.before) throw new Error(`"${f.path}" changed since the proposal was made; propose again`);
+    await writeFiles(dir, p.files, 'after');
+    Object.assign(p, { status: 'applied', approved_by, applied_at: new Date().toISOString() });
+    p.comments_resolved = await settle(dir, p, approved_by);
+    return store(dir, p);
+  }
   // a file the proposal creates must still be absent; an existing one must be as it was
   const current = existsSync(fileOf(dir, p)) ? await readFile(fileOf(dir, p), 'utf8') : '';
   if (sha(current) !== p.base_hash) throw new Error(`"${p.screen}" changed since the proposal was made; propose again`);
@@ -172,6 +270,19 @@ export async function rejectProposal(dir, { id, reason = '' }) {
 export async function undoProposal(dir, { id }) {
   const p = await load(dir, id);
   if (p.status !== 'applied') throw new Error(`proposal "${id}" is ${p.status}, not applied`);
+  if (p.kind === 'files') {
+    for (const f of p.files) if ((await readOrNull(join(dir, f.path))) !== f.after) throw new Error(`"${f.path}" changed after the proposal was applied; undo by hand`);
+    await writeFiles(dir, p.files, 'before');
+    for (const cid of p.comments_resolved ?? []) {
+      try {
+        await reopenComment(dir, { id: cid });
+      } catch {
+        /* resolved again by hand since, or gone */
+      }
+    }
+    Object.assign(p, { status: 'undone', undone_at: new Date().toISOString() });
+    return store(dir, p);
+  }
   const current = await readFile(fileOf(dir, p), 'utf8');
   if (sha(current) !== sha(p.after)) throw new Error(`"${p.screen}" changed after the proposal was applied; undo by hand`);
   // undoing a proposal that created the file removes the file, not writes an empty one
@@ -196,5 +307,5 @@ export async function listProposals(dir, { status = 'pending' } = {}) {
   return all
     .filter((p) => status === 'all' || p.status === status)
     .sort((a, b) => a.created.localeCompare(b.created))
-    .map(({ before, after, ...rest }) => rest);
+    .map(({ before, after, ...rest }) => (rest.files ? { ...rest, files: rest.files.map((f) => ({ path: f.path, creates: f.creates, deletes: f.after === null })) } : rest));
 }

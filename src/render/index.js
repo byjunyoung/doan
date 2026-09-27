@@ -1,7 +1,7 @@
 import { mergeState } from '../merge.js';
 import { walkElements } from '../elements.js';
 import { lint, summarize, bindingsOf } from '../lint.js';
-import { tokenNames, getToken, hasToken } from '../tokens.js';
+import { tokenNames, getToken, hasToken, getGroup } from '../tokens.js';
 import { assetsSummary } from '../assets.js';
 import { resolveFlowTarget } from '../flows.js';
 import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
@@ -14,7 +14,7 @@ import { expandComponents } from '../expand.js';
 import { layoutFlows, flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
-import { SLOT_CSS } from '../slots.js';
+import { SLOT_CSS, TYPE_SLOTS, expandBinding } from '../slots.js';
 
 // render draws a screen file with the bundled component set or the team's own. It is the
 // product surface (DESIGN.md §6): what a reviewer opens, what a developer inspects, what a
@@ -255,7 +255,7 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
   const nTokens = tokenNames(mergeTokens(DEFAULT_TOKENS, project.tokens)).length;
   const nAssets = (project.assets ?? []).length;
   const link = (page, href, label, hint) => `<a class="side-link${page === 'index' ? '' : ' sub'}${place.page === page ? ' current' : ''}" href="${href}"><span class="name">${label}</span>${hint}</a>`;
-  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('tokens', 'tokens.html', D.tokens, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('style', 'style.html', D.style, '')}${link('tokens', 'tokens.html', D.tokens, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
 }
 
@@ -291,7 +291,7 @@ const attrName = (s) => String(s).toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 // prototype view, a library sample — never the viewer's own chrome. The chrome runs on the
 // bundled defaults (`:root`), so a kiosk with a 20px body and 56px controls does not blow the
 // sidebar and the tabs up with it (found the first time a project had a type scale of its own).
-export const PRODUCT_ROOTS = '.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant';
+export const PRODUCT_ROOTS = '.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant, .board';
 const productCss = (tokens) => tokensToCss(tokens).replace(/^:root/, PRODUCT_ROOTS);
 
 function modeCss(project) {
@@ -348,8 +348,31 @@ export function childKindOf(contract, id) {
   return walk(contract.elements);
 }
 
+// Fonts the project ships: files under assets/fonts/ named <Family>-<Weight>[Italic].<ext>
+// become @font-face rules (Pretendard-Bold.woff2 → family Pretendard, weight 700); a stylesheet
+// URL in conventions.render.fonts (a webfont CDN) becomes a link. Nothing else loads a font.
+const WEIGHTS = { thin: 100, extralight: 200, light: 300, regular: 400, medium: 500, semibold: 600, bold: 700, extrabold: 800, black: 900 };
+export function fontFaces(project) {
+  const fmt = { woff2: 'woff2', woff: 'woff', ttf: 'truetype', otf: 'opentype' };
+  return (project.assets ?? [])
+    .filter((a) => /^assets\/fonts\/[^/]+\.(woff2?|ttf|otf)$/i.test(a.path))
+    .map((a) => {
+      const base = a.path.split('/').pop().replace(/\.[^.]+$/, '');
+      const m = /^(.+?)-([A-Za-z]+?)(Italic)?$/.exec(base);
+      const family = m && (WEIGHTS[m[2].toLowerCase()] || m[3]) ? m[1] : base;
+      const weight = m ? WEIGHTS[m[2].toLowerCase()] ?? 400 : 400;
+      const ext = a.path.split('.').pop().toLowerCase();
+      return `@font-face { font-family: "${family}"; src: url("${a.path}") format("${fmt[ext]}"); font-weight: ${weight}; font-style: ${m?.[3] ? 'italic' : 'normal'}; font-display: swap; }`;
+    })
+    .join('\n');
+}
+export const fontLinks = (project) =>
+  [].concat(project.conventions?.render?.fonts ?? []).filter((u) => typeof u === 'string' && /^https?:\/\//.test(u)).map((u) => `<link rel="stylesheet" href="${h(u)}">`).join('');
+
 function componentCss(project) {
-  const rules = [];
+  const rules = [fontFaces(project)];
+  const all = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const has = (name) => getToken(all, name) !== undefined;
   for (const c of Object.values(project.components ?? {})) {
     const compound = Array.isArray(c.elements) && c.elements.length > 0;
     const kind = attrName(c.kind);
@@ -358,10 +381,11 @@ function componentCss(project) {
     // variable, set on that child with more weight than the child's contract gives it
     const split = (b) => {
       const own = [], parts = [];
+      // `font:` and `surface:` bind a whole style — they stand for the plain slots it defines
       for (const [key, token] of Object.entries(b ?? {})) {
         const dot = key.indexOf('.');
-        if (dot < 0) own.push([key, token]);
-        else parts.push([key.slice(0, dot), key.slice(dot + 1), token]);
+        if (dot < 0) own.push(...expandBinding(key, token, has));
+        else for (const [slot, t] of expandBinding(key.slice(dot + 1), token, has)) parts.push([key.slice(0, dot), slot, t]);
       }
       return { own, parts };
     };
@@ -387,23 +411,23 @@ function componentCss(project) {
       if (bound.length) rules.push(`.el-${kind} { ${bound.map((s) => (s === 'border' ? `border: 1px solid var(--k-${kind}-border)` : `${SLOT_CSS[s]}: var(--k-${kind}-${attrName(s)})`)).join('; ')}; }`);
     }
     // the same bindings reach a piece an adapter drew, so the contract themes antd and MUI too
-    const slots = [...new Set([...Object.keys(c.tokens ?? {}), ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => Object.keys(b ?? {})))])].filter((s) => SLOT_CSS[s] && !s.includes('.'));
+    const slots = [...new Set([...split(c.tokens).own, ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => split(b).own))].map(([s]) => s))].filter((s) => SLOT_CSS[s]);
     if (slots.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${slots.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
     // type reaches a bundled piece by inheritance from its wrapper (the set draws with `font: inherit`);
     // height and shadow it reads itself, kind by kind, in the bundled css
-    const type = slots.filter((s) => s === 'font-size' || s === 'font-weight');
+    const type = slots.filter((s) => TYPE_SLOTS.includes(s));
     if (type.length) rules.push(`.el-${attrName(c.kind)}:not([data-drawn]) { ${type.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
   }
   return rules.join('\n');
 }
 
-function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
+function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', fonts = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
   return `<!doctype html>
 <html lang="${h(lang)}"><head><meta charset="utf-8"><title>${h(title)}</title>
-<style>${tokensToCss(DEFAULT_TOKENS)}\n${productCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
+<style>${tokensToCss(DEFAULT_TOKENS)}\n${productCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${fonts}${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
+<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, state: c.state ?? null, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
@@ -459,7 +483,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
 <div class="section-title">${D.comments} <span class="hint">${comments.length} ${D.open}</span></div><ul class="list" id="comments">${commentList || `<li class="hint">${D.none}</li>`}</ul>
 ${refs ? `<div class="section-title">${D.references}</div><div class="hint" style="font-size:12px">${refs}</div>` : ''}`,
   });
-  return page({ title: doc.screen, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
+  return page({ title: doc.screen, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', file: screen.file, body, api, screen: doc.screen, comments, lang });
 }
 
 export async function renderIndex(project, { branch = null, today, proposals = [], comments = [], api = false, adapter = null } = {}) {
@@ -496,7 +520,7 @@ export async function renderIndex(project, { branch = null, today, proposals = [
     .join('');
   const waiting = proposals.length
     ? `<div class="section-title">${D.waitingForPerson}</div><table class="index"><thead><tr><th>${D.proposal}</th><th>${D.screen}</th><th>${D.tier}</th><th>${D.summary}</th><th>${D.lintAfter}</th></tr></thead><tbody>${proposals
-        .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} ${D.blocking}, ${p.lint?.after?.warning ?? 0} ${D.warning}</td></tr>`)
+        .map((p) => `<tr><td><a href="proposal-${h(p.id)}.html"><u>${h(p.id)}</u></a></td><td>${h(p.screen ?? p.label)}</td><td>${h(p.tier)}</td><td>${h(p.summary)}</td><td class="${p.lint?.after?.blocking ? 'bad' : ''}">${p.lint?.after?.blocking ?? 0} ${D.blocking}, ${p.lint?.after?.warning ?? 0} ${D.warning}</td></tr>`)
         .join('')}</tbody></table>`
     : '';
   // the domains first — each a canvas, the page a Figma file had per domain
@@ -520,7 +544,7 @@ ${domainCards ? `<div class="section-title">${D.domains}</div><div class="card-g
 ${flows.html}
 ${cards}`,
   }) + flows.script;
-  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+  return page({ title: D.screens, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 
 // A pending proposal drawn as a decision page: what was agreed, what changes, and every
@@ -579,7 +603,7 @@ ${c.tokens || c.variants ? `<div class="section-title">${D.bindingsLabel}</div><
     place: { page: 'components' },
     content: sections || `<div class="hint">${D.noneOfKind}</div>`,
   });
-  return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+  return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 const basenameOf = (p) => String(p).split('/').pop();
 
@@ -637,7 +661,7 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
     `
 <script>window.DOAN_FLOWS = ${JSON.stringify(flows)}; window.DOAN_CANVAS = ${JSON.stringify({ domain: pageSpec.domain, screens: inDomain })}; window.DOAN_SCREEN_DOMAIN = ${JSON.stringify(screenDomain)};</script>
 <script>${CANVAS_JS}</script>`;
-  return page({ title: pageSpec.domain, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments, lang });
+  return page({ title: pageSpec.domain, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments, lang });
 }
 
 // The click-through prototype: every screen in every state on one page, one shown at a time;
@@ -679,7 +703,7 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
     `
 <script>window.DOAN_FLOWS = ${JSON.stringify(flows)};</script>
 <script>${PROTO_JS}</script>`;
-  return page({ title: D.proto, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
+  return page({ title: D.proto, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
 
 // The flow map (src/flowmap.js): sections as boxes, screens as nodes — a scaled Default with a
@@ -730,6 +754,38 @@ ${map.orphans.length ? `<div class="section-title">${D.orphanScreens}</div><ul c
   const title = `<div class="section-title" id="flows">${D.flowMap} <span class="hint">${map.edges.length} ${D.flows.toLowerCase()}${map.dead.length ? ` · <span class="bad">${map.dead.length} ${D.deadFlows.toLowerCase()}</span>` : ''}</span></div>`;
   const script = `<script>(function () { var d = decodeURIComponent(location.hash.slice(1)); if (!d) return; var first = null; document.querySelectorAll('.flow-sec[data-domain]').forEach(function (s) { if (s.getAttribute('data-domain') === d) { s.classList.add('current'); first = first || s; } }); var box = document.querySelector('.flow-scroll'); if (first && box) { box.scrollLeft = Math.max(0, first.offsetLeft - (box.clientWidth - first.offsetWidth) / 2); box.scrollTop = Math.max(0, first.offsetTop - 24); } })();</script>`;
   return { html: `${title}${picture}${lists}`, script };
+}
+
+// A proposal of files — tokens, contracts, assets: what was agreed, each file's text AS-IS beside
+// TO-BE with the changed lines marked, and the style board as it is beside the board as it
+// would be, each in its own frame so the two token sets never meet (DESIGN.md §7.4).
+export function renderFilesProposal(project, proposal, { after = null, branch = null, adapter = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const lines = (t) => (t === null || t === undefined ? [] : String(t).split('\n'));
+  const side = (mine, other) => {
+    const others = new Set(other);
+    return `<pre class="fdiff">${mine.map((l) => `<span class="${others.has(l) ? '' : 'chg'}">${h(l) || ' '}</span>`).join('\n')}</pre>`;
+  };
+  const files = proposal.files
+    .map((f) => `<div class="section-title"><code>${h(f.path)}</code> ${f.creates ? `<span class="pill cm">${D.newFile}</span>` : f.after === null ? `<span class="pill bad">${D.deletedFile}</span>` : ''}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${side(lines(f.before), lines(f.after))}</div><div><div class="hint">TO-BE</div>${side(lines(f.after), lines(f.before))}</div></div>`)
+    .join('');
+  const decisions = proposal.decisions?.length ? `<div class="section-title">${D.agreedBefore}</div><table class="index"><thead><tr><th>${D.item}</th><th>${D.decision}</th><th>${D.why}</th></tr></thead><tbody>${proposal.decisions.map((d) => `<tr><td>${h(d.item)}</td><td>${h(d.decision)}</td><td>${h(d.why ?? '')}</td></tr>`).join('')}</tbody></table>` : '';
+  const board = (p) => `<iframe class="board-frame" srcdoc="${h(renderStyle(p, { adapter, bare: true }))}"></iframe>`;
+  const boards = after ? `<div class="section-title">${D.style}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${board(project)}</div><div><div class="hint">TO-BE</div>${board(after)}</div></div>` : '';
+  const la = proposal.lint?.after ?? {};
+  const findings = (la.findings ?? []).length ? `<ul class="list">${la.findings.map((f) => `<li><span class="${f.severity === 'blocking' ? 'bad' : 'hint'}">${h(f.id)}</span> <code>${h(f.file ?? '')}</code> ${h(f.message)}</li>`).join('')}</ul>` : '';
+  const actions = proposal.status === 'pending' && api ? `<div class="actions"><input id="by" placeholder="${h(D.yourName)}"> <button class="btn btn-primary" id="apply">${D.apply}</button> <button class="btn" id="reject">${D.reject}</button></div><script>(function(){var id=${JSON.stringify(proposal.id)};function go(a){var by=document.getElementById('by').value.trim();if(a==='apply'&&!by){document.getElementById('by').focus();return;}fetch('/api/proposals/'+id+'/'+a,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({by:by})}).then(function(r){return r.json()}).then(function(){location.href='index.html'});}document.getElementById('apply').onclick=function(){go('apply')};document.getElementById('reject').onclick=function(){go('reject')};})();</script>` : '';
+  const content = `<p>${h(proposal.summary)}</p>${decisions}<div class="section-title">lint</div><p class="hint">${proposal.lint?.before?.blocking ?? 0} → <b class="${la.blocking ? 'bad' : ''}">${la.blocking ?? 0}</b> ${D.blocking}, ${la.warning ?? 0} ${D.warning}</p>${findings}${actions}${boards}${files}`;
+  const body = shellOf(project, D, {
+    title: `${h(proposal.label)} <span class="hint">${D.proposal}</span>`,
+    meta: `${h(proposal.status)} · ${proposal.files.length} ${D.filesN}${branch ? ` · ${h(branch)}` : ''}`,
+    place: { page: 'style' },
+    content,
+  });
+  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, lang });
 }
 
 export function renderProposal(project, proposal, { branch = null, adapter = null, api = false } = {}) {
@@ -785,7 +841,7 @@ ${verdict}
 <div class="tabs-row">${tabs}</div>
 <div class="states">${panels}</div>`,
   });
-  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
+  return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', file: proposal.file, body, api, screen: proposal.screen, comments: [], lang });
 }
 
 // The tokens page: Figma's variables modal, as near as the files allow. Left, the collections
@@ -915,7 +971,7 @@ export function renderTokens(project, { branch = null, api = false } = {}) {
     }) +
     VARS_SCRIPT +
     PICK_SCRIPT;
-  return page({ title: D.tokens, tokens: merged, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
+  return page({ title: D.tokens, tokens: merged, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: '', comments: [], lang });
 }
 
 // The variables layout's own behaviour: one collection shown at a time, its groups filter the
@@ -994,7 +1050,91 @@ export function renderAssets(project, { branch = null, api = false } = {}) {
       place: { page: 'assets' },
       content: (grid || `<div class="hint">${D.noAssets}</div>`) + lists,
     }) + PICK_SCRIPT;
-  return page({ title: D.assets, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: '', comments: [], lang });
+  return page({ title: D.assets, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: '', comments: [], lang });
+}
+
+// The style board: what the product looks like, on one page — every text style set in its own
+// type, the colours by group, the surfaces as boxes, the scales, and every component's sample in
+// each of its variants. All of it inside `.board`, one of the product roots, so it is drawn with
+// the project's tokens while the page around it keeps the viewer's (DESIGN.md §6.11).
+export function renderStyle(project, { branch = null, adapter = null, api = false, bare = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const own = project.tokens ?? {};
+  const pick = (group) => Object.entries(tokens[group] ?? {});
+  const origin = (name) => (getToken(own, name) !== undefined || getGroup(own, name) ? '' : ` <span class="hint">${D.bundled}</span>`);
+  const panel = (title, rows) => `<h3><code>${h(title)}</code></h3><table class="props">${rows.map(([k, v]) => `<tr><td class="hint">${h(k)}</td><td><code>${h(v)}</code></td></tr>`).join('')}</table>`;
+  const cssv = (name) => `var(--${name.replace(/\./g, '-')})`;
+
+  const texts = pick('text').filter(([, v]) => v && typeof v === 'object');
+  const textRows = texts.length
+    ? texts.map(([name, v]) => {
+        const style = Object.keys(v).map((p) => `${p}:${cssv(`text.${name}.${p}`)}`).join(';');
+        return `<div class="b-text" data-panel="${h(panel(`text.${name}`, Object.entries(v)))}"><div class="b-label"><code>text.${h(name)}</code>${origin(`text.${name}`)}<div class="hint">${h([v['font-size'], v['font-weight'], v['line-height']].filter(Boolean).join(' · '))}</div></div><div class="b-sample" style="${style}">${h(D.sampleText)}</div></div>`;
+      }).join('')
+    : `<div class="hint">${D.noStyles}</div>`;
+
+  const colorGroups = new Map();
+  for (const name of tokenNames(tokens.color ?? {}, ['color'])) {
+    const g = name.split('.').length > 2 ? name.split('.').slice(0, 2).join('.') : 'color';
+    if (!colorGroups.has(g)) colorGroups.set(g, []);
+    colorGroups.get(g).push(name);
+  }
+  const colours = [...colorGroups.entries()].map(([g, names]) => `<div class="b-swatches">${names.map((n) => `<div class="b-swatch" data-panel="${h(panel(n, [['value', getToken(tokens, n)], ['css', `--${n.replace(/\./g, '-')}`]]))}"><span style="background:${cssv(n)}"></span><code>${h(n.replace(/^color\./, ''))}</code><div class="hint">${h(getToken(tokens, n))}</div></div>`).join('')}</div>`).join('');
+
+  const surfaces = pick('surface').filter(([, v]) => v && typeof v === 'object');
+  const surfaceBoxes = surfaces.length
+    ? `<div class="b-surfaces">${surfaces.map(([name, v]) => {
+        const map = { bg: 'background', border: 'border-color', radius: 'border-radius', shadow: 'box-shadow', text: 'color', padding: 'padding' };
+        const style = Object.keys(v).filter((k) => map[k]).map((k) => `${map[k]}:${cssv(`surface.${name}.${k}`)}`).join(';');
+        return `<div class="b-surface" style="${style}" data-panel="${h(panel(`surface.${name}`, Object.entries(v)))}"><code>surface.${h(name)}</code>${origin(`surface.${name}`)}</div>`;
+      }).join('')}</div>`
+    : `<div class="hint">${D.noSurfaces}</div>`;
+
+  const scale = (group, draw) => {
+    const names = tokenNames(tokens[group] ?? {}, [group]);
+    return names.length ? `<div class="b-scale"><div class="b-scale-name">${h(group)}</div>${names.map((n) => `<div class="b-step" title="${h(n)} ${h(getToken(tokens, n))}">${draw(n)}<code>${h(n.split('.').pop())}</code><span class="hint">${h(getToken(tokens, n))}</span></div>`).join('')}</div>` : '';
+  };
+  const scales =
+    scale('space', (n) => `<i class="b-bar" style="width:${cssv(n)}"></i>`) +
+    scale('radius', (n) => `<i class="b-radius" style="border-radius:${cssv(n)}"></i>`) +
+    scale('control', (n) => `<i class="b-control" style="height:${cssv(n)}"></i>`) +
+    scale('shadow', (n) => `<i class="b-shadow" style="box-shadow:${cssv(n)}"></i>`);
+
+  // every component: its sample, and the sample in each option of each variant axis
+  const maps = mapsFor(project);
+  const registry = project.components ?? {};
+  const stub = { doc: { elements: [] }, lineOf: () => null };
+  const draw = (el) => {
+    const view = expandComponents({ elements: [el], layout: {} }, registry);
+    const r = makeRenderer(stub, view.layout, maps, adapter, registry);
+    return view.elements.map((x) => r.element(x)).join('');
+  };
+  const comps = Object.values(registry)
+    .filter((c) => c.file && c.sample && typeof c.sample === 'object')
+    .sort((a, b) => a.kind.localeCompare(b.kind))
+    .map((c) => {
+      const base = { id: 'sample', kind: c.kind, ...c.sample };
+      const variants = Object.keys(c.variants ?? {}).flatMap((prop) => (c.props?.[prop]?.options ?? Object.keys(c.variants[prop] ?? {})).map((opt) => [prop, opt]));
+      const cells = [['', base], ...variants.map(([prop, opt]) => [`${prop} = ${opt}`, { ...base, id: `sample-${prop}-${opt}`, [prop]: c.props?.[prop]?.type === 'boolean' ? opt === 'true' : opt }])];
+      return `<div class="b-comp"><div class="b-comp-head"><a href="components.html#k-${h(c.kind)}"><code>${h(c.kind)}</code></a></div><div class="b-comp-row">${cells.map(([label, el]) => `<div class="b-cell">${draw(el)}${label ? `<div class="hint">${h(label)}</div>` : ''}</div>`).join('')}</div></div>`;
+    })
+    .join('');
+
+  const content = `<div class="board">
+<div class="section-title">${D.textStyles}</div>${textRows}
+<div class="section-title">${D.colorsLabel}</div>${colours}
+<div class="section-title">${D.surfacesLabel}</div>${surfaceBoxes}
+<div class="section-title">${D.scalesLabel}</div>${scales}
+<div class="section-title">${D.componentsLabel}</div>${comps}
+</div>`;
+  const extraCss = adapter?.styles ? adapter.styles() : '';
+  if (bare) return page({ title: D.style, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body: `<main class="bare">${content}</main>`, api, lang });
+  const body =
+    shellOf(project, D, { title: D.style, meta: `${h(D.styleMeta)}${branch ? ` · ${h(branch)}` : ''}`, place: { page: 'style' }, content }) + PICK_SCRIPT;
+  return page({ title: D.style, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body, api, screen: '', comments: [], lang });
 }
 
 const screenLinkOf = (project, screen) => {
@@ -1090,5 +1230,5 @@ ${spec.notes.length ? `<div class="section-title">${D.notes}</div><ul class="lis
     }) +
     `
 <script>(function () { var b = document.getElementById('spec-copy-md'), t = document.getElementById('spec-md'); if (!b || !t) return; b.addEventListener('click', function () { var text = t.content ? t.content.textContent : t.textContent; navigator.clipboard.writeText(text).then(function () { var was = b.textContent; b.textContent = '✓'; setTimeout(function () { b.textContent = was; }, 1200); }); }); })();</script>`;
-  return page({ title: `${doc.screen} · ${D.spec}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), body, api, screen: doc.screen, comments: [], lang });
+  return page({ title: `${doc.screen} · ${D.spec}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: doc.screen, comments: [], lang });
 }

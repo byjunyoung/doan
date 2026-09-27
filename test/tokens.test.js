@@ -247,7 +247,13 @@ test("a project's tokens reach only what it draws: the frame gets the 20px body,
   const html = await renderIndex(await loadProject(dir), { branch: 'x' });
   assert.match(html, /:root \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --font-size-md: 14px;/, 'chrome: the bundled size');
   assert.match(html, /:root \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --color-primary: #2f6fed;/, 'chrome: the bundled colour');
-  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --font-size-md: 20px;/, 'product: the project size');
-  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --color-primary: #e4572e;/);
-  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant \{ font: var\(--font-size-md/);
+  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --font-size-md: 20px;/, 'product: the project size');
+  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{\n(  --[a-z0-9-]+: [^\n]+;\n)*  --color-primary: #e4572e;/);
+  assert.match(html, /\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board \{ font: var\(--font-size-md/);
+});
+
+test('a DTCG typography token resolves to five css values under its name; the bundled set has text styles and surfaces', () => {
+  const r = resolveTokens([{ base: { $type: 'dimension', value: 18 }, text: { $type: 'typography', hero: { $value: { fontFamily: ['Inter', 'sans-serif'], fontSize: { value: 40, unit: 'px' }, fontWeight: 700, lineHeight: 1.1, letterSpacing: { value: -0.5, unit: 'px' } } } } }]);
+  assert.deepEqual(r.tokens.text.hero, { 'font-family': 'Inter, sans-serif', 'font-size': '40px', 'font-weight': '700', 'line-height': '1.1', 'letter-spacing': '-0.5px' });
+  assert.deepEqual(r.problems, []);
 });

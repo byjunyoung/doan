@@ -25,7 +25,7 @@ const call = async (name, args = {}) => {
 
 test('the server exposes the verbs and the two agent reads', async () => {
   const { tools } = await client.listTools();
-  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_components', 'list_flows', 'list_screens', 'list_tokens', 'list_assets', 'handoff', 'prep', 'render', 'propose', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
+  assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_components', 'list_flows', 'list_screens', 'list_tokens', 'list_assets', 'handoff', 'prep', 'render', 'propose', 'propose_files', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());
 });
 
 test('lint returns the same JSON the CLI does', async () => {
@@ -96,6 +96,10 @@ test('propose → pending → apply with approved_by runs over MCP, and list_pro
 test('the server offers a "draw" prompt that walks the agent through decisions before propose', async () => {
   const { prompts } = await client.listPrompts();
   assert.ok(prompts.some((p) => p.name === 'draw'));
+  assert.deepEqual(prompts.map((p) => p.name).sort(), ['component', 'draw', 'style']);
+  const style = await client.getPrompt({ name: 'style', arguments: { reference: 'a burger kiosk' } });
+  assert.match(style.messages[0].content.text, /propose_files/);
+  assert.match(style.messages[0].content.text, /a burger kiosk/);
   const got = await client.getPrompt({ name: 'draw', arguments: { screen: 'order-list' } });
   const text = got.messages.map((m) => m.content.text).join('\n');
   assert.match(text, /order-list/);

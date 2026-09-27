@@ -4,7 +4,7 @@ import { mkdtempSync, cpSync, readFileSync, existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { propose, applyProposal, rejectProposal, undoProposal, listProposals } from '../src/proposals.js';
+import { propose, proposeFiles, projectWith, applyProposal, rejectProposal, undoProposal, listProposals } from '../src/proposals.js';
 
 const examples = fileURLToPath(new URL('../examples/orders', import.meta.url));
 const opts = { branch: 'feature/x', today: '2026-09-23' };
@@ -180,4 +180,59 @@ test('a proposal applied in a copy of the project lands in the copy — never ba
   assert.match(readFileSync(join(b, 'screens', 'order-list.yaml'), 'utf8'), /id: extra, kind: hint/);
   assert.doesNotMatch(readFileSync(join(a, 'screens', 'order-list.yaml'), 'utf8'), /id: extra/, 'the original project is untouched');
   assert.equal((await listProposals(a)).find((x) => x.id === p.id).status, 'pending');
+});
+
+test('files: a proposal carries tokens, a contract and an svg; always pending; lint runs on the project as it would be; apply writes all, undo puts all back', async () => {
+  const dir = sandbox();
+  const button = readFileSync(join(dir, 'components', 'button.yaml'), 'utf8');
+  const p = await proposeFiles(dir, {
+    files: [
+      { path: 'tokens.json', content: '{}' },
+    ].slice(1).concat([
+      { path: 'components/button.yaml', content: button.replace('tokens:\n', 'tokens:\n  font: text.label\n') },
+      { path: 'components/chip.yaml', content: 'kind: chip\ndescription: A small label.\nprops:\n  text: { type: string, required: true }\ntokens:\n  surface: surface.sunken\nsample: { text: New }\n' },
+      { path: 'assets/icons/dot.svg', content: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8"><circle cx="4" cy="4" r="4"/></svg>' },
+    ]),
+    summary: 'button type, a chip, an icon',
+    decisions: [{ item: 'chip', decision: 'sunken surface' }],
+  }, opts);
+  assert.equal(p.kind, 'files');
+  assert.equal(p.status, 'pending');
+  assert.equal(p.label, 'components/button.yaml +2');
+  assert.deepEqual(p.files.map((f) => [f.path, f.creates]), [['components/button.yaml', false], ['components/chip.yaml', true], ['assets/icons/dot.svg', true]]);
+  assert.equal(p.lint.after.blocking, p.lint.before.blocking);
+  assert.equal(existsSync(join(dir, 'components', 'chip.yaml')), false, 'nothing is written before apply');
+  const listed = (await listProposals(dir)).find((x) => x.id === p.id);
+  assert.deepEqual(listed.files[1], { path: 'components/chip.yaml', creates: true, deletes: false });
+  await applyProposal(dir, { id: p.id, approved_by: 'me' });
+  assert.match(readFileSync(join(dir, 'components', 'button.yaml'), 'utf8'), /font: text.label/);
+  assert.equal(existsSync(join(dir, 'assets', 'icons', 'dot.svg')), true);
+  await undoProposal(dir, { id: p.id });
+  assert.equal(readFileSync(join(dir, 'components', 'button.yaml'), 'utf8'), button);
+  assert.equal(existsSync(join(dir, 'components', 'chip.yaml')), false);
+});
+
+test('files: a path outside the design files, a broken json, a file changed since — each refused', async () => {
+  const dir = sandbox();
+  await assert.rejects(proposeFiles(dir, { files: [{ path: '../evil.yaml', content: 'x' }] }, opts), /is not a file a proposal may change/);
+  await assert.rejects(proposeFiles(dir, { files: [{ path: 'screens/order-list.yaml', content: 'x' }] }, opts), /is not a file a proposal may change/);
+  await assert.rejects(proposeFiles(dir, { files: [{ path: 'tokens/x.tokens.json', content: '{' }] }, opts), /is not JSON/);
+  const p = await proposeFiles(dir, { files: [{ path: 'components/chip.yaml', content: 'kind: chip\ndescription: x\n' }] }, opts);
+  const { writeFileSync } = await import('node:fs');
+  writeFileSync(join(dir, 'components', 'chip.yaml'), 'kind: chip\ndescription: by hand\n');
+  await assert.rejects(applyProposal(dir, { id: p.id, approved_by: 'me' }), /changed since the proposal was made/);
+});
+
+test('files: the proposal page shows the style board as it is beside as it would be, and each file AS-IS beside TO-BE', async () => {
+  const dir = sandbox();
+  const { loadProject } = await import('../src/index.js');
+  const { renderFilesProposal } = await import('../src/render/index.js');
+  const p = await proposeFiles(dir, { files: [{ path: 'tokens.json', content: JSON.stringify({ color: { primary: '#e4572e' } }) }], summary: 'orange' }, opts);
+  const { project: after } = await projectWith(dir, JSON.parse(readFileSync(join(dir, '.proposals', `${p.id}.json`), 'utf8')).files);
+  const html = renderFilesProposal(await loadProject(dir), JSON.parse(readFileSync(join(dir, '.proposals', `${p.id}.json`), 'utf8')), { after, api: true });
+  const frames = html.match(/<iframe class="board-frame" srcdoc="/g) ?? [];
+  assert.equal(frames.length, 2);
+  assert.match(html, /#e4572e/);
+  assert.match(html, /<span class="chg">\{&quot;color&quot;:\{&quot;primary&quot;:&quot;#e4572e&quot;\}\}<\/span>/);
+  assert.match(html, /id="apply"/);
 });

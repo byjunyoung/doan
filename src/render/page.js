@@ -8,7 +8,7 @@ export const CSS = `
 html, body { height: 100%; }
 body { margin: 0; font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); background: var(--color-surface); }
 /* what the project draws takes the project's type; the chrome around it keeps the viewer's */
-.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant { font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); }
+.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant, .board { font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); }
 a { color: inherit; text-decoration: none; }
 .shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr) 0; min-height: 100vh; transition: grid-template-columns .15s ease; }
 .shell.drawer-open { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--drawer-w); }
@@ -60,6 +60,26 @@ a { color: inherit; text-decoration: none; }
 .list { margin: 0; padding-left: var(--space-lg); font-size: 13px; }
 .list li { margin: 2px 0; }
 .list code { background: var(--color-bg); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+/* the style board (renderStyle) — drawn with the project's tokens */
+.board { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 12px; padding: 24px 28px; }
+.board .section-title { font: 600 12px/1.4 system-ui, sans-serif; color: #6b7280; margin: 28px 0 12px; text-transform: none; } .board .section-title:first-child { margin-top: 0; }
+.board .hint, .board code, .board .b-label, .board .b-scale-name { font-family: system-ui, sans-serif; }
+.b-text { display: grid; grid-template-columns: 180px 1fr; gap: var(--space-md); align-items: baseline; padding: 12px 0; border-bottom: 1px solid var(--color-border); cursor: pointer; }
+.b-label { font-size: 12px; } .b-label code { font-size: 12px; } .b-sample { color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.b-swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: var(--space-sm); margin-bottom: 12px; }
+.b-swatch { font-size: 12px; cursor: pointer; } .b-swatch span { display: block; height: 48px; border-radius: 8px; border: 1px solid rgba(0,0,0,.08); margin-bottom: 6px; } .b-swatch code { font-size: 11px; }
+.b-surfaces { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-md); padding: 16px; background: var(--color-surface); border-radius: 8px; }
+.b-surface { min-height: 96px; border: 1px solid transparent; padding: 12px; font-size: 12px; cursor: pointer; }
+.b-scale { display: flex; align-items: flex-end; gap: var(--space-md); flex-wrap: wrap; margin-bottom: 16px; } .b-scale-name { width: 60px; font-size: 12px; color: #6b7280; align-self: center; }
+.b-step { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-xs); font-size: 11px; } .b-step code { font-size: 11px; }
+.b-bar { display: block; height: 12px; background: var(--color-primary); border-radius: 2px; } .b-radius { display: block; width: 40px; height: 40px; border: 2px solid var(--color-text); }
+.b-control { display: block; width: 40px; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: 4px; } .b-shadow { display: block; width: 56px; height: 40px; background: var(--color-bg); border-radius: 8px; }
+.b-comp { border-top: 1px solid var(--color-border); padding: 16px 0; } .b-comp-head { font-size: 12px; margin-bottom: 8px; }
+.b-comp-row { display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: flex-start; } .b-cell { min-width: 120px; max-width: 360px; display: flex; flex-direction: column; gap: var(--space-xs); } .b-cell > .hint { font-size: 11px; }
+main.bare { padding: 16px; }
+.fdiff-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); } .fdiff-pair > div { min-width: 0; }
+.fdiff { font-size: 11px; line-height: 1.5; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; padding: 8px; overflow: auto; max-height: 420px; margin: 4px 0 0; } .fdiff .chg { background: #fff4d6; display: inline-block; width: 100%; }
+.board-frame { width: 100%; height: 720px; border: 1px solid var(--color-border); border-radius: 8px; background: #fff; }
 .acceptance { list-style: none; padding-left: 0; } .acceptance li { display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: baseline; margin: 4px 0; }
 .acceptance label { display: inline-flex; gap: var(--space-sm); align-items: baseline; cursor: pointer; } .acceptance input { width: auto; margin: 0; padding: 0; }
 .index td:last-child { overflow-wrap: anywhere; }
@@ -281,6 +301,8 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .img { position: relative; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); display: grid; place-items: center; height: 80px; color: var(--color-muted); box-shadow: var(--k-image-shadow, none); }
 .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; } .img.fit-contain img { object-fit: contain; }
 .ico-img { width: 1em; height: 1em; vertical-align: -0.15em; }
+.ico-mask { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
+.el-image .img.is-icon { background: none; border-color: transparent; box-shadow: none; } .ico-fill { width: 100%; height: 100%; vertical-align: top; }
 /* the tokens page: a variables table per collection; the assets page: a card per file */
 .tok { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: var(--space-lg); }
 .tok th, .tok td { text-align: left; padding: 6px var(--space-sm); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
@@ -907,9 +929,31 @@ export const CANVAS_JS = `
       '<h4>' + esc(screen) + '-' + esc(state) + ' <span class="hint">' + esc(frame.getAttribute('data-type') || '') + ' \\u00b7 ' + esc(frame.getAttribute('data-platform') || '') + '</span><span class="close" id="close">\\u00d7</span></h4>' +
       '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(frame.getAttribute('data-file') || '') + '</code></p>' +
       '<p><a class="btn" href="' + esc(screen) + '.html#state-' + esc(state) + '">' + t('screen', 'screen') + '</a> <a class="btn" href="proto.html#' + esc(screen) + (state !== 'Default' ? '.' + esc(state) : '') + '">\\u25b6 ' + t('proto', 'Prototype') + '</a> <a class="btn" href="spec-' + esc(screen) + '.html">' + t('specFor', 'developer spec') + '</a></p>' +
+      frameComments(screen, state) +
       '<h4>' + t('flows', 'Flows') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (f) { return '<li><code>' + esc(f.from) + '</code> \\u2192 ' + esc(f.to) + (f.state !== 'Default' ? '.' + esc(f.state) : '') + (f.label ? ' <span class="hint">' + esc(f.label) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('none', 'none') + '</div>');
     var close = document.getElementById('close'); if (close) close.addEventListener('click', clearAll);
+    var send = document.getElementById('fsend');
+    if (send) send.addEventListener('click', function () {
+      var text = document.getElementById('ftext').value.trim(); var who = document.getElementById('fwho').value.trim();
+      if (!text) return;
+      fetch('/api/comments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: screen, path: '', state: state, text: text, author: who || 'anonymous' }) })
+        .then(function (r) { return r.ok ? location.reload() : r.json().then(function (j) { document.getElementById('fstate').textContent = j.error; }); });
+    });
   }
+  // comments on a screen as a whole — no element — listed on its frame's panel, with a box to add one
+  function frameComments(screen, state) {
+    var mine = (window.DOAN_COMMENTS || []).filter(function (c) { return c.screen === screen && !c.element && !c.path; });
+    return '<h4>' + t('comments', 'Comments') + '</h4>' +
+      (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + (c.state ? '<span class="hint">' + esc(c.state) + '</span> ' : '') + esc(c.text) + '</li>'; }).join('') + '</ul>' : '') +
+      (window.DOAN_API ? '<textarea id="ftext" rows="3" placeholder="' + t('sayWhatScreen', 'say what should change on this screen') + '"></textarea><input id="fwho" placeholder="' + t('yourName', 'your name') + '"><button class="btn btn-primary" id="fsend">' + t('send', 'Comment') + '</button> <span class="hint" id="fstate"></span>' : '');
+  }
+  // a frame whose screen has comments of its own carries a blue dot on its title
+  (window.DOAN_COMMENTS || []).forEach(function (c) {
+    if (c.element || c.path) return;
+    document.querySelectorAll('.cv-frame[data-screen="' + c.screen + '"]' + (c.state ? '[data-state="' + c.state + '"]' : '') + ' > .cv-frame-title').forEach(function (title) {
+      if (!title.querySelector('.dot.cm')) { var d = document.createElement('i'); d.className = 'dot cm'; d.title = c.author + ': ' + c.text; title.appendChild(d); }
+    });
+  });
   function selectFrame(frame, zoom) {
     if (window.doanClearSelection) window.doanClearSelection();
     markFrame(frame); frameInfo(frame); setHash(frame, null);
