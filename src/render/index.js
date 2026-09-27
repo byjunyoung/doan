@@ -245,10 +245,17 @@ ${content}
 // server-side. No resolver, no controls.
 const attrName = (s) => String(s).toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
+// The project's tokens reach only what the project draws — a screen frame, a canvas frame, a
+// prototype view, a library sample — never the viewer's own chrome. The chrome runs on the
+// bundled defaults (`:root`), so a kiosk with a 20px body and 56px controls does not blow the
+// sidebar and the tabs up with it (found the first time a project had a type scale of its own).
+export const PRODUCT_ROOTS = '.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant';
+const productCss = (tokens) => tokensToCss(tokens).replace(/^:root/, PRODUCT_ROOTS);
+
 function modeCss(project) {
   const contexts = project.tokenSet?.contexts ?? {};
   return Object.entries(contexts)
-    .flatMap(([axis, byCtx]) => Object.entries(byCtx).map(([ctx, t]) => tokensToCss(mergeTokens(DEFAULT_TOKENS, t)).replace(/^:root/, `:root[data-${attrName(axis)}="${h(ctx)}"]`)))
+    .flatMap(([axis, byCtx]) => Object.entries(byCtx).map(([ctx, t]) => tokensToCss(mergeTokens(DEFAULT_TOKENS, t)).replace(/^:root/, `:root[data-${attrName(axis)}="${h(ctx)}"] :is(${PRODUCT_ROOTS})`)))
     .join('\n');
 }
 
@@ -307,7 +314,7 @@ function componentCss(project) {
 function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', file = '', body, api = false, screen = '', comments = [], lang = 'en' }) {
   return `<!doctype html>
 <html lang="${h(lang)}"><head><meta charset="utf-8"><title>${h(title)}</title>
-<style>${tokensToCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
+<style>${tokensToCss(DEFAULT_TOKENS)}\n${productCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
 <script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>

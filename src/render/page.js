@@ -7,6 +7,8 @@ export const CSS = `
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); background: var(--color-surface); }
+/* what the project draws takes the project's type; the chrome around it keeps the viewer's */
+.frame, .cv-frame, .proto-view, .lib-pic, .lib-variant { font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); }
 a { color: inherit; text-decoration: none; }
 .shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr) 0; min-height: 100vh; transition: grid-template-columns .15s ease; }
 .shell.drawer-open { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--drawer-w); }

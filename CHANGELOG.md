@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.12.2 — 2026-09-27
+
+- **A project's tokens reach only what it draws.** They used to sit on `:root`, so a kiosk with a 20px body and 56px controls blew the viewer's own sidebar, tabs and buttons up with it — unseen while every project's tokens matched the bundled ones. The chrome now runs on the bundled defaults; the project's tokens, and the theme switch, apply inside a screen frame, a canvas frame, a prototype view and a library sample.
+
 ## 0.12.1 — 2026-09-26
 
 What filling in a real project showed — the kiosk sample drawn with tokens, contracts and assets of its own (DESIGN.md §13).

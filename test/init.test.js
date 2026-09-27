@@ -102,6 +102,6 @@ test('init writes DTCG token files with a light/dark resolver; resolved for ligh
   assert.deepEqual(conv.tokens.primitive, ['primitive']);
   const screen = project.screens.find((s) => s.doc.screen === 'sample-list');
   const html = renderScreen(project, screen);
-  assert.match(html, /:root\[data-theme="dark"\] \{[^}]*--color-bg: #1f2328;/);
+  assert.match(html, /:root\[data-theme="dark"\] :is\(\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant\) \{[^}]*--color-bg: #1f2328;/);
   assert.match(html, /<select data-mode="theme"><option value="light" selected>light<\/option><option value="dark">dark<\/option><\/select>/);
 });
