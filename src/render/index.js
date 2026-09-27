@@ -44,7 +44,7 @@ function axisCss(rule) {
     if (a) s.push(`justify-content:${a}`);
     if (j) s.push(`align-items:${j}`);
   } else if (rule.kind === 'stack') {
-    if (a) s.push(`align-items:${a}`);
+    if (a) s.push(`align-items:${a}`, `--lay-align:${a}`);
     if (j) s.push(`justify-content:${j}`);
   } else {
     if (a) s.push('display:flex', `justify-content:${a}`, ...(['start', 'end', 'center'].includes(rule.align) ? [`text-align:${rule.align}`] : []));
@@ -87,8 +87,11 @@ export function layoutStyle(rule, { container = true } = {}) {
   // as much as to a container: page.js passes them down to the kind's inner row
   if (rule.wrap) s.push('flex-wrap:wrap');
   if (rule.scroll === 'horizontal') s.push('overflow-x:auto', 'flex-wrap:nowrap');
+  // a list that is longer than the frame scrolls inside it — a kiosk menu board — and whatever
+  // grows toward it may shrink, so the bar below stays on the screen
+  if (rule.scroll === 'vertical') s.push('overflow-y:auto', 'min-height:0');
   if (rule.padding) s.push(`padding:${tokenVar(rule.padding)}`);
-  if (rule.grow) s.push('flex:1 1 auto');
+  if (rule.grow) s.push('flex:1 1 auto', 'min-height:0');
   if (rule.size) s.push(`width:var(--size-${rule.size})`);
   return s.filter(Boolean).join(';');
 }
@@ -228,7 +231,10 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
     const st = s?.doc.status;
     return [st === 'ready' || st === 'done' ? `<span class="pill ok">${st}</span>` : '', block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
   };
-  const tree = canvasPages(project)
+  // one domain is no level of its own: its sections stand at the top of the tree
+  const pages = canvasPages(project);
+  const solo = pages.length === 1;
+  const tree = pages
     .map((p) => {
       const cur = p.slug === place.domain;
       const n = p.sections.reduce((k, s) => k + s.screens.length, 0);
@@ -250,7 +256,7 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
               .join(''),
         )
         .join('');
-      return `<div class="tree-domain${cur ? ' open current' : ''}" data-domain="${h(p.slug)}"><div class="tree-domain-head"><span class="caret"></span><a class="name" href="canvas-${h(p.slug)}.html">${h(p.domain)}</a><span class="hint">${n}</span></div><div class="tree-body">${body}</div></div>`;
+      return `<div class="tree-domain${solo ? ' solo open' : ''}${cur ? ' open current' : ''}" data-domain="${h(p.slug)}"><div class="tree-domain-head"><span class="caret"></span><a class="name" href="canvas-${h(p.slug)}.html">${h(p.domain)}</a><span class="hint">${n}</span></div><div class="tree-body">${body}</div></div>`;
     })
     .join('');
   const nComponents = Object.keys(project.components ?? {}).length;
@@ -258,8 +264,10 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
   // the screens are built from them
   const nTokens = tokenNames(mergeTokens(DEFAULT_TOKENS, project.tokens)).length;
   const nAssets = (project.assets ?? []).length;
+  // the sections of the page you are on, one level under its entry
+  const subs = (list) => (list ?? []).map((x) => `<a class="side-link subsub" href="${h(x.href)}"><span class="name">${h(x.label)}</span>${x.n !== undefined ? `<span class="hint">${x.n}</span>` : ''}</a>`).join('');
   const link = (page, href, label, hint) => `<a class="side-link${page === 'index' ? '' : ' sub'}${place.page === page ? ' current' : ''}" href="${href}"><span class="name">${label}</span>${hint}</a>`;
-  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  const base = `<div class="base">${link('index', 'index.html', D.overview, proposals.length ? `<span class="pill cm">${proposals.length} ${D.waiting}</span>` : '')}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
 }
 
@@ -557,6 +565,32 @@ ${cards}`,
 // The library: every contract in the registry, drawn from its own sample — one picture, and
 // one more per option of every prop that carries variant bindings — with its props, slots and
 // bindings beside it. What a Figma library page was: the design system, seen whole.
+// the category a bundled kind sits in on the components page; a contract may say its own
+const KIND_CATEGORY = {
+  button: 'action', 'button-group': 'action', fab: 'action', chip: 'action',
+  input: 'input', textarea: 'input', select: 'input', number: 'input', date: 'input', 'date-range': 'input', checkbox: 'input', radio: 'input', switch: 'input', segment: 'input', segmented: 'input', stepper: 'input', field: 'input', fieldset: 'input', 'filter-form': 'input', 'filter-bar': 'input', 'search-bar': 'input', upload: 'input',
+  caption: 'display', hint: 'display', image: 'display', tag: 'display', table: 'display', 'kv-table': 'display', 'list-cell': 'display', 'stat-strip': 'display', 'tile-grid': 'display', divider: 'display', placeholder: 'display', 'sortable-list': 'display', tile: 'display', progress: 'display',
+  card: 'container', section: 'container', group: 'container', modal: 'container', 'bottom-sheet': 'container', 'detail-card': 'container', 'sheet-handle': 'container', overlay: 'container',
+  'page-header': 'nav', 'app-bar': 'nav', 'tab-bar': 'nav', tabs: 'nav', nav: 'nav', pagination: 'nav',
+  'empty-notice': 'feedback', 'error-notice': 'feedback', skeleton: 'feedback', toast: 'feedback', snackbar: 'feedback', tooltip: 'feedback', confirm: 'feedback', 'pull-to-refresh': 'feedback',
+};
+// every kind the screens name — in elements, in state and variant patches — and the parts of the compounds among them
+function usedKinds(project) {
+  const out = new Set();
+  const walk = (v) => {
+    if (Array.isArray(v)) return v.forEach(walk);
+    if (v && typeof v === 'object') {
+      if (typeof v.kind === 'string') out.add(v.kind);
+      Object.values(v).forEach(walk);
+    }
+  };
+  for (const s of project.screens) walk(s.doc);
+  for (const k of [...out]) walk(project.components?.[k]?.elements);
+  return out;
+}
+// a link to #k-<kind> inside a folded group opens the group first
+const OPEN_TARGET_SCRIPT = `<script>(function(){function go(){var id=decodeURIComponent(location.hash.slice(1));if(!id)return;var t=document.getElementById(id);if(!t)return;var d=t.closest('details');while(d){d.open=true;d=d.parentElement&&d.parentElement.closest('details');}t.scrollIntoView();}window.addEventListener('hashchange',go);go();})();</script>`;
+
 export function renderLibrary(project, { branch = null, adapter = null, api = false } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);
@@ -581,9 +615,7 @@ export function renderLibrary(project, { branch = null, adapter = null, api = fa
       for (const [opt, b] of Object.entries(options ?? {})) for (const [slot, t] of Object.entries(b ?? {})) rows.push(`<tr><td><code>${h(slot)}</code> <span class="hint">${h(prop)}=${h(opt)}</span></td><td><code>${h(t)}</code></td></tr>`);
     return rows.join('');
   };
-  const sections = Object.values(registry)
-    .sort((a, b) => a.kind.localeCompare(b.kind))
-    .map((c) => {
+  const section = (c) => {
       const sample = { id: `sample-${c.kind}`, kind: c.kind, ...(c.sample ?? {}) };
       const variantPics = Object.entries(c.variants ?? {})
         .flatMap(([prop, options]) => Object.keys(options ?? {}).map((opt) => `<div class="lib-variant"><div class="hint">${h(prop)} = ${h(opt)}</div>${picture(c, { ...sample, id: `${sample.id}-${prop}-${opt}`, [prop]: c.props?.[prop]?.type === 'boolean' ? opt === 'true' : opt })}</div>`))
@@ -595,17 +627,35 @@ export function renderLibrary(project, { branch = null, adapter = null, api = fa
       return `<section class="lib" id="k-${h(c.kind)}">
 <h3>${h(c.kind)}</h3><div class="hint">${h(c.description ?? '')}</div><div class="hint lib-meta">${meta}</div>
 <div class="lib-row">${picture(c, sample)}${variantPics ? `<div class="lib-variants">${variantPics}</div>` : ''}</div>
+${props.length || c.slots?.length || c.tokens || c.variants ? `<details class="lib-more"><summary>${D.propsAndStyle}</summary>
 ${props.length ? `<div class="section-title">${D.propsLabel}</div><table class="props">${props.map(propRow).join('')}</table>` : ''}
 ${c.slots?.length ? `<div class="section-title">${D.slotsLabel}</div><div class="hint">${c.slots.map((s) => `<code>${h(s)}</code>`).join(' ')}</div>` : ''}
 ${c.tokens || c.variants ? `<div class="section-title">${D.bindingsLabel}</div><table class="props">${bindingRows(c)}</table>` : ''}
+</details>` : ''}
 </section>`;
-    })
-    .join('');
+  };
+  // two levels, as a design system's page reads: what this project uses, then the bundled rest
+  // folded; inside each, by category — a contract's own category: wins, a compound is "made of parts"
+  const used = usedKinds(project);
+  const catOf = (c) => c.category ?? (Array.isArray(c.elements) && c.elements.length ? 'compound' : KIND_CATEGORY[c.kind] ?? 'other');
+  const CATS = ['compound', 'action', 'input', 'display', 'container', 'nav', 'feedback', 'other'];
+  const catLabel = (k) => D[`cat${k[0].toUpperCase()}${k.slice(1)}`] ?? k;
+  // a team's own category: gets its own heading, after the known ones
+  for (const c of Object.values(registry)) if (!CATS.includes(catOf(c))) CATS.splice(CATS.length - 1, 0, catOf(c));
+  const byCat = (list, prefix) =>
+    CATS.map((k) => [k, list.filter((c) => catOf(c) === k)]).filter(([, l]) => l.length)
+      .map(([k, l]) => `<h3 class="lib-cat" id="${prefix}-${k}">${h(catLabel(k))}<span class="n">${l.length}</span></h3>${l.sort((a, b) => a.kind.localeCompare(b.kind)).map(section).join('')}`).join('');
+  const all = Object.values(registry);
+  const mine = all.filter((c) => used.has(c.kind)), rest = all.filter((c) => !used.has(c.kind));
+  const sections = (mine.length ? `<div class="lib-group"><h2>${D.usedHere} <span class="hint">${mine.length}</span></h2>${byCat(mine, 'used')}</div>` : '') +
+    (rest.length ? `<details class="lib-group" id="unused"${mine.length ? '' : ' open'}><summary>${D.unusedBundled} <span class="hint">${rest.length}</span></summary>${byCat(rest, 'rest')}</details>` : '');
+  const sub = CATS.filter((k) => mine.some((c) => catOf(c) === k)).map((k) => ({ href: `#used-${k}`, label: catLabel(k), n: mine.filter((c) => catOf(c) === k).length }));
+  if (rest.length) sub.push({ href: '#unused', label: D.unusedBundled, n: rest.length });
   const body = shellOf(project, D, {
     title: D.library,
     meta: `${Object.keys(registry).length}${branch ? ` · ${h(branch)}` : ''}`,
-    place: { page: 'components' },
-    content: sections || `<div class="hint">${D.noneOfKind}</div>`,
+    place: { page: 'components', sub },
+    content: (sections || `<div class="hint">${D.noneOfKind}</div>`) + OPEN_TARGET_SCRIPT,
   });
   return page({ title: D.library, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments: [], lang });
 }
@@ -660,7 +710,7 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
       tools: `<button class="toggle" id="cv-out" type="button">−</button><span class="toggle zoom" id="cv-zoom">100%</span><button class="toggle" id="cv-in" type="button">+</button><button class="toggle" id="cv-fit" type="button">${D.fitLabel}</button><label class="toggle"><input type="checkbox" id="cv-show-arrows" checked> ${D.arrowsLabel}</label>`,
       mainClass: 'cv-main',
       comments: api ? comments : [],
-      content: `<div class="cv-wrap" id="cv-wrap"><div class="cv-canvas" id="cv-canvas"><div class="cv-domain" id="cv-domain">${sections}</div><svg class="cv-arrows" id="cv-arrows"><defs><marker id="cv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs></svg></div></div>`,
+      content: `<div class="cv-wrap" id="cv-wrap"><div class="cv-canvas" id="cv-canvas"><div class="cv-domain" id="cv-domain">${sections}</div><svg class="cv-arrows" id="cv-arrows"><defs><marker id="cv-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker><marker id="cv-arrow-hot" class="hot" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="4" markerHeight="4" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z"/></marker></defs></svg></div></div>`,
     }) +
     `
 <script>window.DOAN_FLOWS = ${JSON.stringify(flows)}; window.DOAN_CANVAS = ${JSON.stringify({ domain: pageSpec.domain, screens: inDomain })}; window.DOAN_SCREEN_DOMAIN = ${JSON.stringify(screenDomain)};</script>
@@ -1083,13 +1133,21 @@ export function renderFoundations(project, { branch = null, adapter = null, api 
       }).join('')
     : `<div class="hint">${D.noStyles}</div>`;
 
-  const colorGroups = new Map();
-  for (const name of tokenNames(tokens.color ?? {}, ['color'])) {
-    const g = name.split('.').length > 2 ? name.split('.').slice(0, 2).join('.') : 'color';
-    if (!colorGroups.has(g)) colorGroups.set(g, []);
-    colorGroups.get(g).push(name);
-  }
-  const colours = [...colorGroups.entries()].map(([g, names]) => `<div class="b-swatches">${names.map((n) => `<div class="b-swatch" data-panel="${h(panel(n, [['value', getToken(tokens, n)], ['css', `--${n.replace(/\./g, '-')}`]]))}"><span style="background:${cssv(n)}"></span><code>${h(n.replace(/^color\./, ''))}</code><div class="hint">${h(getToken(tokens, n))}</div></div>`).join('')}</div>`).join('');
+  // colours by role, the way a palette page reads: base surfaces and text, the brand, status, the tool's own
+  const roleOf = (n) => {
+    const leaf = n.split('.').slice(1).join('.');
+    if (/^(bg|surface|border|text|muted)$/.test(leaf)) return 'Base';
+    if (/^(danger|success|warning|info|error)/.test(leaf)) return 'State';
+    if (/^(placeholder|tbd|none)/.test(leaf)) return 'System';
+    return 'Brand';
+  };
+  const colorNames = tokenNames(tokens.color ?? {}, ['color']);
+  const swatch = (n) => `<div class="b-swatch" data-panel="${h(panel(n, [['value', getToken(tokens, n)], ['css', `--${n.replace(/\./g, '-')}`]]))}"><span style="background:${cssv(n)}"></span><code>${h(n.replace(/^color\./, ''))}</code><div class="hint">${h(getToken(tokens, n))}</div></div>`;
+  const colours = ['Base', 'Brand', 'State', 'System']
+    .map((r) => [r, colorNames.filter((n) => roleOf(n) === r)])
+    .filter(([, l]) => l.length)
+    .map(([r, l]) => `<div class="b-role">${D[`role${r}`]}</div><div class="b-swatches">${l.map(swatch).join('')}</div>`)
+    .join('');
 
   const surfaces = pick('surface').filter(([, v]) => v && typeof v === 'object');
   const surfaceBoxes = surfaces.length
@@ -1131,16 +1189,16 @@ export function renderFoundations(project, { branch = null, adapter = null, api 
     .join('');
 
   const content = `<div class="board">
-<div class="section-title">${D.textStyles}</div>${textRows}
-<div class="section-title">${D.colorsLabel}</div>${colours}
-<div class="section-title">${D.surfacesLabel}</div>${surfaceBoxes}
-<div class="section-title">${D.scalesLabel}</div>${scales}
+<div class="section-title" id="f-text">${D.textStyles}</div>${textRows}
+<div class="section-title" id="f-color">${D.colorsLabel}</div>${colours}
+<div class="section-title" id="f-surface">${D.surfacesLabel}</div>${surfaceBoxes}
+<div class="section-title" id="f-scale">${D.scalesLabel}</div>${scales}
 ${bare ? `<div class="section-title">${D.componentsLabel}</div>${comps}` : ''}
 </div>`;
   const extraCss = adapter?.styles ? adapter.styles() : '';
   if (bare) return page({ title: D.foundations, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body: `<main class="bare">${content}</main>`, api, lang });
   const body =
-    shellOf(project, D, { title: D.foundations, meta: `${h(D.styleMeta)}${branch ? ` · ${h(branch)}` : ''}`, place: { page: 'foundations' }, content: foundationTabs(D, 'board') + content }) + PICK_SCRIPT;
+    shellOf(project, D, { title: D.foundations, meta: `${h(D.styleMeta)}${branch ? ` · ${h(branch)}` : ''}`, place: { page: 'foundations', sub: [{ href: '#f-text', label: D.textStyles, n: texts.length }, { href: '#f-color', label: D.colorsLabel, n: colorNames.length }, { href: '#f-surface', label: D.surfacesLabel, n: surfaces.length }, { href: '#f-scale', label: D.scalesLabel }] }, content: foundationTabs(D, 'board') + content }) + PICK_SCRIPT;
   return page({ title: D.foundations, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss, body, api, screen: '', comments: [], lang });
 }
 

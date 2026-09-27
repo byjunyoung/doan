@@ -213,6 +213,6 @@ test('a card or modal antd draws gets the screen layout on the box its children 
   const html = renderScreen(project, project.screens.find((s) => s.doc.screen === 'order-list'), { branch: 'x', adapter });
   assert.match(html, /data-id="box"[^>]*style="[^"]*--lay-dir:column;--lay-gap:var\(--space-lg\)/);
   assert.match(html, /<div class="modal-body">/);
-  assert.match(html, /\.lay-body, \.el-modal:not\(\[data-drawn\]\) > \.modal-body \{ display: flex; flex-direction: var\(--lay-dir, column\); gap: var\(--lay-gap, 0\); \}/);
+  assert.match(html, /\.lay-body, \.el-modal:not\(\[data-drawn\]\) > \.modal-body \{ display: flex; flex-direction: var\(--lay-dir, column\); gap: var\(--lay-gap, 0\); align-items: var\(--lay-align, stretch\); \}/);
   assert.doesNotMatch(html, /code\/\[object Object\]/);
 });

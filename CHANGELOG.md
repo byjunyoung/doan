@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.15.3 — 2026-09-28
+
+- **`scroll: vertical`** — a list longer than the frame scrolls inside it (a kiosk menu board) and the bar below stays on screen. `grow` may now shrink; everything else keeps its height.
+- **An element leads to its main component**, as in Figma — the drawer shows the instance chain (`◇ tile › ◇ caption` for a part of a compound), each a link, and a *Go to main component* button; a right click on any element offers the same, Select and copy path:line. The components page outlines the contract it was opened on.
+- **The layer tree folds like Figma's** — a caret on every element that holds others (Alt+click folds all under it), a guide line per level, a mark for what each is (▤ ◇ T ▨); a frame opens with every layer folded, showing its top level; a selection opens the rows above it.
+- **The design-system pages have levels** — Components: used in this project first, by category (made of parts, actions, inputs, content, containers, navigation, feedback; a contract's `category:` wins), the bundled rest folded; each card folds its props and styles. Foundations: colours by role (base, brand, status, system). The sidebar lists the sections of the page you are on; an anchor opens the folded group it sits in.
+- **Canvas arrows keep to the gutters**, as Figma's Autoflow does — out of the state frame the flow leaves (its `in:`), along the gutter beside it, and for anything but the next column up into a corridor above the section boxes and down the gutter left of the target; every gutter and the corridor hand out lanes. A flow that goes back (처음으로, 이전, a timeout home) is no line but a chip under the frame it leaves, one per screen it returns to; arrows between the same two frames merge. Labels are short (the flow's `when`, ⏱ for a timeout), centred in their gutter, cut with … when they would not fit, moved past other labels and frames, and drawn above every line. The column gap is 280px, the frame gap 120px.
+- **Canvas details** — hovering an arrow or its label lights the line, its head and its label together; a device frame (tablet, phone) has nothing square behind its rounded bezel and its selection follows the curve; the canvas area fits the window, so its four corners show.
+- **A project of one domain has no domain row** — the sidebar starts at its sections; with two or more, each domain is a level as before.
+- **The two side panes are one width** — the page list on the left and the inspect panel on the right are both 280px (were 232px and 340px).
+- **A files proposal may carry screens** — one change across a screen and the rest (a section renamed and its screens moved) is one proposal, clean together where each alone would block.
+- **Alignment reaches a drawn card's body** — `align: center` on a card antd drew centres what is inside it, and the card itself still fills its place. A full-width picture fills its row whatever the alignment around it.
+
 ## 0.15.2 — 2026-09-28
 
 What the kiosk's comments and its prototype showed.

@@ -215,7 +215,7 @@ test('files: a proposal carries tokens, a contract and an svg; always pending; l
 test('files: a path outside the design files, a broken json, a file changed since — each refused', async () => {
   const dir = sandbox();
   await assert.rejects(proposeFiles(dir, { files: [{ path: '../evil.yaml', content: 'x' }] }, opts), /is not a file a proposal may change/);
-  await assert.rejects(proposeFiles(dir, { files: [{ path: 'screens/order-list.yaml', content: 'x' }] }, opts), /is not a file a proposal may change/);
+  await assert.rejects(proposeFiles(dir, { files: [{ path: 'screens/../x.yaml', content: 'x' }] }, opts), /is not a file a proposal may change/);
   await assert.rejects(proposeFiles(dir, { files: [{ path: 'tokens/x.tokens.json', content: '{' }] }, opts), /is not JSON/);
   const p = await proposeFiles(dir, { files: [{ path: 'components/chip.yaml', content: 'kind: chip\ndescription: x\n' }] }, opts);
   const { writeFileSync } = await import('node:fs');
@@ -245,4 +245,16 @@ test('files: lint after runs the schema of every file — a conventions key the 
   assert.ok(bad.lint.after.findings.some((f) => f.id === 'SCHEMA' && f.file === 'conventions.yaml'));
   const good = await proposeFiles(dir, { files: [{ path: 'conventions.yaml', content: conv + '\nrender:\n  fonts: [ "https://cdn.example.com/f.css" ]\n' }] }, opts);
   assert.equal(good.lint.after.blocking, 0);
+});
+
+test('files: one change across a screen and the rest — a section renamed and the screen moved into it — is one proposal, clean together where each alone would block', async () => {
+  const dir = sandbox();
+  const sections = readFileSync(join(dir, 'sections.yaml'), 'utf8');
+  const screen = readFileSync(join(dir, 'screens', 'order-list.yaml'), 'utf8');
+  const old = screen.match(/^section: (.+)$/m)[1];
+  const p = await proposeFiles(dir, { files: [
+    { path: 'sections.yaml', content: sections.replace(old.replace(/^"|"$/g, ''), '03. Orders - All orders') },
+    { path: 'screens/order-list.yaml', content: screen.replace(`section: ${old}`, 'section: "03. Orders - All orders"') },
+  ] }, opts);
+  assert.equal(p.lint.after.blocking, p.lint.before.blocking);
 });

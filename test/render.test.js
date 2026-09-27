@@ -247,7 +247,7 @@ test('a project with no token resolver gets no mode select and no per-context cs
 });
 
 test('align is horizontal and justify vertical whatever the direction; columns can be a track list; a leaf aligns its box and text', () => {
-  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center', justify: 'space-between' }), /^display:flex;flex-direction:column;--lay-dir:column;align-items:center;justify-content:space-between$/);
+  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center', justify: 'space-between' }), /^display:flex;flex-direction:column;--lay-dir:column;align-items:center;--lay-align:center;justify-content:space-between$/);
   assert.match(layoutStyle({ kind: 'stack', direction: 'row', align: 'space-between', justify: 'center' }), /flex-direction:row;--lay-dir:row;justify-content:space-between;align-items:center/);
   assert.match(layoutStyle({ kind: 'grid', columns: '1fr auto auto', gap: 'space.md', justify: 'center' }), /display:grid;grid-template-columns:1fr auto auto;gap:var\(--space-md\);--lay-gap:var\(--space-md\);align-items:center;align-content:center/);
   assert.match(layoutStyle({ kind: 'grid', columns: ['1fr', 'auto'] }), /grid-template-columns:1fr auto/);
@@ -290,4 +290,30 @@ test('an svg icon is a mask in the text colour — on a button, and as an image 
   const { kinds } = await import('../src/render/kinds.js');
   assert.match(kinds.image({ id: 'i', kind: 'image', src: 'assets/icons/card.svg', size: 'sm' }), /<div class="img is-icon size-sm"><span class="ico-mask ico-fill"/);
   assert.match(kinds.image({ id: 'i', kind: 'image', src: 'assets/photos/a.svg' }), /<img src="assets\/photos\/a.svg"/);
+});
+
+test('scroll: vertical keeps a long list inside the frame; grow may shrink; a stack aligned center carries it to a drawn card body', () => {
+  assert.match(layoutStyle({ kind: 'grid', columns: 3, scroll: 'vertical', grow: true }), /overflow-y:auto;min-height:0;flex:1 1 auto;min-height:0/);
+  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center' }), /align-items:center;--lay-align:center/);
+});
+
+test('an element leads to its main component: the drawer shows the instance chain and a link, a right click offers the same, the components page marks the target', async () => {
+  const { INSPECTOR_JS, CSS } = await import('../src/render/page.js');
+  assert.match(INSPECTOR_JS, /function instancePath\(el\)/);
+  assert.match(INSPECTOR_JS, /components\.html#k-' \+ esc\(el\.getAttribute\('data-kind'\)\)/);
+  assert.match(INSPECTOR_JS, /addEventListener\('contextmenu'/);
+  assert.match(CSS, /\.lib:target \{ outline:/);
+});
+
+test('the components page reads in two levels — used here by category, the bundled rest folded — each card folds its tables; the foundations board groups colours by role; the sidebar lists the sections of the page you are on', async () => {
+  const project = await loadProject(orders);
+  const { renderLibrary } = await import('../src/render/index.js');
+  const lib = renderLibrary(project, { branch: 'x' });
+  assert.match(lib, /<div class="lib-group"><h2>Used in this project <span class="hint">\d+<\/span><\/h2><h3 class="lib-cat" id="used-action">Actions/);
+  assert.match(lib, /<details class="lib-group" id="unused"( open)?><summary>Bundled, not used here|^(?![\s\S]*id="unused")/);
+  assert.match(lib, /<details class="lib-more"><summary>Props and styles<\/summary>/);
+  assert.match(lib, /<a class="side-link subsub" href="#used-action"><span class="name">Actions<\/span>/);
+  const f = renderFoundations(project, { branch: 'x' });
+  assert.match(f, /<div class="b-role">Base<\/div>/);
+  assert.match(f, /<a class="side-link subsub" href="#f-text"><span class="name">Text styles<\/span>/);
 });

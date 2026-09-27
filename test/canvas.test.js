@@ -106,3 +106,34 @@ test('the shell folds for narrow windows: a menu button and a panel button on ev
     assert.match(html, /window\.doanPanelOpen = function \(\)/);
   }
 });
+
+test('the layer tree folds like Figma: a caret per element that holds others (Alt folds all under it), a guide per level, a mark per kind, every row folded at first, a selection revealed', async () => {
+  const { CANVAS_JS, CSS } = await import('../src/render/page.js');
+  assert.match(CANVAS_JS, /function paintLayers\(box\)/);
+  assert.match(CANVAS_JS, /if \(e\.altKey\)/);
+  assert.match(CANVAS_JS, /open: false/);
+  assert.match(CANVAS_JS, /function revealLayer\(el\)/);
+  assert.match(CSS, /\.tree-el \.lg \{[^}]*border-left: 1px solid/);
+});
+
+test('hovering an arrow or its label lights both up; the canvas area fits the window so its four corners show', async () => {
+  const { CANVAS_JS, CSS } = await import('../src/render/page.js');
+  assert.match(CANVAS_JS, /'class': 'cv-hit', d: pathOf\(points\), 'data-flow': fid/);
+  assert.match(CANVAS_JS, /lg\.setAttribute\('data-flow', fid\)/);
+  assert.match(CANVAS_JS, /svg\.addEventListener\('mouseover'/);
+  assert.match(CSS, /\.cv-arrow\.hot \{ stroke: var\(--color-primary\)/);
+  assert.match(CSS, /\.cv-main \{ display: flex; flex-direction: column; height: 100vh;/);
+});
+
+test('a project of one domain has no domain row: the sidebar starts at its sections', async () => {
+  const conv = 'meta: { language: en }\nstates: { known: [Default] }\n';
+  const screen = (id, section) => `schema: doan/0.2\nid: scr_${id}\nscreen: ${id}\nsection: "${section}"\ntype: page\nelements: []\n`;
+  const dir = await dirWith({ 'conventions.yaml': conv, 'sections.yaml': '- "01. Cafe - Menu"\n- "02. Cafe - Cart"\n', 'screens/a.yaml': screen('a', '01. Cafe - Menu'), 'screens/b.yaml': screen('b', '02. Cafe - Cart') });
+  const project = await loadProject(dir);
+  const [page] = canvasPages(project);
+  const html = renderCanvas(project, page, { branch: 'x' });
+  assert.match(html, /<div class="tree-domain solo open/);
+  assert.match(html, /\.tree-domain\.solo > \.tree-domain-head \{ display: none; \}/);
+  const two = await loadProject(await dirWith({ 'conventions.yaml': conv, 'sections.yaml': '- "01. Cafe - Menu"\n- "02. Shop - Cart"\n', 'screens/a.yaml': screen('a', '01. Cafe - Menu'), 'screens/b.yaml': screen('b', '02. Shop - Cart') }));
+  assert.doesNotMatch(renderCanvas(two, canvasPages(two)[0], { branch: 'x' }), /tree-domain solo/);
+});

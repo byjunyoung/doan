@@ -3,7 +3,7 @@
 // delegated click handler behind the drawer inspector. Sizes and colours come from tokens.
 // NOTE: this file's strings are template literals — no backticks inside them, comments included.
 export const CSS = `
-:root { --size-sm: 240px; --size-md: 480px; --size-lg: 720px; --size-full: 100%; --side-w: 232px; --drawer-w: 340px; --ref-w: 1280px; }
+:root { --size-sm: 240px; --size-md: 480px; --size-lg: 720px; --size-full: 100%; --side-w: 280px; --drawer-w: 280px; /* the two side panes are one width */ --ref-w: 1280px; }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
 body { margin: 0; font: var(--font-size-md, var(--font-size, 14px))/1.45 var(--font-family); color: var(--color-text); background: var(--color-surface); }
@@ -149,6 +149,7 @@ table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
 .tree-domain-head .name { flex: 1; color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tree-domain-head .hint { font-weight: 400; }
 .tree-domain.current > .tree-domain-head { box-shadow: inset 3px 0 0 var(--color-primary); background: var(--color-surface); }
+.tree-domain.solo > .tree-domain-head { display: none; }
 .tree-domain > .tree-body { display: none; } .tree-domain.open > .tree-body { display: block; }
 .caret { width: 12px; font-size: 9px; color: var(--color-muted); cursor: pointer; text-align: center; flex: 0 0 auto; }
 .caret::before { content: '\\25B8'; } .open > .tree-domain-head .caret::before, .open > .tree-screen-head .caret::before { content: '\\25BE'; }
@@ -161,16 +162,21 @@ table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
 .tree-frame { display: block; padding: 3px var(--space-md) 3px 30px; color: var(--color-text); font-size: 12px; }
 .tree-frame:hover { background: var(--color-surface); }
 .tree-frame.current { background: var(--color-surface); font-weight: 600; box-shadow: inset 3px 0 0 var(--color-primary); }
-.tree-el { padding: 2px var(--space-md); font-size: 11px; color: var(--color-text); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tree-el { display: flex; align-items: center; height: 22px; padding: 0 var(--space-md) 0 20px; font-size: 11px; color: var(--color-text); cursor: pointer; white-space: nowrap; overflow: hidden; }
+.tree-el .lg { flex: 0 0 14px; align-self: stretch; margin-left: 6px; border-left: 1px solid var(--color-border); }
+.tree-el[hidden] { display: none; }
+.tree-el .lc { flex: 0 0 14px; text-align: center; color: var(--color-muted); font-size: 11px; } .tree-el .lc:hover { color: var(--color-text); }
+.tree-el .lm { flex: 0 0 16px; text-align: center; color: var(--color-muted); font-size: 10px; }
+.tree-el .ln { overflow: hidden; text-overflow: ellipsis; } .tree-el .lk { margin-left: 6px; color: var(--color-muted); font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
 .tree-el:hover { background: var(--color-surface); } .tree-el.current { background: var(--color-surface); font-weight: 600; }
 .cv-body .el.hover { outline: 1px solid var(--color-primary); outline-offset: 1px; }
 .cv-frame.selected .cv-body { outline: 2px solid var(--color-primary); outline-offset: 4px; }
 .cv-frame.selected .cv-frame-title { color: var(--color-primary); }
 /* the domain canvas — sizes are canvas pixels, scaled with the zoom, so they read like fig's page values */
-.cv-main { display: flex; flex-direction: column; min-height: 100vh; }
-.cv-wrap { position: relative; flex: 1; min-height: 480px; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: grab; user-select: none; }
+.cv-main { display: flex; flex-direction: column; height: 100vh; min-height: 0; box-sizing: border-box; padding-bottom: var(--space-md); }
+.cv-wrap { position: relative; flex: 1; min-height: 0; overflow: hidden; background: var(--color-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: grab; user-select: none; }
 .cv-wrap.dragging { cursor: grabbing; }
-.cv-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; --cv-col: 160px; --cv-frame: 96px; --cv-sec: 240px; --cv-pad: 96px; }
+.cv-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; --cv-col: 280px; --cv-frame: 120px; --cv-sec: 240px; --cv-pad: 96px; }
 .cv-domain { display: flex; gap: var(--cv-sec); align-items: flex-start; padding: 120px; width: max-content; }
 .cv-section { position: relative; padding: 112px var(--cv-pad) var(--cv-pad); border: 1px dashed var(--color-border); border-radius: 48px; background: rgba(107,114,128,.04); width: max-content; }
 .cv-section-title { position: absolute; top: 32px; left: 44px; font-size: 22px; letter-spacing: .04em; text-transform: uppercase; color: var(--color-muted); white-space: nowrap; }
@@ -180,12 +186,20 @@ table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
 .cv-frame-title { display: block; font-size: 18px; color: var(--color-muted); margin-bottom: 8px; text-decoration: none; white-space: nowrap; }
 .cv-frame-title:hover { color: var(--color-primary); }
 .cv-body { background: var(--color-bg); box-shadow: 0 2px 16px rgba(0,0,0,.08); }
+/* a device frame draws its own rounded bezel: nothing square behind it, and the selection follows its curve */
+.cv-body:has(> .cv-stage > .frame.device-tablet) { background: none; box-shadow: none; border-radius: 24px; }
+.cv-body:has(> .cv-stage > .frame.device-phone) { background: none; box-shadow: none; border-radius: 44px; }
 .cv-stage { display: block; } .cv-stage .frame { transform: none !important; margin: 0 !important; box-shadow: none; }
 .cv-arrows { position: absolute; left: 0; top: 0; overflow: visible; pointer-events: none; }
 .cv-arrow { fill: none; stroke: var(--color-muted); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .cv-arrow.conditional { stroke-dasharray: 12 8; }
+.cv-hit { fill: none; stroke: transparent; stroke-width: 24; pointer-events: stroke; cursor: default; }
+.cv-label { pointer-events: all; cursor: default; }
+.cv-arrow.hot { stroke: var(--color-primary); stroke-width: 6; }
+.cv-label.hot rect { stroke: var(--color-primary); stroke-width: 3; fill: #eef3ff; } .cv-label.hot text { fill: var(--color-primary); font-weight: 700; }
+#cv-arrow-hot path { fill: var(--color-primary); }
 .cv-chain { fill: none; stroke: var(--color-muted); stroke-width: 2; stroke-dasharray: 12 8; opacity: .6; }
-.cv-label rect { fill: var(--color-bg); stroke: var(--color-border); rx: 8; } .cv-label text { font-size: 20px; font-weight: 500; fill: var(--color-muted); }
+.cv-label rect { fill: var(--color-bg); stroke: var(--color-border); rx: 8; } .cv-back rect { fill: var(--color-surface); stroke-dasharray: 5 4; } .cv-label text { font-size: 20px; font-weight: 500; fill: var(--color-muted); }
 .cv-stub text { font-size: 20px; fill: var(--color-primary); } .cv-stub a { pointer-events: auto; }
 #cv-arrow path { fill: var(--color-muted); }
 body.cv-no-arrows .cv-arrows { display: none; }
@@ -302,7 +316,7 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .img img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block; } .img.fit-contain img { object-fit: contain; }
 .ico-img { width: 1em; height: 1em; vertical-align: -0.15em; }
 .ico-mask { display: inline-block; width: 1em; height: 1em; vertical-align: -0.15em; background: currentColor; -webkit-mask: var(--ico) center / contain no-repeat; mask: var(--ico) center / contain no-repeat; }
-.el-image .img.is-icon { background: none; border-color: transparent; box-shadow: none; } .ico-fill { width: 100%; height: 100%; vertical-align: top; }
+.el-image .img.is-icon { background: none; border-color: transparent; box-shadow: none; color: inherit; } .ico-fill { width: 100%; height: 100%; vertical-align: top; }
 /* the tokens page: a variables table per collection; the assets page: a card per file */
 .tok { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: var(--space-lg); }
 .tok th, .tok td { text-align: left; padding: 6px var(--space-sm); border-bottom: 1px solid var(--color-border); vertical-align: middle; }
@@ -370,7 +384,25 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-skeleton .skel { background: linear-gradient(90deg, var(--k-skeleton-bg, var(--color-surface)), var(--k-skeleton-border, var(--color-border)), var(--k-skeleton-bg, var(--color-surface))); }
 .el-overlay .overlay-box { background: var(--k-overlay-bg, rgba(255,255,255,.8)); color: var(--k-overlay-text, inherit); }
 .el-toast .toast { background: var(--k-toast-bg, var(--color-text)); color: var(--k-toast-text, var(--color-bg)); border-radius: var(--k-toast-radius, var(--radius-sm)); } .el-toast .toast.error { background: var(--k-toast-bg, var(--color-danger)); }
-.lay-body, .el-modal:not([data-drawn]) > .modal-body { display: flex; flex-direction: var(--lay-dir, column); gap: var(--lay-gap, 0); }
+/* only what grows may shrink: a row of buttons keeps its height when a list below scrolls */
+.view-root .el { flex-shrink: 0; }
+/* a full-width picture fills its row whatever the alignment of the box it sits in */
+.el-image[data-size="full"] { align-self: stretch; }
+/* a card or modal a library drew is one root inside its wrapper: it fills the wrapper; the layout's alignment is for its children (.lay-body) */
+.el-card[data-drawn], .el-modal[data-drawn] { align-items: stretch !important; justify-content: flex-start !important; }
+.ctx-menu { position: fixed; z-index: 1000; background: #fff; border: 1px solid #d9dbe0; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 4px; display: flex; flex-direction: column; min-width: 180px; font: 13px/1.4 system-ui, sans-serif; }
+.ctx-menu button { text-align: left; background: none; border: 0; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: #1f2328; } .ctx-menu button:hover { background: #f1f3f5; }
+.inst-path { font-size: 12px; } .inst-path a { color: #2f6fed; text-decoration: none; }
+/* the components page in groups: used here first, by category; the bundled rest folded */
+.lib-group { margin: 0 0 var(--space-lg); } .lib-group > h2, .lib-group > summary { font-size: 15px; margin: 0 0 var(--space-sm); cursor: pointer; } .lib-group > summary { list-style: none; } .lib-group > summary::before { content: '▸  '; color: var(--color-muted); } .lib-group[open] > summary::before { content: '▾  '; }
+.lib-cat { font-size: 12px; font-weight: 600; color: var(--color-muted); margin: var(--space-lg) 0 var(--space-sm); padding-bottom: 4px; border-bottom: 1px solid var(--color-border); scroll-margin-top: 16px; }
+.lib-cat .n { font-weight: 400; margin-left: 4px; }
+.lib-more { margin-top: var(--space-sm); } .lib-more > summary { font-size: 12px; color: var(--color-muted); cursor: pointer; }
+.side-link.subsub { padding-left: 40px; font-size: 12px; color: var(--color-muted); } .side-link.subsub:hover { color: var(--color-text); }
+.b-role { font-size: 11px; color: #6b7280; margin: 12px 0 6px; font-family: system-ui, sans-serif; }
+.board .section-title { scroll-margin-top: 16px; }
+.lib:target { outline: 2px solid #2f6fed; outline-offset: 2px; scroll-margin-top: 16px; }
+.lay-body, .el-modal:not([data-drawn]) > .modal-body { display: flex; flex-direction: var(--lay-dir, column); gap: var(--lay-gap, 0); align-items: var(--lay-align, stretch); }
 .el-modal[data-drawn] > * { box-shadow: var(--k-modal-shadow, 0 8px 32px rgba(0,0,0,.25)); }
 .el-modal:not([data-drawn]) { background: var(--k-modal-bg, var(--color-bg)); color: var(--k-modal-text, inherit); border-radius: var(--k-modal-radius, var(--radius-md)); padding: var(--k-modal-padding, 0); box-shadow: var(--k-modal-shadow, none); }
 .el-confirm .confirm { background: var(--k-confirm-bg, var(--color-bg)); color: var(--k-confirm-text, inherit); border-radius: var(--k-confirm-radius, var(--radius-md)); }
@@ -497,6 +529,40 @@ export const INSPECTOR_JS = `
     });
   });
 
+  // the instance chain, as Figma shows it: an element drawn inside a compound (card/label) lists the
+  // compound first — each a link to its contract on the components page
+  function instancePath(el) {
+    var chain = [], n = el;
+    while (n) {
+      var kind = n.getAttribute('data-kind');
+      if (kind) chain.unshift('<a href="components.html#k-' + esc(kind) + '">\u25c7 ' + esc(kind) + '</a>');
+      var id = n.getAttribute('data-id') || '';
+      if (id.indexOf('/') < 0) break;
+      var owner = id.slice(0, id.lastIndexOf('/'));
+      n = document.querySelector('.el[data-id="' + owner + '"]');
+    }
+    return chain.join(' \u203a ');
+  }
+  // right click on an element: go to its main component, select it, copy where it is written
+  var ctx = null;
+  function closeCtx() { if (ctx) { ctx.remove(); ctx = null; } }
+  document.addEventListener('contextmenu', function (e) {
+    if (document.body.getAttribute('data-mode') === 'proto') return;
+    var el = e.target.closest && e.target.closest('.el[data-kind]');
+    if (!el) return;
+    e.preventDefault(); closeCtx();
+    ctx = document.createElement('div'); ctx.className = 'ctx-menu';
+    var items = [
+      ['\u25c7 ' + t('goToComponent', 'Go to main component'), function () { location.href = 'components.html#k-' + el.getAttribute('data-kind'); }],
+      [t('selectIt', 'Select'), function () { openDrawer(el); }],
+      [t('copy', 'copy path:line'), function () { if (navigator.clipboard) navigator.clipboard.writeText((document.body.getAttribute('data-file') || '') + ':' + (el.getAttribute('data-line') || '') + '  ' + el.getAttribute('data-path')); }],
+    ];
+    items.forEach(function (it) { var b = document.createElement('button'); b.type = 'button'; b.textContent = it[0]; b.addEventListener('click', function (ev) { ev.stopPropagation(); closeCtx(); it[1](); }); ctx.appendChild(b); });
+    ctx.style.left = e.clientX + 'px'; ctx.style.top = e.clientY + 'px';
+    document.body.appendChild(ctx);
+  });
+  document.addEventListener('click', closeCtx);
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCtx(); });
   // drawer inspector: one delegated click
   function openDrawer(el) {
     if (window.doanPanelOpen) window.doanPanelOpen();
@@ -516,7 +582,9 @@ export const INSPECTOR_JS = `
     var mine = comments.filter(function (c) { return (c.element ? c.element === id : c.path === path) && sameScreen(c, el); });
     panel.innerHTML =
       '<h4>' + esc(el.getAttribute('data-id')) + ' <span class="hint">' + esc(el.getAttribute('data-kind')) + '</span><span class="close" id="close">×</span></h4>' +
-      '<div class="hint">' + t('component', 'component') + ': ' + (maps ? esc(maps) : t('bundled', 'bundled default')) + '</div>' +
+      '<div class="inst-path">' + t('component', 'component') + ' ' + instancePath(el) + '</div>' +
+      '<p><a class="btn" href="components.html#k-' + esc(el.getAttribute('data-kind')) + '">\u25c7 ' + t('goToComponent', 'Go to main component') + '</a></p>' +
+      (maps ? '<div class="hint">' + esc(maps) + '</div>' : '') +
       (el.getAttribute('data-code') ? '<p><span class="k">' + t('codeLabel', 'code') + '</span> <code>' + esc(el.getAttribute('data-code')) + '</code></p>' : '') +
       (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
       '<table>' + rows + '</table>' +
@@ -563,6 +631,19 @@ export const INSPECTOR_JS = `
       .then(function (r) { return r.ok ? general() : r.json().then(function (j) { document.getElementById('gstate').textContent = j.error; }); });
   });
   general();
+  // an anchor on this page (#f-color, #k-tile, a sidebar section link) opens the folded group it sits
+  // in and scrolls to it — inside its pane when the pane scrolls, else the page
+  function reveal() {
+    var id = decodeURIComponent(location.hash.slice(1)); if (!id || id.indexOf(':') >= 0) return;
+    var t = document.getElementById(id); if (!t) return;
+    var d = t.closest('details'); while (d) { d.open = true; d = d.parentElement && d.parentElement.closest('details'); }
+    var c = t.parentElement;
+    while (c && c !== document.body) { var o = getComputedStyle(c).overflowY; if ((o === 'auto' || o === 'scroll') && c.scrollHeight > c.clientHeight) break; c = c.parentElement; }
+    if (c && c !== document.body) c.scrollTop += t.getBoundingClientRect().top - c.getBoundingClientRect().top - 12;
+    else window.scrollTo(0, window.scrollY + t.getBoundingClientRect().top - 12);
+  }
+  window.addEventListener('hashchange', function () { setTimeout(reveal, 0); });
+  window.addEventListener('load', function () { setTimeout(reveal, 0); });
   // Enter sends a comment, Shift+Enter breaks the line — in every comment box (element, frame, whole)
   document.addEventListener('keydown', function (e) {
     var send = { ctext: 'csend', ftext: 'fsend', gtext: 'gsend' }[e.target && e.target.id];
@@ -871,11 +952,22 @@ export const CANVAS_JS = `
   function rectOf(node) { var r = node.getBoundingClientRect(), c = canvas.getBoundingClientRect(); return { x: (r.left - c.left) / scale, y: (r.top - c.top) / scale, w: r.width / scale, h: r.height / scale }; }
   function mk(tag, attrs, text) { var n = document.createElementNS(NS, tag); for (var k in attrs) n.setAttribute(k, attrs[k]); if (text !== undefined) n.textContent = text; return n; }
   function pathOf(points) { return points.map(function (p, i) { return (i ? 'L' : 'M') + Math.round(p.x) + ' ' + Math.round(p.y); }).join(' '); }
-  function label(text, x, y) {
+  // a label pill: centred in the space it belongs to (a gutter, the corridor), cut with … when it
+  // would not fit, and moved down past any label or frame already there — never over a screen
+  var placed = [], frameBoxes = [];
+  function widthOf(text) { var w = 0; for (var i = 0; i < text.length; i++) w += text.charCodeAt(i) > 0x2e80 ? 20 : 11; return w + 20; }
+  function hits(b) {
+    return placed.concat(frameBoxes).some(function (o) { return b.x < o.x + o.w && b.x + b.w > o.x && b.y < o.y + o.h && b.y + b.h > o.y; });
+  }
+  function label(text, x, y, room) {
+    var w = widthOf(text);
+    if (room && w > room) { while (text.length > 2 && widthOf(text + '\u2026') > room) text = text.slice(0, -1); text += '\u2026'; w = widthOf(text); }
+    var b = { x: x - w / 2, y: y - 16, w: w, h: 32 };
+    for (var n = 0; n < 40 && hits(b); n++) b.y += 38;
+    placed.push(b);
     var g = mk('g', { 'class': 'cv-label' });
-    var w = Math.round(text.length * 11) + 20;
-    g.appendChild(mk('rect', { x: Math.round(x - w / 2), y: Math.round(y - 16), width: w, height: 32 }));
-    g.appendChild(mk('text', { x: Math.round(x), y: Math.round(y + 7), 'text-anchor': 'middle' }, text));
+    g.appendChild(mk('rect', { x: Math.round(b.x), y: Math.round(b.y), width: w, height: 32 }));
+    g.appendChild(mk('text', { x: Math.round(b.x + w / 2), y: Math.round(b.y + 23), 'text-anchor': 'middle' }, text));
     return g;
   }
   function draw() {
@@ -892,41 +984,94 @@ export const CANVAS_JS = `
       for (var i = 1; i < list.length; i++) { var a = list[i - 1].r, c2 = list[i].r; svg.appendChild(mk('path', { 'class': 'cv-chain', d: pathOf([{ x: a.x + a.w / 2, y: a.y + a.h }, { x: c2.x + c2.w / 2, y: c2.y }]) })); }
     });
     var here = (window.DOAN_CANVAS || {}).screens || [], elsewhere = window.DOAN_SCREEN_DOMAIN || {};
-    var backRows = 0;
+    // arrows keep to the gutters, as Figma's Autoflow does: out of the frame the flow leaves (its
+    // first in: state, else Default), along the gutter right of it, and — when the target is not
+    // the next column — up into a corridor above every frame, across, and down the gutter left of
+    // the target. Each gutter and the corridor hand out lanes so no two arrows share a line.
+    var all = Object.keys(frames).map(function (k) { return frames[k].r; });
+    placed = []; frameBoxes = all.map(function (r) { return { x: r.x - 4, y: r.y - 28, w: r.w + 8, h: r.h + 32 }; });
+    // the corridor runs above the section boxes, clear of their titles
+    var secs = Array.prototype.slice.call(document.querySelectorAll('.cv-section')).map(function (n) { return rectOf(n).y; });
+    var top = Math.min.apply(null, (secs.length ? secs : all.map(function (r) { return r.y; })));
+    var colX = {}; Object.keys(cols).forEach(function (sc) { colX[sc] = cols[sc][0].r.x; });
+    var order = Object.keys(colX).sort(function (p, q) { return colX[p] - colX[q]; });
+    var lanesR = {}, lanesL = {}, corridor = 0, LANE = 16, GUT = 28;
+    function next(screen) { var i = order.indexOf(screen); return i >= 0 ? order[i + 1] : null; }
+    function laneR(sc) { lanesR[sc] = (lanesR[sc] || 0) + 1; return lanesR[sc] - 1; }
+    function laneL(sc) { lanesL[sc] = (lanesL[sc] || 0) + 1; return lanesL[sc] - 1; }
+    // a flow that goes back — to a screen left of where it starts (처음으로, 이전, a timeout home) —
+    // is no line: it is one note under the frame it leaves, flows to the same screen merged. Only
+    // what goes forward is drawn, so the corridor carries the few flows that skip a column.
+    var backs = [], labels = [], flowN = 0;
+    function isBack(f, src) { var t = cols[f.to]; return f.to !== f.screen && t && t[0].r.x < src.r.x; }
+    var drawnPairs = {};
     (window.DOAN_FLOWS || []).forEach(function (f) {
-      if (here.indexOf(f.screen) < 0 || f.to === f.screen) return;
-      var src = frames[f.screen + '|Default'] || (cols[f.screen] || [])[0]; if (!src) return;
+      if (here.indexOf(f.screen) < 0) return;
+      var fromState = f.in && f.in.length ? f.in[0] : 'Default';
+      var src0 = frames[f.screen + '|' + fromState] || frames[f.screen + '|Default'];
+      if (src0 && isBack(f, src0)) { backs.push({ src: src0, f: f }); return; }
+      var src = frames[f.screen + '|' + fromState] || frames[f.screen + '|Default'] || (cols[f.screen] || [])[0]; if (!src) return;
       var s = src.r, start = { x: s.x + s.w, y: s.y + s.h / 2 };
       var anchor = src.el.querySelector('.el[data-id="' + f.from + '"]');
       if (anchor) { var ar = rectOf(anchor), ay = ar.y + ar.h / 2; if (ay > s.y && ay < s.y + s.h) start.y = ay; }
-      var text = [f.from + (f.via ? '.' + f.via : ''), f.gesture, f.nav, f.when].filter(Boolean).join(' \\u00b7 ');
+      // a short label: what it waits for when it says, else what is pressed; a timeout says so
+      var text = (f.gesture === 'timeout' ? '⏱ ' : '') + (f.when || (f.from + (f.via ? '.' + f.via : '')));
       var cls = 'cv-arrow' + (f.style === 'conditional' ? ' conditional' : '');
       var tgt = frames[f.to + '|' + f.state] || frames[f.to + '|Default'] || (cols[f.to] || [])[0];
       if (!tgt) {
         var other = elsewhere[f.to], g = mk('g', { 'class': 'cv-stub' });
         g.appendChild(mk('path', { 'class': cls, d: pathOf([start, { x: start.x + 80, y: start.y }]), 'marker-end': 'url(#cv-arrow)' }));
         var link = mk('a', { href: other ? 'canvas-' + other.slug + '.html' : f.to + '.html' });
-        link.appendChild(mk('text', { x: Math.round(start.x + 92), y: Math.round(start.y + 7) }, '\\u2192 ' + (other ? other.domain + ' / ' : '') + f.to + (f.state !== 'Default' ? '.' + f.state : '') + (text ? '  (' + text + ')' : '')));
+        link.appendChild(mk('text', { x: Math.round(start.x + 92), y: Math.round(start.y + 7) }, '→ ' + (other ? other.domain + ' / ' : '') + f.to + (f.state !== 'Default' ? '.' + f.state : '') + (text ? '  (' + text + ')' : '')));
         g.appendChild(link); svg.appendChild(g); return;
       }
+      if (tgt === src) return;
+      var pair = src.el.getAttribute('data-screen') + src.el.getAttribute('data-state') + '>' + tgt.el.getAttribute('data-screen') + tgt.el.getAttribute('data-state');
+      if (drawnPairs[pair]) { var tn = drawnPairs[pair], rc = tn.previousSibling, nt = tn.textContent + ' \u00b7 ' + text, nw = widthOf(nt); rc.setAttribute('width', nw); rc.setAttribute('x', Math.round(+tn.getAttribute('x') - nw / 2)); tn.textContent = nt; return; }
       var t = tgt.r, points, lab;
-      if (t.x >= start.x + TRUNK / 2) {
+      var gx = s.x + s.w + GUT + laneR(f.screen) * LANE;
+      if (f.to === f.screen) {
+        // another state of the same screen: along the right gutter, in at its right edge
+        var endR = { x: t.x + t.w + HEAD_GAP, y: t.y + t.h / 2 };
+        points = [start, { x: gx, y: start.y }, { x: gx, y: endR.y }, endR];
+        var nx = (function () { var i = order.indexOf(f.screen), n = order[i + 1]; return n ? colX[n] : s.x + s.w + 280; })();
+        lab = { x: (s.x + s.w + nx) / 2, y: (start.y + endR.y) / 2, room: nx - s.x - s.w - 16 };
+      } else if (next(f.screen) === f.to) {
+        // the next column: one gutter between them
         var end = { x: t.x - HEAD_GAP, y: t.y + t.h / 2 };
-        var kx = Math.min(start.x + TRUNK, (start.x + t.x) / 2);
-        points = Math.abs(end.y - start.y) < 1 ? [start, end] : [start, { x: kx, y: start.y }, { x: kx, y: end.y }, end];
-        lab = points.length === 2 ? { x: (start.x + end.x) / 2, y: start.y - 26 } : { x: kx, y: (start.y + end.y) / 2 };
+        points = [start, { x: gx, y: start.y }, { x: gx, y: end.y }, end];
+        lab = { x: (s.x + s.w + t.x) / 2, y: (start.y + end.y) / 2, room: t.x - s.x - s.w - 16 };
       } else {
-        // back: out into the trunk, up into a corridor above both frames, over, then down the
-        // gap on the target's left — never through the frames stacked above it — and in at
-        // the left edge's midpoint
-        var cy = Math.min(s.y, t.y) - CORRIDOR - backRows * 40; backRows++;
-        var gx = t.x - 60 - backRows * 12;
-        var end2 = { x: t.x - HEAD_GAP, y: t.y + t.h / 2 };
-        points = [start, { x: start.x + TRUNK, y: start.y }, { x: start.x + TRUNK, y: cy }, { x: gx, y: cy }, { x: gx, y: end2.y }, end2];
-        lab = { x: (start.x + TRUNK + gx) / 2, y: cy };
+        // anywhere else: up the right gutter into the corridor above every frame, across, down
+        // the gutter left of the target
+        var cy = top - 24 - corridor * LANE; corridor++;
+        var lx = t.x - GUT - laneL(f.to) * LANE;
+        var end3 = { x: t.x - HEAD_GAP, y: t.y + t.h / 2 };
+        points = [start, { x: gx, y: start.y }, { x: gx, y: cy }, { x: lx, y: cy }, { x: lx, y: end3.y }, end3];
+        lab = { x: (gx + lx) / 2, y: cy, room: Math.abs(lx - gx) - 16 };
       }
-      svg.appendChild(mk('path', { 'class': cls, d: pathOf(points), 'marker-end': 'url(#cv-arrow)' }));
-      if (text) svg.appendChild(label(text, lab.x, lab.y));
+      var fid = String(flowN++);
+      svg.appendChild(mk('path', { 'class': cls, d: pathOf(points), 'marker-end': 'url(#cv-arrow)', 'data-flow': fid }));
+      svg.appendChild(mk('path', { 'class': 'cv-hit', d: pathOf(points), 'data-flow': fid }));
+      if (text) { var lg = label(text, lab.x, lab.y, lab.room); lg.setAttribute('data-flow', fid); drawnPairs[pair] = lg.querySelector('text'); labels.push(lg); }
+    });
+    labels.forEach(function (g) { svg.appendChild(g); });
+    // the backward flows: one line under each frame, a chip per screen it returns to
+    var byFrame = new Map();
+    backs.forEach(function (b) { var list = byFrame.get(b.src) || []; list.push(b.f); byFrame.set(b.src, list); });
+    byFrame.forEach(function (list, src) {
+      var byTo = {};
+      list.forEach(function (f) { var k = f.to + (f.state !== 'Default' ? '.' + f.state : ''); (byTo[k] = byTo[k] || []).push((f.gesture === 'timeout' ? '\u23f1 ' : '') + (f.when || f.from)); });
+      var x = src.r.x, y = src.r.y + src.r.h + 30;
+      Object.keys(byTo).forEach(function (k) {
+        var text = '\u21a9 ' + k + '  ' + byTo[k].filter(function (v, i, a) { return a.indexOf(v) === i; }).join(' \u00b7 ');
+        var w = 0; for (var i = 0; i < text.length; i++) w += text.charCodeAt(i) > 0x2e80 ? 20 : 11; w += 24;
+        var g = mk('g', { 'class': 'cv-label cv-back', 'data-flow': 'b' + (flowN++) });
+        g.appendChild(mk('rect', { x: Math.round(x), y: Math.round(y - 16), width: w, height: 32 }));
+        g.appendChild(mk('text', { x: Math.round(x + w / 2), y: Math.round(y + 7), 'text-anchor': 'middle' }, text));
+        svg.appendChild(g);
+        x += w + 12;
+      });
     });
   }
   // --- the workspace: tree, selection, shortcuts, deep links
@@ -998,24 +1143,71 @@ export const CANVAS_JS = `
     if (zoom) zoomTo(frame);
   }
   function clearAll() { markFrame(null); if (window.doanClearSelection) window.doanClearSelection(); history.replaceState(null, '', location.pathname); }
-  // the element layers of the selected frame, in document order, indented by nesting
+  // the element layers of the selected frame, as Figma lists them: a row per element, a caret on
+  // each one that holds others (click to fold, Alt+click to fold everything under it), a guide line
+  // per level, a mark for what it is (▤ a box of others, ◇ a component, T text, ▨ a picture). Every
+  // row starts folded, so a frame opens on its top-level layers; a selection opens the rows above it.
+  var layerRows = [];
+  var TEXT_KINDS = { caption: 1, hint: 1, text: 1, 'page-header': 0 };
   function layersFor(frame) {
     document.querySelectorAll('.tree-layers').forEach(function (n) { n.innerHTML = ''; });
     var box = document.querySelector('.tree-layers[data-screen="' + frame.getAttribute('data-screen') + '"][data-state="' + frame.getAttribute('data-state') + '"]');
+    layerRows = [];
     if (!box) return;
-    var html = '';
-    frame.querySelectorAll('.el').forEach(function (el) {
+    var els = Array.prototype.slice.call(frame.querySelectorAll('.el'));
+    els.forEach(function (el) {
       var depth = 0, p = el.parentElement; while (p && p !== frame) { if (p.classList.contains('el')) depth++; p = p.parentElement; }
-      html += '<div class="tree-el" data-path="' + esc(el.getAttribute('data-path')) + '" style="padding-left:' + (24 + depth * 12) + 'px"><span class="hint">' + esc(el.getAttribute('data-kind')) + '</span> ' + esc(el.getAttribute('data-id')) + '</div>';
+      var id = el.getAttribute('data-id') || '';
+      var kids = el.querySelector('.el') !== null;
+      var compound = kids && !!el.querySelector('.el[data-id^="' + id + '/"]');
+      var kind = el.getAttribute('data-kind') || '';
+      var mark = compound ? '◇' : kids ? '▤' : kind === 'image' ? '▨' : TEXT_KINDS[kind] ? 'T' : '◇';
+      layerRows.push({ el: el, depth: depth, kids: kids, open: false, id: id, kind: kind, mark: mark });
+    });
+    var html = '';
+    layerRows.forEach(function (r, i) {
+      var guides = ''; for (var d = 0; d < r.depth; d++) guides += '<i class="lg"></i>';
+      var name = r.id.indexOf('/') >= 0 ? r.id.slice(r.id.lastIndexOf('/') + 1) : r.id;
+      html += '<div class="tree-el" data-i="' + i + '">' + guides + (r.kids ? '<span class="lc">' + (r.open ? '▾' : '▸') + '</span>' : '<span class="lc"></span>') +
+        '<span class="lm">' + r.mark + '</span><span class="ln">' + esc(name) + '</span><span class="lk">' + esc(r.kind) + '</span></div>';
     });
     box.innerHTML = html;
+    paintLayers(box);
     box.querySelectorAll('.tree-el').forEach(function (row) {
-      var el = frame.querySelector('.el[data-path="' + row.getAttribute('data-path') + '"]');
-      if (!el) return;
-      row.addEventListener('mouseenter', function () { el.classList.add('hover'); });
-      row.addEventListener('mouseleave', function () { el.classList.remove('hover'); });
-      row.addEventListener('click', function () { if (window.doanSelect) window.doanSelect(el); zoomTo(el, 160); });
+      var r = layerRows[+row.getAttribute('data-i')];
+      row.addEventListener('mouseenter', function () { r.el.classList.add('hover'); });
+      row.addEventListener('mouseleave', function () { r.el.classList.remove('hover'); });
+      row.addEventListener('click', function (e) {
+        if (e.target.classList.contains('lc') && r.kids) {
+          e.stopPropagation();
+          var to = !r.open; r.open = to;
+          if (e.altKey) for (var j = +row.getAttribute('data-i') + 1; j < layerRows.length && layerRows[j].depth > r.depth; j++) if (layerRows[j].kids) layerRows[j].open = to;
+          return paintLayers(box);
+        }
+        if (window.doanSelect) window.doanSelect(r.el); zoomTo(r.el, 160);
+      });
     });
+  }
+  // show a row only when every row above it at a lower depth is open; carets follow
+  function paintLayers(box) {
+    var closedAt = Infinity;
+    box.querySelectorAll('.tree-el').forEach(function (row) {
+      var r = layerRows[+row.getAttribute('data-i')];
+      if (r.depth <= closedAt) closedAt = Infinity;
+      row.hidden = r.depth > closedAt;
+      if (!row.hidden && r.kids && !r.open) closedAt = r.depth;
+      var c = row.querySelector('.lc'); if (c && r.kids) c.textContent = r.open ? '▾' : '▸';
+    });
+  }
+  // a selection opens every row above it
+  function revealLayer(el) {
+    var i = -1; for (var k = 0; k < layerRows.length; k++) if (layerRows[k].el === el) { i = k; break; }
+    if (i < 0) return null;
+    var need = layerRows[i].depth;
+    for (var j = i - 1; j >= 0 && need > 0; j--) if (layerRows[j].depth < need) { layerRows[j].open = true; need = layerRows[j].depth; }
+    var box = document.querySelector('.tree-layers .tree-el') ? document.querySelector('.tree-el').parentElement : null;
+    if (box) paintLayers(box);
+    return document.querySelector('.tree-el[data-i="' + i + '"]');
   }
   // hover on the canvas: only the innermost element lights up
   var hovered = null;
@@ -1033,7 +1225,7 @@ export const CANVAS_JS = `
     var frame = el.closest('.cv-frame'); if (!frame) return;
     if (selectedFrame !== frame) markFrame(frame);
     document.querySelectorAll('.tree-el.current').forEach(function (r) { r.classList.remove('current'); });
-    var row = document.querySelector('.tree-el[data-path="' + el.getAttribute('data-path') + '"]'); if (row) { row.classList.add('current'); row.scrollIntoView({ block: 'nearest' }); }
+    var row = revealLayer(el); if (row) { row.classList.add('current'); row.scrollIntoView({ block: 'nearest' }); }
     setHash(frame, el);
   });
   // the tree: a frame on this canvas is selected in place; a frame elsewhere is a link (the tree
@@ -1070,6 +1262,16 @@ export const CANVAS_JS = `
     return true;
   }
 
+  // hover on an arrow or its label: the line, its head and its label light up together
+  svg.addEventListener('mouseover', function (e) {
+    var n = e.target.closest && e.target.closest('[data-flow]'); if (!n) return;
+    var id = n.getAttribute('data-flow');
+    svg.querySelectorAll('[data-flow="' + id + '"]').forEach(function (m) { m.classList.add('hot'); if (m.classList.contains('cv-arrow')) m.setAttribute('marker-end', 'url(#cv-arrow-hot)'); });
+  });
+  svg.addEventListener('mouseout', function (e) {
+    var n = e.target.closest && e.target.closest('[data-flow]'); if (!n) return;
+    svg.querySelectorAll('.hot').forEach(function (m) { m.classList.remove('hot'); if (m.classList.contains('cv-arrow')) m.setAttribute('marker-end', 'url(#cv-arrow)'); });
+  });
   // the inspector script runs after this one; the first selection must wait for it
   function start() {
     if (!fromHash()) fitAll();

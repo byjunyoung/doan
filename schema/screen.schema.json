@@ -223,9 +223,10 @@
         },
         "scroll": {
           "enum": [
-            "horizontal"
+            "horizontal",
+            "vertical"
           ],
-          "description": "children keep their width and the container scrolls sideways"
+          "description": "horizontal: children keep their width and the container scrolls sideways; vertical: a list longer than the frame scrolls inside it"
         },
         "justify": {
           "type": "string",
