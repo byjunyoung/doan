@@ -98,3 +98,9 @@ test('a comment on the whole project — no screen — is kept beside the screen
   const named = await addComment(dir, { screen: 'order-list', path: 'elements.1', text: 'x' });
   assert.equal(named.author, authorOf(dir));
 });
+
+test('Enter sends a comment and Shift+Enter breaks the line, in every comment box; a Korean IME composition is left alone', async () => {
+  const scripts = Object.values(await import('../src/render/page.js')).filter((x) => typeof x === 'string').join('\n');
+  assert.match(scripts, /\{ ctext: 'csend', ftext: 'fsend', gtext: 'gsend' \}/);
+  assert.match(scripts, /e\.key !== 'Enter' \|\| e\.shiftKey \|\| e\.isComposing/);
+});

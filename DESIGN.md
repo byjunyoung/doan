@@ -368,6 +368,9 @@ Shipped 2026-09-24 (0.6.0). `proto.html` holds every screen in every state and s
 
 Everything on the page is the same drawing the screen page shows, so a library adapter's components and a compound part look the same here. Nothing is stored and nothing is generated per project: the page is `render` output like the rest.
 
+
+**Every state has a way out (0.15.2).** The owner asked that a prototype run end to end. Two things stood in the way: a flow could not say which state it leaves from, so a Loading screen offered the Default screen's buttons or nothing, and `timeout` flows never played. A flow now carries `in:` (the states it leaves from) and the prototype plays a timeout after a short beat, showing the flow's `when`; a disabled element is no hotspot.
+
 ### 6.6 The domain canvas
 
 Shipped 2026-09-24 (0.7.0). After the four stages the owner looked at the viewer next to a Figma file kept with the `fig` skills and said what was missing: *a page per domain, the domain's screens laid out together, the flow drawn among them*. That page is what a designer opens first; a screen page and a thumbnail map are not it. So the canvas is the viewer's first surface now, and it follows fig's own conventions for a Figma page — the ones `fig:prep` laid out and `fig:lint` checked — because that is the shape the owner's eye already reads.

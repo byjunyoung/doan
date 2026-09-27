@@ -84,7 +84,7 @@ main.bare { padding: 16px; }
 .acceptance label { display: inline-flex; gap: var(--space-sm); align-items: baseline; cursor: pointer; } .acceptance input { width: auto; margin: 0; padding: 0; }
 .index td:last-child { overflow-wrap: anywhere; }
 .dead { color: var(--color-danger); text-decoration: line-through; }
-.backdrop { background: rgba(31,35,40,.45); padding: var(--space-xl); display: flex; justify-content: center; min-height: 480px; }
+.backdrop { background: rgba(31,35,40,.45); padding: var(--space-md); display: flex; justify-content: center; min-height: 480px; }
 .backdrop .modal-box { width: var(--size-md); } .backdrop .modal-box.size-sm { width: var(--size-sm); } .backdrop .modal-box.size-lg { width: var(--size-lg); }
 .backdrop.by-element .view-root { border: 0; box-shadow: none; padding: 0; background: none; }
 .backdrop .view-root { border: 0; box-shadow: 0 8px 32px rgba(0,0,0,.25); padding: var(--space-lg); background: var(--color-bg); border-radius: var(--radius-md); min-height: 0; }
@@ -370,6 +370,7 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-skeleton .skel { background: linear-gradient(90deg, var(--k-skeleton-bg, var(--color-surface)), var(--k-skeleton-border, var(--color-border)), var(--k-skeleton-bg, var(--color-surface))); }
 .el-overlay .overlay-box { background: var(--k-overlay-bg, rgba(255,255,255,.8)); color: var(--k-overlay-text, inherit); }
 .el-toast .toast { background: var(--k-toast-bg, var(--color-text)); color: var(--k-toast-text, var(--color-bg)); border-radius: var(--k-toast-radius, var(--radius-sm)); } .el-toast .toast.error { background: var(--k-toast-bg, var(--color-danger)); }
+.lay-body, .el-modal:not([data-drawn]) > .modal-body { display: flex; flex-direction: var(--lay-dir, column); gap: var(--lay-gap, 0); }
 .el-modal[data-drawn] > * { box-shadow: var(--k-modal-shadow, 0 8px 32px rgba(0,0,0,.25)); }
 .el-modal:not([data-drawn]) { background: var(--k-modal-bg, var(--color-bg)); color: var(--k-modal-text, inherit); border-radius: var(--k-modal-radius, var(--radius-md)); padding: var(--k-modal-padding, 0); box-shadow: var(--k-modal-shadow, none); }
 .el-confirm .confirm { background: var(--k-confirm-bg, var(--color-bg)); color: var(--k-confirm-text, inherit); border-radius: var(--k-confirm-radius, var(--radius-md)); }
@@ -562,6 +563,13 @@ export const INSPECTOR_JS = `
       .then(function (r) { return r.ok ? general() : r.json().then(function (j) { document.getElementById('gstate').textContent = j.error; }); });
   });
   general();
+  // Enter sends a comment, Shift+Enter breaks the line — in every comment box (element, frame, whole)
+  document.addEventListener('keydown', function (e) {
+    var send = { ctext: 'csend', ftext: 'fsend', gtext: 'gsend' }[e.target && e.target.id];
+    if (!send || e.key !== 'Enter' || e.shiftKey || e.isComposing) return;
+    e.preventDefault();
+    var btn = document.getElementById(send); if (btn) btn.click();
+  });
   window.doanSelect = openDrawer;
   window.doanClearSelection = function () {
     if (selected) selected.classList.remove('selected');
@@ -689,13 +697,16 @@ export const PROTO_JS = `
   function top() { return stack[stack.length - 1]; }
   function lineOf(f) { return f.label + ' \\u2192 ' + f.to + (f.state !== 'Default' ? '.' + f.state : ''); }
   // one listener per element; an element several flows leave from asks which one
-  function arm(root, screen) {
-    var mine = flows.filter(function (f) { return f.screen === screen; });
+  // a flow with an in list leaves only from those states of its screen
+  function leaves(f, screen, state) { return f.screen === screen && (!f.in || f.in.indexOf(state) >= 0); }
+  function arm(root, screen, state) {
+    var mine = flows.filter(function (f) { return leaves(f, screen, state) && f.gesture !== 'timeout'; });
     var byFrom = {};
     mine.forEach(function (f) { (byFrom[f.from] = byFrom[f.from] || []).push(f); });
     Object.keys(byFrom).forEach(function (from) {
       var list = byFrom[from];
       root.querySelectorAll('.el[data-id="' + from + '"]').forEach(function (el) {
+        if (el.getAttribute('data-disabled') === 'true') return;
         el.classList.add('hotspot');
         if (list.every(function (f) { return f.style === 'conditional'; })) el.classList.add('hotspot-cond');
         el.setAttribute('title', list.map(lineOf).join('\\n'));
@@ -732,7 +743,7 @@ export const PROTO_JS = `
     overlay.innerHTML = ''; overlay.hidden = true;
     if (t.overlay) {
       var ov = viewOf(t.screen, t.state);
-      if (ov) { var c = ov.cloneNode(true); c.hidden = false; overlay.appendChild(c); overlay.hidden = false; arm(c, t.screen); }
+      if (ov) { var c = ov.cloneNode(true); c.hidden = false; overlay.appendChild(c); overlay.hidden = false; arm(c, t.screen, t.state); }
     }
     screenSel.value = base.screen;
     stateSel.innerHTML = statesOf(base.screen).map(function (s) { return '<option value="' + s + '"' + (s === base.state ? ' selected' : '') + '>' + s + '</option>'; }).join('');
@@ -740,7 +751,7 @@ export const PROTO_JS = `
     if (decodeURIComponent(location.hash.slice(1)) !== want) history.replaceState(null, '', '#' + want);
     // the panel: where the prototype is, and the flows that leave this screen, each a button
     if (panel) {
-      var here = flows.filter(function (f) { return f.screen === t.screen; });
+      var here = flows.filter(function (f) { return leaves(f, t.screen, t.state); });
       panel.innerHTML = '';
       var h3 = document.createElement('h3'); h3.textContent = t.screen + (t.state !== 'Default' ? ' · ' + t.state : ''); panel.appendChild(h3);
       var help = document.createElement('div'); help.className = 'hint'; help.textContent = T.protoHelp || ''; panel.appendChild(help);
@@ -754,9 +765,18 @@ export const PROTO_JS = `
         box.appendChild(b);
       });
     }
+    // a timeout flow plays by itself: the first one that leaves this state, after a short beat
+    // (the design's own delay is in when; the prototype does not make you wait ten seconds)
+    clearTimeout(timer);
+    var auto = flows.filter(function (f) { return f.gesture === 'timeout' && leaves(f, t.screen, t.state); })[0];
+    if (auto) {
+      if (panel) { var chip = document.createElement('div'); chip.className = 'proto-auto hint'; chip.textContent = '\u23f1 ' + (auto.when || 'timeout') + ' \u2192 ' + auto.to + (auto.state !== 'Default' ? '.' + auto.state : ''); panel.insertBefore(chip, panel.children[1] || null); }
+      timer = setTimeout(function () { go(auto); }, 4000);
+    }
     if (typeof window.doanTreeFollow === 'function') window.doanTreeFollow();
     if (typeof window.doanFit === 'function') window.doanFit();
   }
+  var timer = null;
   function go(f) {
     // dismiss and back leave the current view and land where the flow says — which may be a
     // state the screen underneath was not in (add → kiosk-menu.Selected)
@@ -781,7 +801,7 @@ export const PROTO_JS = `
     var screen = hsh.slice(0, i), state = hsh.slice(i + 1);
     return viewOf(screen, state) ? { screen: screen, state: state } : null;
   }
-  views.forEach(function (v) { arm(v, v.getAttribute('data-screen')); });
+  views.forEach(function (v) { arm(v, v.getAttribute('data-screen'), v.getAttribute('data-state')); });
   document.body.classList.toggle('show-hotspots', hot.checked);
   hot.addEventListener('change', function () { document.body.classList.toggle('show-hotspots', hot.checked); });
   screenSel.addEventListener('change', function () { stack = [{ screen: screenSel.value, state: 'Default' }]; show(); });

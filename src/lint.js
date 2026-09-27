@@ -243,6 +243,9 @@ const rules = {
           out.push(finding('L16', 'warning', s, ['flows', i, 'gesture'], `gesture "${flow.gesture}" is not in flows.gestures`));
         if (flow.nav && vocab.navs?.length && !vocab.navs.includes(flow.nav))
           out.push(finding('L16', 'warning', s, ['flows', i, 'nav'], `nav "${flow.nav}" is not in flows.navs`));
+        // `in` names the states the flow leaves from: they must be this screen's
+        for (const st of flow.in === undefined ? [] : [].concat(flow.in))
+          if (st !== 'Default' && !(st in (s.doc.states ?? {}))) out.push(finding('L16', 'warning', s, ['flows', i, 'in'], `state "${st}" is not a state of this screen`));
       });
     return out;
   },

@@ -201,3 +201,18 @@ test('fonts: assets/fonts/<Family>-<Weight>.woff2 becomes @font-face, a styleshe
   assert.match(html, /font-weight: 400; font-style: normal/);
   assert.match(html, /<link rel="stylesheet" href="https:\/\/cdn.example.com\/fonts.css">/);
 });
+
+test('a card or modal antd draws gets the screen layout on the box its children sit in; maps_to.code is not listed as a library name', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    const f = join(d, 'screens', 'order-list.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('  - id: paging\n', '  - id: box\n    kind: modal\n    title: T\n    children:\n      - { id: x1, kind: button, label: A }\n      - { id: x2, kind: button, label: B }\n  - id: paging\n').replace('  paging: { align: end }', '  paging: { align: end }\n  box: { kind: stack, direction: column, gap: space.lg }'));
+  });
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const project = await loadProject(dir);
+  const adapter = await createAdapter('antd', project);
+  const html = renderScreen(project, project.screens.find((s) => s.doc.screen === 'order-list'), { branch: 'x', adapter });
+  assert.match(html, /data-id="box"[^>]*style="[^"]*--lay-dir:column;--lay-gap:var\(--space-lg\)/);
+  assert.match(html, /<div class="modal-body">/);
+  assert.match(html, /\.lay-body, \.el-modal:not\(\[data-drawn\]\) > \.modal-body \{ display: flex; flex-direction: var\(--lay-dir, column\); gap: var\(--lay-gap, 0\); \}/);
+  assert.doesNotMatch(html, /code\/\[object Object\]/);
+});

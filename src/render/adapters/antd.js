@@ -16,6 +16,8 @@ const list = (x) => (Array.isArray(x) ? x : x === undefined ? [] : [x]);
 const text = (x) => (isTbd(x) ? `TBD${x.$tbd?.owner ? ` (${x.$tbd.owner})` : ''}` : x === undefined || x === null ? '' : String(x));
 const label = (c) => (typeof c === 'object' && c && !isTbd(c) ? c.label ?? c.key ?? c.id ?? JSON.stringify(c) : c);
 const raw = (html) => e('div', { dangerouslySetInnerHTML: { __html: html } });
+// the children of a container antd draws (card, modal): the box the screen's layout reaches (page.js)
+const body = (html) => e('div', { className: 'lay-body', dangerouslySetInnerHTML: { __html: html } });
 const dummyRows = (cols) => Array.from({ length: 3 }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c) => [c.dataIndex, sample(c.title, i)])]));
 
 function themeFrom(tokens) {
@@ -72,9 +74,9 @@ const components = {
   Checkbox: (el) => e(antd.Checkbox, { checked: !!el.checked }, text(el.label ?? el.text ?? el.id)),
   Switch: (el) => e(antd.Switch, { checked: !!el.on }),
   // the contract's padding slot lands on the card root, so the body adds none of its own
-  Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined, styles: { body: { padding: 0 } } }, raw(r.children(el))),
+  Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined, styles: { body: { padding: 0 } } }, body(r.children(el))),
   // the shadow is css (page.js .el-modal[data-drawn] > *), so a contract's shadow slot can replace it
-  Modal: (el, r) => e(antd.Card, { title: text(el.title), styles: { body: { padding: 0 } } }, raw(r.children(el))),
+  Modal: (el, r) => e(antd.Card, { title: text(el.title), styles: { body: { padding: 0 } } }, body(r.children(el))),
   'Modal.confirm': (el) => e(antd.Card, { size: 'small', title: text(el.title) }, e('p', null, text(el.text)), e(antd.Space, null, ...list(el.buttons).map((b, i) => e(antd.Button, { key: i, type: i === list(el.buttons).length - 1 ? 'primary' : 'default' }, text(b))))),
   Tooltip: (el) => e(antd.Tag, { color: 'default' }, `ⓘ ${text(el.trigger ?? 'tooltip')}`),
 };

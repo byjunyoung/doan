@@ -247,9 +247,9 @@ test('a project with no token resolver gets no mode select and no per-context cs
 });
 
 test('align is horizontal and justify vertical whatever the direction; columns can be a track list; a leaf aligns its box and text', () => {
-  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center', justify: 'space-between' }), /^display:flex;flex-direction:column;align-items:center;justify-content:space-between$/);
-  assert.match(layoutStyle({ kind: 'stack', direction: 'row', align: 'space-between', justify: 'center' }), /flex-direction:row;justify-content:space-between;align-items:center/);
-  assert.match(layoutStyle({ kind: 'grid', columns: '1fr auto auto', gap: 'space.md', justify: 'center' }), /display:grid;grid-template-columns:1fr auto auto;gap:var\(--space-md\);align-items:center;align-content:center/);
+  assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center', justify: 'space-between' }), /^display:flex;flex-direction:column;--lay-dir:column;align-items:center;justify-content:space-between$/);
+  assert.match(layoutStyle({ kind: 'stack', direction: 'row', align: 'space-between', justify: 'center' }), /flex-direction:row;--lay-dir:row;justify-content:space-between;align-items:center/);
+  assert.match(layoutStyle({ kind: 'grid', columns: '1fr auto auto', gap: 'space.md', justify: 'center' }), /display:grid;grid-template-columns:1fr auto auto;gap:var\(--space-md\);--lay-gap:var\(--space-md\);align-items:center;align-content:center/);
   assert.match(layoutStyle({ kind: 'grid', columns: ['1fr', 'auto'] }), /grid-template-columns:1fr auto/);
   assert.match(layoutStyle({ kind: 'grid', columns: 3 }), /grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/);
   assert.match(layoutStyle({ align: 'end' }, { container: false }), /display:flex;justify-content:flex-end;text-align:end/);

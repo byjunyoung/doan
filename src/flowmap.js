@@ -44,7 +44,7 @@ export function flowGraph(project) {
   for (const s of project.screens)
     (s.doc.flows ?? []).forEach((flow, i) => {
       const target = resolveFlowTarget(flow.to, project.screens);
-      const base = { id: `${s.doc.screen}#${i}`, screen: s.doc.screen, from: flow.from, via: flow.via ?? null, to: flow.to, gesture: flow.gesture ?? null, nav: flow.nav ?? null, when: flow.when ?? null, style: flow.style ?? 'default', label: label(flow) };
+      const base = { id: `${s.doc.screen}#${i}`, screen: s.doc.screen, from: flow.from, via: flow.via ?? null, to: flow.to, gesture: flow.gesture ?? null, nav: flow.nav ?? null, when: flow.when ?? null, style: flow.style ?? 'default', in: flow.in === undefined ? null : [].concat(flow.in), label: label(flow) };
       if (!target) {
         dead.push(base);
         return;

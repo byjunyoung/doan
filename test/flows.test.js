@@ -142,3 +142,22 @@ test('the prototype selects nothing: its panel explains and lists the flows, the
   assert.match(html, /T\.chooseFlow/);
   assert.match(html, /"flowsFrom":"Flows from this screen"/);
 });
+
+test('a flow may name the states it leaves from (in); the graph carries it, lint names a state the screen lacks, and the prototype plays timeout flows by itself', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'doan-in-'));
+  await mkdir(join(dir, 'screens'), { recursive: true });
+  await writeFile(join(dir, 'conventions.yaml'), 'meta: { language: en }\nflows:\n  gestures: [tap, timeout]\n');
+  await writeFile(join(dir, 'sections.yaml'), '- A\n');
+  await writeFile(join(dir, 'screens', 'pay.yaml'), 'schema: doan/0.2\nid: scr_P\nscreen: pay\nsection: A\ntype: page\nelements:\n  - { id: go, kind: button, label: Pay }\nstates:\n  Loading:\n    - { target: go, set: { disabled: true } }\nflows:\n  - { from: go, to: pay.Loading, gesture: tap, in: Default }\n  - { from: go, to: done, gesture: timeout, in: Loading, when: approved }\n  - { from: go, to: done, gesture: tap, in: Nope }\n');
+  await writeFile(join(dir, 'screens', 'done.yaml'), 'schema: doan/0.2\nid: scr_D\nscreen: done\nsection: A\ntype: page\nelements:\n  - { id: ok, kind: caption, text: Done }\n');
+  const project = await loadProject(dir);
+  const g = flowGraph(project);
+  assert.deepEqual(g.edges.map((e) => e.in), [['Default'], ['Loading'], ['Nope']]);
+  const { lint } = await import('../src/lint.js');
+  const l16 = lint(project, { branch: null }).filter((f) => f.id === 'L16');
+  assert.equal(l16.length, 1);
+  assert.match(l16[0].message, /state "Nope" is not a state of this screen/);
+  const { PROTO_JS } = await import('../src/render/page.js');
+  assert.match(PROTO_JS, /function leaves\(f, screen, state\) \{ return f\.screen === screen && \(!f\.in \|\| f\.in\.indexOf\(state\) >= 0\); \}/);
+  assert.match(PROTO_JS, /f\.gesture === 'timeout' && leaves\(f, t\.screen, t\.state\)/);
+});

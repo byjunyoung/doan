@@ -319,6 +319,21 @@
         },
         "nav": {
           "type": "string"
+        },
+        "in": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "the states the flow leaves from — Loading only, say; without it, every state where the element is"
         }
       },
       "additionalProperties": false

@@ -76,6 +76,10 @@ export function layoutStyle(rule, { container = true } = {}) {
     // adapts on its own, before any breakpoint says so
     if (rule.kind === 'grid' || rule.kind === 'columns') s.push('display:grid', gridColumns(rule));
     if (rule.gap) s.push(`gap:${tokenVar(rule.gap)}`);
+    // a container a library adapter drew keeps its children one box further in (a card's body);
+    // the same direction and gap reach them there through these (page.js .lay-body)
+    if (rule.kind === 'stack' || rule.kind === 'row') s.push(`--lay-dir:${rule.kind === 'row' ? 'row' : rule.direction ?? 'column'}`);
+    if (rule.gap) s.push(`--lay-gap:${tokenVar(rule.gap)}`);
   }
   // a container places its children; a leaf's rule places the leaf's own box and text
   if (container || !rule.kind) s.push(...axisCss(rule));
@@ -173,7 +177,7 @@ function mapsFor(project) {
   const out = {};
   for (const [kind, def] of Object.entries(project.components ?? project.conventions.kinds ?? {})) {
     const m = def?.maps_to;
-    if (m && typeof m === 'object') out[kind] = Object.entries(m).filter(([ds]) => ds !== 'figma').map(([ds, name]) => `${ds}/${[].concat(name).join('|')}`).join(', ');
+    if (m && typeof m === 'object') out[kind] = Object.entries(m).filter(([ds, name]) => ds !== 'figma' && (typeof name === 'string' || Array.isArray(name))).map(([ds, name]) => `${ds}/${[].concat(name).join('|')}`).join(', ');
   }
   return out;
 }
@@ -643,7 +647,7 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
   const sections = pageSpec.sections
     .map((sec) => `<div class="cv-section" data-section="${h(sec.name)}"><div class="cv-section-title">${h(sec.name)}</div><div class="cv-row">${sec.screens.map((s) => `<div class="cv-col" data-screen="${h(s.screen)}">${s.states.map((st) => frame(s.screen, st)).join('')}</div>`).join('')}</div></div>`)
     .join('');
-  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, via: e.via, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label, when: e.when }));
+  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, via: e.via, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, in: e.in, when: e.when, label: e.label, when: e.when }));
   const others = canvasPages(project).filter((p) => p.slug !== pageSpec.slug);
   const screenDomain = Object.fromEntries(others.flatMap((p) => p.sections.flatMap((s) => s.screens.map((x) => [x.screen, { domain: p.domain, slug: p.slug }]))));
   const nScreens = inDomain.length;
@@ -689,7 +693,7 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
       ]);
     })
     .join('');
-  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, label: e.label }));
+  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, in: e.in, when: e.when, label: e.label }));
   const body =
     shellOf(project, D, {
       title: D.proto,

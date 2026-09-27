@@ -6,6 +6,7 @@ import { lintProject, renderProject, initProject, componentBases, importFigma, m
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
+import { authorOf } from './comments.js';
 import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -62,7 +63,7 @@ usage: doan <verb> …
         queue a new version of a screen (or a new screen): diff, lint before/after, tier. text-only + clean lint applies at once.
         --comments names the open comments it answers; apply resolves them, undo reopens them.
   proposals <project-dir> [--status pending|applied|all]
-  apply <project-dir> <id> --by <name>      reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
+  apply <project-dir> <id> [--by <name>]    reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
 
 function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -160,7 +161,8 @@ async function proposalsCommand(opts) {
 const gated = (fn, key) => async (opts) => {
   const [dir, id] = opts._;
   if (!dir || !id) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const p = await fn(dir, { id, approved_by: opts.by, reason: opts.reason });
+  // who said yes: --by, or the project's git author
+  const p = await fn(dir, { id, approved_by: opts.by || authorOf(dir), reason: opts.reason });
   process.stdout.write(`${p.id}  ${p.status}  ${p.screen}\n`);
   return 0;
 };

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.15.2 — 2026-09-28
+
+What the kiosk's comments and its prototype showed.
+
+- **A flow names the states it leaves from** — `in: Loading` or `in: [Default, Error]`. Without it, as before, every state where the element is. The prototype arms a flow only in its states, lint (L16) names a state the screen lacks.
+- **The prototype plays `timeout` flows by itself** — after a short beat, with the flow's `when` shown in the panel (the design's own delay, 10 seconds, stays in the file). A disabled element is no hotspot.
+- **Layout reaches the children of a card or modal a library drew** — they sit one box further in (antd's card body); direction and gap now reach them there, and the bundled modal body too.
+- **Enter sends a comment**, Shift+Enter breaks the line, in every comment box; `apply` from the CLI defaults `--by` to the git user as the viewer does. `maps_to.code` no longer shows as `code/[object Object]` among a kind's library names.
+
 ## 0.15.1 — 2026-09-28
 
 - **No name to type.** The comment boxes and the Apply buttons ask for no name; the author and the approver are the project's git user (`git config user.name`), since the viewer has no login and one person uses it.
