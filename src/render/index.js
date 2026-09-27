@@ -112,7 +112,8 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       // the contract is the one truth about a kind: its defaults fill what the element left out
       // and an enum value it does not declare falls back to the declared default, for the bundled
       // set and a library adapter alike — nothing draws from a default of its own
-      const drawn = contract && !el.$expanded ? withContract(contract, el) : el;
+      // a compound's wrapper takes its defaults too, so a variant on it (selected: false) is an attribute
+      const drawn = contract ? withContract(contract, el) : el;
       const byAdapter = !el.$expanded && !!adapter?.kinds?.[el.kind];
       const fn = el.$expanded ? kinds.group : (adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic);
       const known = lines.get(el.id) ?? (el.$from ? { path: `${el.$from.file} › ${el.$from.path}`, line: null } : undefined);
@@ -334,15 +335,59 @@ function withContract(contract, el) {
 // what a contract's token slots mean in CSS, for a piece a library adapter drew: the bundled
 // set reads --k-<kind>-<slot> itself; an antd or MUI root gets these applied from outside
 
+// The kind of a child a compound contract declares, by its id, at any depth.
+export function childKindOf(contract, id) {
+  const walk = (nodes) => {
+    for (const n of nodes ?? []) {
+      if (n && n.id === id && n.kind) return n.kind;
+      const deep = walk(n?.children);
+      if (deep) return deep;
+    }
+    return null;
+  };
+  return walk(contract.elements);
+}
+
 function componentCss(project) {
   const rules = [];
   for (const c of Object.values(project.components ?? {})) {
-    const decl = (b) => Object.entries(b ?? {}).map(([slot, token]) => `--k-${attrName(c.kind)}-${attrName(slot)}: ${tokenVar(token)}`).join('; ');
-    if (c.tokens && Object.keys(c.tokens).length) rules.push(`.el-${attrName(c.kind)} { ${decl(c.tokens)}; }`);
+    const compound = Array.isArray(c.elements) && c.elements.length > 0;
+    const kind = attrName(c.kind);
+    // a binding is `slot: token` on the kind itself, or `child.slot: token` — a part of a compound,
+    // re-bound from outside (a tile's label turns white when the tile is selected): the child's own
+    // variable, set on that child with more weight than the child's contract gives it
+    const split = (b) => {
+      const own = [], parts = [];
+      for (const [key, token] of Object.entries(b ?? {})) {
+        const dot = key.indexOf('.');
+        if (dot < 0) own.push([key, token]);
+        else parts.push([key.slice(0, dot), key.slice(dot + 1), token]);
+      }
+      return { own, parts };
+    };
+    const decl = (own) => own.map(([slot, token]) => `--k-${kind}-${attrName(slot)}: ${tokenVar(token)}`).join('; ');
+    const partRules = (selector, parts) =>
+      parts.map(([child, slot, token]) => {
+        const ck = childKindOf(c, child);
+        return ck ? `${selector} [data-id$="/${attrName(child)}"] { --k-${attrName(ck)}-${attrName(slot)}: ${tokenVar(token)}; }` : '';
+      }).filter(Boolean);
+    const base = split(c.tokens);
+    if (base.own.length) rules.push(`.el-${kind} { ${decl(base.own)}; }`);
+    rules.push(...partRules(`.el-${kind}`, base.parts));
     for (const [prop, options] of Object.entries(c.variants ?? {}))
-      for (const [opt, b] of Object.entries(options ?? {})) if (b && Object.keys(b).length) rules.push(`.el-${attrName(c.kind)}[data-${attrName(prop)}="${h(opt)}"] { ${decl(b)}; }`);
+      for (const [opt, b] of Object.entries(options ?? {})) {
+        const v = split(b);
+        const selector = `.el-${kind}[data-${attrName(prop)}="${h(opt)}"]`;
+        if (v.own.length) rules.push(`${selector} { ${decl(v.own)}; }`);
+        rules.push(...partRules(selector, v.parts));
+      }
+    // a compound is drawn as the tree it declares, its wrapper a plain box: the bindings dress the box
+    if (compound) {
+      const bound = [...new Set([...base.own, ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => split(b).own))].map(([s]) => s))].filter((s) => SLOT_CSS[s]);
+      if (bound.length) rules.push(`.el-${kind} { ${bound.map((s) => (s === 'border' ? `border: 1px solid var(--k-${kind}-border)` : `${SLOT_CSS[s]}: var(--k-${kind}-${attrName(s)})`)).join('; ')}; }`);
+    }
     // the same bindings reach a piece an adapter drew, so the contract themes antd and MUI too
-    const slots = [...new Set([...Object.keys(c.tokens ?? {}), ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => Object.keys(b ?? {})))])].filter((s) => SLOT_CSS[s]);
+    const slots = [...new Set([...Object.keys(c.tokens ?? {}), ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => Object.keys(b ?? {})))])].filter((s) => SLOT_CSS[s] && !s.includes('.'));
     if (slots.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${slots.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
     // type reaches a bundled piece by inheritance from its wrapper (the set draws with `font: inherit`);
     // height and shadow it reads itself, kind by kind, in the bundled css

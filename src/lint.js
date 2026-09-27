@@ -7,6 +7,7 @@ import { hasToken } from './tokens.js';
 import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 import { SLOTS } from './slots.js';
+import { childKindOf } from './render/index.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
 // can edit the exact line. Severity: blocking stops handoff; warning is counted.
@@ -388,8 +389,16 @@ const rules = {
     for (const c of Object.values(registryOf(ctx)))
       if (c.file)
         for (const { path } of bindingsOf(c)) {
-          const slot = String(path[path.length - 1]);
-          if (!SLOTS.includes(slot)) out.push(fileFinding('L28', 'warning', c.file, path, `"${slot}" is not a slot the picture reads (${SLOTS.join(', ')})`));
+          const key = String(path[path.length - 1]);
+          const dot = key.indexOf('.');
+          // `child.slot` re-binds a part of a compound: the child must be one the contract declares
+          if (dot >= 0) {
+            const child = key.slice(0, dot), slot = key.slice(dot + 1);
+            if (!childKindOf(c, child)) out.push(fileFinding('L28', 'warning', c.file, path, `"${child}" is not an element this contract declares`));
+            else if (!SLOTS.includes(slot)) out.push(fileFinding('L28', 'warning', c.file, path, `"${slot}" is not a slot the picture reads (${SLOTS.join(', ')})`));
+            continue;
+          }
+          if (!SLOTS.includes(key)) out.push(fileFinding('L28', 'warning', c.file, path, `"${key}" is not a slot the picture reads (${SLOTS.join(', ')})`));
         }
     return out;
   },

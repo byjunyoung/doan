@@ -99,7 +99,7 @@ a { color: inherit; text-decoration: none; }
 .stepper { display: inline-flex; align-items: center; border: 1px solid var(--color-border); border-radius: var(--radius-sm); margin: 0 var(--space-md); min-height: var(--k-stepper-min-height, auto); } .step-btn { padding: 4px 12px; color: var(--color-primary); } .step-val { padding: 4px 12px; border-left: 1px solid var(--color-border); border-right: 1px solid var(--color-border); min-width: 32px; text-align: center; }
 .ptr { text-align: center; color: var(--color-muted); font-size: 14px; height: 20px; } .ptr.on { color: var(--color-primary); }
 .el-caption[data-props*='"style":"title"'] .caption { font-size: var(--k-caption-font-size, 20px); font-weight: var(--k-caption-font-weight, 600); } .el-caption[data-props*='"style":"strong"'] .caption { font-weight: var(--k-caption-font-weight, 600); }
-.el-image .img.size-full { height: 240px; width: 100%; }
+.el-image .img.size-sm { height: 48px; width: 48px; } .el-image .img.size-lg { height: 160px; } .el-image .img.size-full { height: 240px; width: 100%; }
 .el-button[data-props*='"size":"full"'] .btn, .el-button[data-size="full"] .btn { width: calc(100% - 2 * var(--space-md)); margin: 0 var(--space-md); padding: 12px; }
 .el-button[data-props*='"variant":"icon"'] .btn { border: 0; background: none; color: var(--k-button-text, var(--color-primary)); padding: 4px; }
 .gesture, .navkind { display: inline-block; font-size: 10px; padding: 0 5px; border-radius: 8px; background: var(--color-surface); border: 1px solid var(--color-border); color: var(--color-muted); margin-left: 4px; }

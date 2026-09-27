@@ -39,7 +39,9 @@ function defaultsOf(contract) {
 }
 
 function expandOne(instance, contract, registry, layout, depth) {
-  const props = { ...defaultsOf(contract), ...elementProps(instance) };
+  // every declared prop is present — undefined when the instance left it out — so a condition that
+  // names it (show_when: hint) settles instead of lingering as a condition on the part
+  const props = { ...Object.fromEntries(Object.keys(contract.props ?? {}).map((k) => [k, undefined])), ...defaultsOf(contract), ...elementProps(instance) };
   const slots = isObj(instance.slots) ? instance.slots : {};
   const prefix = `${instance.id}/`;
   const children = [];

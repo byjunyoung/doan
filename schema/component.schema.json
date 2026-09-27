@@ -153,7 +153,8 @@
     "bindings": {
       "type": "object",
       "propertyNames": {
-        "pattern": "^[a-z][a-z0-9-]*$"
+        "pattern": "^[a-z][a-z0-9-]*(\\.[a-z][a-z0-9-]*)?$",
+        "description": "a slot, or child.slot for a part of a compound"
       },
       "additionalProperties": {
         "type": "string",
@@ -210,8 +211,26 @@
           ]
         },
         "columns": {
-          "type": "integer",
-          "minimum": 1
+          "anyOf": [
+            {
+              "type": "integer",
+              "minimum": 1
+            },
+            {
+              "const": "auto"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          ],
+          "description": "a count; auto: as many as fit, each at least `min` wide; or the tracks themselves — \"1fr auto auto\" or [1fr, auto, auto]"
         },
         "gap": {
           "type": "string"
@@ -220,13 +239,32 @@
           "type": "string"
         },
         "align": {
-          "type": "string"
+          "type": "string",
+          "description": "horizontal: start · center · end · space-between · stretch — whatever the direction"
         },
         "grow": {
           "type": "boolean"
         },
         "size": {
           "type": "string"
+        },
+        "min": {
+          "type": "string",
+          "description": "a size class (sm, md, lg) — the least width of an auto column"
+        },
+        "wrap": {
+          "type": "boolean",
+          "description": "a stack or row whose children wrap onto the next line when the width runs out"
+        },
+        "scroll": {
+          "enum": [
+            "horizontal"
+          ],
+          "description": "children keep their width and the container scrolls sideways"
+        },
+        "justify": {
+          "type": "string",
+          "description": "vertical: start · center · end · space-between · stretch — whatever the direction"
         }
       },
       "additionalProperties": false

@@ -125,3 +125,48 @@ test('a list cell draws its value and hides the chevron when told — every prop
   assert.match(html, /data-id="row"[^>]*>[\s\S]*?<div class="cell-value">4,500<\/div><\/div><\/div>/);
   assert.match(html, /data-id="row2"[^>]*>[\s\S]*?<span class="cell-chevron">›<\/span>/);
 });
+
+const TILE = `kind: tile
+description: A big touch target — icon above, label below.
+props:
+  label: { type: string, required: true }
+  icon: { type: string }
+  selected: { type: boolean, default: false }
+tokens: { bg: color.bg, border: color.border, radius: radius.md, padding: space.lg, min-height: control.xl, label.text: color.text }
+variants:
+  selected:
+    "true": { bg: color.primary, border: color.primary, label.text: color.primary-text }
+elements:
+  - { id: icon, kind: image, src: $icon, size: sm, fit: contain, show_when: icon }
+  - { id: label, kind: caption, text: $label, style: title }
+layout:
+  root: { kind: stack, direction: column, align: center, justify: center, gap: space.sm }
+`;
+
+test("a compound's bindings dress its wrapper as a box and re-bind its parts: label.text turns white where the tile is selected", async () => {
+  const dir = await copyOf(orders, async (d) => {
+    await writeFile(join(d, 'components', 'tile.yaml'), TILE);
+    const f = join(d, 'screens', 'order-list.yaml');
+    await writeFile(f, (await readFile(f, 'utf8')).replace('  - id: paging\n', '  - { id: pay-card, kind: tile, label: Card, selected: true }\n  - { id: pay-cash, kind: tile, label: Cash }\n  - id: paging\n'));
+  });
+  const html = await screenHtml(dir, 'order-list');
+  assert.match(html, /\.el-tile \{ --k-tile-bg: var\(--color-bg\); --k-tile-border: var\(--color-border\); --k-tile-radius: var\(--radius-md\); --k-tile-padding: var\(--space-lg\); --k-tile-min-height: var\(--control-xl\); \}/);
+  assert.match(html, /\.el-tile \[data-id\$="\/label"\] \{ --k-caption-text: var\(--color-text\); \}/);
+  assert.match(html, /\.el-tile\[data-selected="true"\] \{ --k-tile-bg: var\(--color-primary\); --k-tile-border: var\(--color-primary\); \}/);
+  assert.match(html, /\.el-tile\[data-selected="true"\] \[data-id\$="\/label"\] \{ --k-caption-text: var\(--color-primary-text\); \}/);
+  assert.match(html, /\.el-tile \{ background-color: var\(--k-tile-bg\); border: 1px solid var\(--k-tile-border\); border-radius: var\(--k-tile-radius\); padding: var\(--k-tile-padding\); min-height: var\(--k-tile-min-height\); \}/);
+  assert.match(html, /data-id="pay-card"[^>]*data-selected="true"/);
+  assert.match(html, /data-id="pay-cash"[^>]*data-selected="false"/, 'the wrapper takes the contract defaults too');
+  assert.match(html, /data-id="pay-card\/label"/);
+  const { lint } = await import('../src/lint.js');
+  assert.equal(lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28').length, 0, 'label.text is a binding L28 accepts');
+});
+
+test('L28 on a compound: a part the contract does not declare, or a slot it does not have, is named', async () => {
+  const dir = await copyOf(orders, async (d) => {
+    await writeFile(join(d, 'components', 'tile.yaml'), TILE.replace('label.text: color.text', 'label.text: color.text, nope.text: color.text, icon.colour: color.text'));
+  });
+  const { lint } = await import('../src/lint.js');
+  const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
+  assert.deepEqual(l28.map((f) => f.message.split('"')[1]).sort(), ['colour', 'nope']);
+});

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.1 — 2026-09-27
+
+Compound kinds that look like something (DESIGN.md §4.5).
+
+- **A compound's bindings dress its wrapper.** A contract with `elements:` is drawn as the tree it declares; its `tokens` (bg, border, radius, padding, shadow, min-height, type) now paint the box around that tree, and its variants change it. A tile is a tile.
+- **`child.slot` re-binds a part from outside** — `label.text: color.primary-text` under `variants.selected.true` turns the tile's caption white where the tile is selected. The child must be one the contract declares, the slot one the picture reads; L28 says otherwise. The child's own contract keeps the rest.
+- A compound's wrapper takes its contract defaults, so `selected: false` is an attribute a variant can match; every declared prop is known to its conditions, so `show_when: hint` hides the part when no hint was given instead of leaving a condition on it. The component schema's layout rule is the screen's (`justify`, track lists). Image size classes: sm 48px square, md 80px, lg 160px, full 240px.
+
 ## 0.13.0 — 2026-09-27
 
 Where things sit. The kiosk's frames looked unfinished not for their colours but for their composition, and composition was outside the layout vocabulary (DESIGN.md §4.7).
