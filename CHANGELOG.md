@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.20.0 — 2026-09-28
+
+Eight things the portfolio site showed when it was written as doan files — places where the file said one thing and the picture another, or could not say it at all.
+
+- **A part re-bound from its compound is drawn that way** — `title.font: text.title` on a card set a variable the caption never read, because the caption's own contract binds only its colour; the part now reads every slot it is given, on the bundled set and on a project's own copy of it. Nothing warned before; now nothing needs to.
+- **A contract lays out its parts with a screen's words** — the component schema takes `padding: [vertical, horizontal]` as a screen does since 0.19; the two layout rules are one definition, and a test keeps them so.
+- **A vertical stack with no alignment stretches its children** — a `group` centred them while the root and a compound's box did not, so text in a card sat in the middle and a title row could not reach the right edge. Of the kiosk and the three examples, one screen moves: the item detail's name, price and description go to the left edge, where its stepper and button already were.
+- **Tabs are drawn** — the bundled set had no picture for `tabs` and showed a box of its props; now a row of tabs with the active one underlined (`text`, `muted`, `border`).
+- **A segment's `bg` is the chosen option's, not the track's** — on a project's own copy of the set (`base: none`) the colour reached the whole track, so every option looked chosen. A library adapter still takes it on the root.
+- **Text alignment is written down** — `align` on a leaf is its text alignment (`intro: { align: center }`); it worked, nothing said so.
+- **A text style may carry Figma's Case** — `textCase: upper | lower | title | original` becomes `text-transform`, so a label keeps its words as written and the style sets the capitals. An unknown word is a warning.
+- **The MCP server says its version** — the package's, not 0.0.1.
+
 ## 0.19.0 — 2026-09-28
 
 - **The right panel in sections, as Figma's** — a head with the name and ×, then titled sections divided edge to edge: component (with the way to the main one), layout, properties, comments, and the file last as one line with *copy*. The frame's panel (screen, comments, flows, file), the comments on the whole and the proposal panel follow the same rule.

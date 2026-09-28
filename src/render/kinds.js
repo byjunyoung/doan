@@ -223,6 +223,12 @@ export const kinds = {
     const actions = list(el.actions).map((a) => (typeof a === 'object' && a.kind ? r.element(a) : `<span class="ab-action">${v(a)}</span>`)).join('');
     return `<div class="ab-left">${el.back ? '<span class="ab-back">‹</span>' : ''}</div><div class="ab-title">${v(el.title)}</div><div class="ab-actions">${actions}</div>`;
   },
+  // tabs over a panel: the active one underlined, as a page header's tabs are (it was a generic box)
+  tabs(el) {
+    const all = list(el.tabs);
+    const active = el.active ?? all[0];
+    return `<div class="tabs">${all.map((t) => `<span class="tab${String(label(t)) === String(label(active)) ? ' active' : ''}" data-ui-tab>${v(label(t))}</span>`).join('')}</div>`;
+  },
   'tab-bar'(el) {
     return `<div class="tb">${list(el.tabs).map((t) => `<div class="tb-item${String(label(t)) === String(el.active ?? list(el.tabs)[0]) ? ' on' : ''}"><span class="tb-icon"></span>${v(label(t))}</div>`).join('')}</div>`;
   },

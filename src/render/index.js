@@ -46,7 +46,10 @@ function axisCss(rule) {
     if (a) s.push(`justify-content:${a}`);
     if (j) s.push(`align-items:${j}`);
   } else if (rule.kind === 'stack') {
+    // a vertical stack with no alignment lets its children take the width, as the screen's root and a
+    // compound's box already do; a group used to centre them, so a row inside could not spread out
     if (a) s.push(`align-items:${a}`, `--lay-align:${a}`);
+    else if ((rule.direction ?? 'column') === 'column') s.push('align-items:stretch');
     if (j) s.push(`justify-content:${j}`);
   } else {
     if (a) s.push('display:flex', `justify-content:${a}`, ...(['start', 'end', 'center'].includes(rule.align) ? [`text-align:${rule.align}`] : []));
@@ -444,6 +447,11 @@ export function fontFaces(project) {
 export const fontLinks = (project) =>
   [].concat(project.conventions?.render?.fonts ?? []).filter((u) => typeof u === 'string' && /^https?:\/\//.test(u)).map((u) => `<link rel="stylesheet" href="${h(u)}">`).join('');
 
+// Slots the bundled set reads for one part of the picture rather than the whole: a segment's and a
+// segmented control's bg and text are the chosen option's (page.js .seg .on), a tab row's text and
+// border the active tab's.
+const READS_ITSELF = { segment: ['bg', 'text'], segmented: ['bg', 'text'], tabs: ['text', 'border'] };
+
 function componentCss(project) {
   const rules = [fontFaces(project)];
   const all = mergeTokens(DEFAULT_TOKENS, project.tokens);
@@ -465,11 +473,18 @@ function componentCss(project) {
       return { own, parts };
     };
     const decl = (own) => own.map(([slot, token]) => `--k-${kind}-${attrName(slot)}: ${tokenVar(token)}`).join('; ');
+    // the part reads what it is given even when its own contract binds nothing there — a caption's
+    // contract binds only its colour, so `label.font: text.title` would set a variable nobody read
     const partRules = (selector, parts) =>
-      parts.map(([child, slot, token]) => {
+      parts.flatMap(([child, slot, token]) => {
         const ck = childKindOf(c, child);
-        return ck ? `${selector} [data-id$="/${attrName(child)}"] { --k-${attrName(ck)}-${attrName(slot)}: ${tokenVar(token)}; }` : '';
-      }).filter(Boolean);
+        if (!ck) return [];
+        const at = `${selector} [data-id$="/${attrName(child)}"]`, name = `--k-${attrName(ck)}-${attrName(slot)}`;
+        const out = [`${at} { ${name}: ${tokenVar(token)}; }`];
+        if (SLOT_CSS[slot]) out.push(`${at}[data-drawn] > * { ${SLOT_CSS[slot]}: var(${name}); }`);
+        if (TYPE_SLOTS.includes(slot)) out.push(`${at}:not([data-drawn]) { ${SLOT_CSS[slot]}: var(${name}); }`);
+        return out;
+      });
     const base = split(c.tokens);
     if (base.own.length) rules.push(`.el-${kind} { ${decl(base.own)}; }`);
     rules.push(...partRules(`.el-${kind}`, base.parts));
@@ -487,7 +502,13 @@ function componentCss(project) {
     }
     // the same bindings reach a piece an adapter drew, so the contract themes antd and MUI too
     const slots = [...new Set([...split(c.tokens).own, ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => split(b).own))].map(([s]) => s))].filter((s) => SLOT_CSS[s]);
-    if (slots.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${slots.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ')}; }`);
+    // a kind the bundled set draws in parts reads some slots itself — a segment's bg is the chosen
+    // option, not the track — so on the project's own copy of that set those slots stay off the root
+    const own = READS_ITSELF[c.kind] ?? [];
+    const outer = slots.filter((s) => !own.includes(s)), inner = slots.filter((s) => own.includes(s));
+    const paint = (list) => list.map((s) => `${SLOT_CSS[s]}: var(--k-${attrName(c.kind)}-${attrName(s)})`).join('; ');
+    if (outer.length) rules.push(`.el-${attrName(c.kind)}[data-drawn] > * { ${paint(outer)}; }`);
+    if (inner.length) rules.push(`.el-${attrName(c.kind)}[data-drawn]:not([data-drawn="own"]) > * { ${paint(inner)}; }`);
     // type reaches a bundled piece by inheritance from its wrapper (the set draws with `font: inherit`);
     // height and shadow it reads itself, kind by kind, in the bundled css
     const type = slots.filter((s) => TYPE_SLOTS.includes(s));

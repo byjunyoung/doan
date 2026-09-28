@@ -187,6 +187,13 @@ export function resolveTokens(docs) {
         const v = value[key] === undefined ? null : toCss(t, value[key]);
         if (v !== null) setIn(tokens, [...e.path, css], v);
       }
+      // DTCG has no letter case; Figma's text style does (Case: Original · Upper · Lower · Title), so
+      // a style may carry `textCase` — the label that is always capitals is a fact of the style
+      if (value.textCase !== undefined) {
+        const tc = TEXT_CASE[String(value.textCase).toLowerCase()];
+        if (tc) setIn(tokens, [...e.path, 'text-transform'], tc);
+        else problems.push({ severity: 'warning', file: origins[at] ?? null, path: at, message: `textCase "${value.textCase}" is not one of ${Object.keys(TEXT_CASE).join(', ')}` });
+      }
       continue;
     }
     const css = toCss(type, value);
@@ -194,6 +201,9 @@ export function resolveTokens(docs) {
   }
   return { tokens, raw, origins, meta, problems };
 }
+
+// Figma's Case for a text style, as css
+const TEXT_CASE = { original: 'none', none: 'none', upper: 'uppercase', uppercase: 'uppercase', lower: 'lowercase', lowercase: 'lowercase', title: 'capitalize' };
 
 // Every dotted token name in a resolved set.
 export function tokenNames(tokens, path = [], out = []) {

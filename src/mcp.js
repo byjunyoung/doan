@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
+import { readFileSync } from 'node:fs';
 import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, listPatterns, specScreen, listFlows } from './verbs.js';
 import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
@@ -29,7 +30,9 @@ const args = parseArgs(process.argv.slice(2));
 const dir = resolve(args._[0] ?? 'design');
 const common = { branch: args.branch, today: args.today, cwd: dir };
 
-const server = new McpServer({ name: 'doan', version: '0.0.1' });
+// the version an agent sees is the package's own, so a client can tell which doan it is talking to
+const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const server = new McpServer({ name: 'doan', version });
 
 const reply = (json) => ({ content: [{ type: 'text', text: JSON.stringify(json, null, 2) }], structuredContent: json });
 const fail = (err) => ({ content: [{ type: 'text', text: `error: ${err.message}` }], isError: true });

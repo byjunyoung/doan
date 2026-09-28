@@ -4,6 +4,7 @@
 // spacing) plus two composite slots that bind a whole style at once:
 //
 //   font:    text.heading   → font-family · font-size · font-weight · line-height · letter-spacing
+//                              · text-transform (since 0.20, a style's Case as Figma names it)
 //   surface: surface.tile   → bg · border · radius · shadow · text · padding
 //
 // A binding becomes `--k-<kind>-<slot>` on the element's wrapper (src/render/index.js
@@ -21,11 +22,12 @@ export const SLOT_CSS = {
   'font-weight': 'font-weight',
   'line-height': 'line-height',
   'letter-spacing': 'letter-spacing',
+  'text-transform': 'text-transform',
   'min-height': 'min-height',
   shadow: 'box-shadow',
 };
 
-export const TYPE_SLOTS = ['font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing'];
+export const TYPE_SLOTS = ['font-family', 'font-size', 'font-weight', 'line-height', 'letter-spacing', 'text-transform'];
 export const COMPOSITE = {
   font: TYPE_SLOTS,
   surface: ['bg', 'border', 'radius', 'shadow', 'text', 'padding'],

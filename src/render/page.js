@@ -326,6 +326,7 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .el-page-header h2 { font-size: var(--k-page-header-font-size, 16px); font-weight: var(--k-page-header-font-weight, inherit); margin: 0; }
 .ph-actions { display: flex; gap: var(--space-sm); }
 .tabs { display: flex; gap: var(--space-md); margin-top: var(--space-xs); }
+.el-tabs .tabs { margin-top: 0; } .el-tabs .tab { color: var(--k-tabs-muted, var(--color-muted)); } .el-tabs .tab.active { color: var(--k-tabs-text, var(--color-text)); border-bottom-color: var(--k-tabs-border, var(--color-primary)); }
 .tabs .tab { padding: 0 0 2px; border-radius: 0; border: 0; border-bottom: 2px solid transparent; } .tabs .tab.active { background: none; border-bottom-color: var(--color-primary); }
 .el-filter-bar, .el-group { display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap; }
 .el-filter-form { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: var(--space-sm); }

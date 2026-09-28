@@ -245,7 +245,7 @@ test('a compound renders as a container of its tree, with the contract layout an
   const dir = await dirWith({ 'conventions.yaml': 'meta: { language: en }\n', 'sections.yaml': '- A\n', 'components/menu-card.yaml': MENU_CARD, 'screens/kiosk.yaml': KIOSK });
   const project = await loadProject(dir);
   const html = renderScreen(project, project.screens[0]);
-  assert.match(html, /data-id="menu-1"[^>]*data-kind="menu-card"[^>]*style="display:flex;flex-direction:column;gap:var\(--space-sm\);--lay-dir:column;--lay-gap:var\(--space-sm\);padding:var\(--space-md\)"/);
+  assert.match(html, /data-id="menu-1"[^>]*data-kind="menu-card"[^>]*style="display:flex;flex-direction:column;gap:var\(--space-sm\);--lay-dir:column;--lay-gap:var\(--space-sm\);align-items:stretch;padding:var\(--space-md\)"/);
   assert.match(html, /data-id="menu-1\/name"[^>]*data-path="components\/menu-card\.yaml › elements\.1"/);
   assert.match(html, /아메리카노/);
   assert.match(html, /\.el-menu-card \{ --k-menu-card-bg: var\(--color-bg\)/);

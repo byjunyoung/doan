@@ -23,6 +23,11 @@ const call = async (name, args = {}) => {
   return { text, json: res.isError ? null : (res.structuredContent ?? JSON.parse(text)), isError: res.isError };
 };
 
+test('the server says which doan it is — the package version, not a placeholder', () => {
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+  assert.deepEqual(client.getServerVersion(), { name: 'doan', version: pkg.version });
+});
+
 test('the server exposes the verbs and the two agent reads', async () => {
   const { tools } = await client.listTools();
   assert.deepEqual(tools.map((t) => t.name).sort(), ['diff', 'get_screen', 'lint', 'list_missing', 'list_components', 'list_flows', 'list_screens', 'list_tokens', 'list_assets', 'list_patterns', 'list_requests', 'close_request', 'handoff', 'prep', 'render', 'propose', 'propose_files', 'list_proposals', 'apply', 'reject', 'undo', 'import_figma', 'map_figma', 'list_comments', 'resolve_comment', 'add_comment'].sort());

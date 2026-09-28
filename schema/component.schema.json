@@ -20,12 +20,21 @@
       "type": "object",
       "additionalProperties": false,
       "description": "when to use it and when not — a design system's usage guidance",
-      "properties": { "when": { "type": "string" }, "not": { "type": "string" } }
+      "properties": {
+        "when": {
+          "type": "string"
+        },
+        "not": {
+          "type": "string"
+        }
+      }
     },
     "anatomy": {
       "type": "object",
       "description": "the parts as a person names them, in order — part id: name (for a compound, its elements' ids)",
-      "additionalProperties": { "type": "string" }
+      "additionalProperties": {
+        "type": "string"
+      }
     },
     "anchors": {
       "type": "array",
@@ -252,7 +261,23 @@
           "type": "string"
         },
         "padding": {
-          "type": "string"
+          "description": "a space token for every side, or [vertical, horizontal] — as Figma's two padding fields and CSS's two values",
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "minItems": 2,
+              "maxItems": 2
+            }
+          ]
         },
         "align": {
           "type": "string",

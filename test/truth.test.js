@@ -90,7 +90,7 @@ test('L28: a binding to a slot the picture does not read is a warning that names
   const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
   assert.equal(l28.length, 1);
   assert.deepEqual(l28[0].path, ['tokens', 'colour']);
-  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, line-height, letter-spacing, min-height, shadow, muted, idle, font, surface\)/);
+  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, line-height, letter-spacing, text-transform, min-height, shadow, muted, idle, font, surface\)/);
 });
 
 test('the bundled set reads type from the contract where it used to fix a size: the page-header title, a field label, a hint; a segment and a stepper take a control height', async () => {
