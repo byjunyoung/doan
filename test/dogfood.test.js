@@ -107,3 +107,9 @@ test('a segment whose options stand apart borders each option, and an option not
   assert.match(html, /\.el-segment \.seg span:not\(\.on\) \{ color: var\(--k-segment-muted, inherit\); \}/);
   assert.match(html, /data-id="s"[^>]*data-apart="true"/);
 });
+
+test('stubs to other domains that leave one frame at the same height take a row each, not one line over another', async () => {
+  const { CANVAS_JS } = await import('../src/render/page.js');
+  assert.match(CANVAS_JS, /while \(rows\.some\(function \(y\) \{ return Math\.abs\(y - ry\) < STUB_ROW; \}\)\) ry \+= STUB_ROW;/);
+  assert.match(CANVAS_JS, /\{ x: start\.x \+ 32, y: start\.y \}, \{ x: start\.x \+ 32, y: ry \}/, 'the line turns down at a right angle into its row');
+});

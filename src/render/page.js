@@ -1268,7 +1268,7 @@ export const CANVAS_JS = `
     // what goes forward is drawn, so the corridor carries the few flows that skip a column.
     var backs = [], labels = [], flowN = 0;
     function isBack(f, src) { var t = cols[f.to]; return f.to !== f.screen && t && t[0].r.x < src.r.x; }
-    var drawnPairs = {};
+    var drawnPairs = {}, stubRows = {}, STUB_ROW = 30; // a stub label is 20px type; a row keeps them apart
     (window.DOAN_FLOWS || []).forEach(function (f) {
       if (here.indexOf(f.screen) < 0) return;
       var fromState = f.in && f.in.length ? f.in[0] : 'Default';
@@ -1284,9 +1284,15 @@ export const CANVAS_JS = `
       var tgt = frames[f.to + '|' + f.state] || frames[f.to + '|Default'] || (cols[f.to] || [])[0];
       if (!tgt) {
         var other = elsewhere[f.to], g = mk('g', { 'class': 'cv-stub' });
-        g.appendChild(mk('path', { 'class': cls, d: pathOf([start, { x: start.x + 80, y: start.y }]), 'marker-end': 'url(#cv-arrow)' }));
+        // stubs leaving one frame from the same height (a header's menu items sit on one line) take a
+        // row each, below the one before: the line leaves at its element and turns down into its row
+        var key = f.screen + '|' + fromState, rows = stubRows[key] || (stubRows[key] = []), ry = start.y;
+        while (rows.some(function (y) { return Math.abs(y - ry) < STUB_ROW; })) ry += STUB_ROW;
+        rows.push(ry);
+        var pts = ry === start.y ? [start, { x: start.x + 80, y: ry }] : [start, { x: start.x + 32, y: start.y }, { x: start.x + 32, y: ry }, { x: start.x + 80, y: ry }];
+        g.appendChild(mk('path', { 'class': cls, d: pathOf(pts), 'marker-end': 'url(#cv-arrow)' }));
         var link = mk('a', { href: other ? 'canvas-' + other.slug + '.html' : f.to + '.html' });
-        link.appendChild(mk('text', { x: Math.round(start.x + 92), y: Math.round(start.y + 7) }, '→ ' + (other ? other.domain + ' / ' : '') + f.to + (f.state !== 'Default' ? '.' + f.state : '') + (text ? '  (' + text + ')' : '')));
+        link.appendChild(mk('text', { x: Math.round(start.x + 92), y: Math.round(ry + 7) }, '→ ' + (other ? other.domain + ' / ' : '') + f.to + (f.state !== 'Default' ? '.' + f.state : '') + (text ? '  (' + text + ')' : '')));
         g.appendChild(link); svg.appendChild(g); return;
       }
       if (tgt === src) return;

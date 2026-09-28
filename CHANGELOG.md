@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.3 — 2026-09-28
+
+- **Stubs to other domains no longer pile up** — flows that leave one frame from the same height (a header's menu items on one line) were drawn as lines and labels one over another; each now takes a row below the one before, its line turning down at a right angle into it.
+
 ## 0.20.2 — 2026-09-28
 
 - **A segment whose options stand apart is a row of bordered buttons** — with `gap` bound (0.16.1) the border leaves the track and goes round each option, the chosen one's in its fill; bound in a variant (`apart: true`), only that variant does. A site's bordered tabs draw as they are.
