@@ -90,7 +90,7 @@ test('L28: a binding to a slot the picture does not read is a warning that names
   const l28 = lint(await loadProject(dir), { branch: null }).filter((f) => f.id === 'L28');
   assert.equal(l28.length, 1);
   assert.deepEqual(l28[0].path, ['tokens', 'colour']);
-  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, line-height, letter-spacing, min-height, shadow, muted, font, surface\)/);
+  assert.match(l28[0].message, /"colour" is not a slot the picture reads \(bg, .*font-size, font-weight, line-height, letter-spacing, min-height, shadow, muted, idle, font, surface\)/);
 });
 
 test('the bundled set reads type from the contract where it used to fix a size: the page-header title, a field label, a hint; a segment and a stepper take a control height', async () => {
@@ -113,6 +113,8 @@ test('antd draws size: full as a block button and sm/md as small/middle, as the 
   const drawn = renderScreen(project, project.screens.find((s) => s.doc.screen === 'order-list'), { branch: 'x', adapter });
   assert.match(drawn, /data-id="export"[^>]*data-size="full"[^>]*data-drawn="antd"[^>]*><button[^>]*class="[^"]*ant-btn-block/);
   assert.match(drawn, /<span class="on">B<\/span>/, 'a segment draws its selected option, not always the first');
+  const { kinds: bundled } = await import('../src/render/kinds.js');
+  assert.doesNotMatch(bundled.segment({ options: ['A', 'B'] }), /class="on"/, 'a segment with no selected has nothing chosen yet');
   assert.match(drawn, /\.el-card:not\(\[data-drawn\]\) \{ padding:/, 'the bundled card box does not wrap a card an adapter drew');
 });
 

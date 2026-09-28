@@ -93,6 +93,8 @@ main.bare { padding: 16px; }
 .frame.device-web { width: var(--ref-w); }
 .frame.device-phone, .frame.device-tablet { width: var(--ref-w); background: var(--color-bg); border: 10px solid #1f2328; border-radius: 44px; overflow: hidden; margin: var(--space-md) auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
 .frame.device-tablet { border-radius: 24px; }
+/* a dialog on a device covers the whole screen and sits in its middle, whatever its height */
+.frame.device-phone > .backdrop, .frame.device-tablet > .backdrop { flex: 1; min-height: 0; align-items: center; }
 .view-root [style*="overflow-x:auto"] > .el { flex: 0 0 auto; }
 .view-root [style*="overflow-x:auto"] > * { flex-wrap: nowrap; } .view-root [style*="overflow-x:auto"] > * > * { flex: 0 0 auto; } .view-root [style*="flex-wrap:wrap"] > * { flex-wrap: wrap; }
 .frame.device-phone .view-root, .frame.device-tablet .view-root { flex: 1; min-height: 0; overflow: hidden; }
@@ -134,6 +136,11 @@ main.bare { padding: 16px; }
 table.index { width: 100%; border-collapse: collapse; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 13px; }
 table.index th, table.index td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
 table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
+/* the spec's element table: fixed shares, so one long cell (a JSON prop) cannot squeeze the rest; id and kind keep one line, the rest wrap */
+table.spec-el { table-layout: fixed; }
+table.spec-el th:nth-child(1) { width: 14%; } table.spec-el th:nth-child(2) { width: 11%; } table.spec-el th:nth-child(3) { width: 27%; } table.spec-el th:nth-child(4) { width: 28%; } table.spec-el th:nth-child(5) { width: 20%; }
+table.spec-el td { vertical-align: top; overflow-wrap: anywhere; }
+table.spec-el td:nth-child(1), table.spec-el td:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bad { color: var(--color-danger); font-weight: 600; }
 
 /* the workspace: the canvas page keeps the panel open and the tree on the left */
@@ -354,7 +361,9 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-section > .section-title { color: var(--k-section-text, inherit); }
 .el-segmented .seg { border-color: var(--k-segmented-border, var(--color-border)); border-radius: var(--k-segmented-radius, var(--radius-sm)); } .el-segmented .seg .on { background: var(--k-segmented-bg, var(--color-primary)); color: var(--k-segmented-text, var(--color-primary-text)); }
 .el-button-group .seg { border-color: var(--k-button-group-border, var(--color-border)); } .el-button-group .seg .on { background: var(--k-button-group-bg, var(--color-primary)); color: var(--k-button-group-text, var(--color-primary-text)); }
-.el-segment .seg { border-color: var(--k-segment-border, var(--color-border)); border-radius: var(--k-segment-radius, var(--radius-sm)); } .el-segment .seg .on { background: var(--k-segment-bg, var(--color-primary)); color: var(--k-segment-text, var(--color-primary-text)); }
+.el-segment .seg { border-color: var(--k-segment-border, var(--color-border)); border-radius: var(--k-segment-radius, var(--radius-sm)); }
+/* a segment's options: gap binds them apart, idle fills the ones not chosen, each takes the segment's radius — the chosen one reads as a pill */
+.el-segment .seg { gap: var(--k-segment-gap, 0px); } .el-segment .seg span { background: var(--k-segment-idle, transparent); border-radius: var(--k-segment-radius, 0); justify-content: center; } .el-segment .seg .on { background: var(--k-segment-bg, var(--color-primary)); color: var(--k-segment-text, var(--color-primary-text)); }
 .el-pagination .pager .on { color: var(--k-pagination-text, var(--color-primary)); }
 .el-detail-card th, .el-detail-card td { border-bottom-color: var(--k-detail-card-border, var(--color-border)); } .el-detail-card th { color: var(--k-detail-card-muted, var(--color-muted)); }
 .el-kv-table th, .el-kv-table td { border-bottom-color: var(--k-kv-table-border, var(--color-border)); } .el-kv-table th { color: var(--k-kv-table-muted, var(--color-muted)); }
@@ -426,7 +435,8 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .drawer h4 { margin: 0 0 var(--space-xs); font-size: 13px; display: flex; align-items: center; gap: var(--space-sm); }
 .drawer h4 .close { margin-left: auto; cursor: pointer; color: var(--color-muted); font-weight: 400; }
 .drawer .k { color: var(--color-muted); }
-.drawer table { font-size: 12px; } .drawer th { width: 34%; }
+/* fixed shares: a long JSON prop wraps inside its cell instead of widening the panel */
+.drawer table { font-size: 12px; table-layout: fixed; } .drawer th { width: 34%; vertical-align: top; } .drawer td { overflow-wrap: anywhere; vertical-align: top; }
 .drawer code { background: var(--color-surface); padding: 1px 4px; border-radius: 3px; word-break: break-all; }
 .drawer textarea, .drawer input { width: 100%; margin: 4px 0; }
 .drawer .cond-line { color: var(--color-muted); }
@@ -437,7 +447,8 @@ export const INSPECTOR_JS = `
 (function () {
   var shell = document.querySelector('.shell');
   var panel = document.getElementById('inspector');
-  var file = document.body.getAttribute('data-file') || '';
+  // the file an element comes from: its frame's on the canvas, the page's on a screen page
+  function fileOf(el) { var f = el && el.closest('[data-file]:not([data-file=""])'); return f ? f.getAttribute('data-file') : ''; }
   var api = window.DOAN_API === true;
   var comments = window.DOAN_COMMENTS || [];
   var T = window.DOAN_I18N || {};
@@ -534,7 +545,7 @@ export const INSPECTOR_JS = `
     var items = [
       ['\u25c7 ' + t('goToComponent', 'Go to main component'), function () { location.href = 'components.html#k-' + el.getAttribute('data-kind'); }],
       [t('selectIt', 'Select'), function () { openDrawer(el); }],
-      [t('copy', 'copy path:line'), function () { if (navigator.clipboard) navigator.clipboard.writeText((document.body.getAttribute('data-file') || '') + ':' + (el.getAttribute('data-line') || '') + '  ' + el.getAttribute('data-path')); }],
+      [t('copy', 'copy path:line'), function () { if (navigator.clipboard) navigator.clipboard.writeText(fileOf(el) + ':' + (el.getAttribute('data-line') || '') + '  ' + el.getAttribute('data-path')); }],
     ];
     items.forEach(function (it) { var b = document.createElement('button'); b.type = 'button'; b.textContent = it[0]; b.addEventListener('click', function (ev) { ev.stopPropagation(); closeCtx(); it[1](); }); ctx.appendChild(b); });
     ctx.style.left = e.clientX + 'px'; ctx.style.top = e.clientY + 'px';
@@ -568,7 +579,7 @@ export const INSPECTOR_JS = `
       (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
       '<table>' + rows + '</table>' +
       '<p class="hint">' + t('samplesNote', 'values shown in the picture are samples unless the file sets them') + '</p>' +
-      '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(file) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
+      '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(fileOf(el)) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
       '<p><button class="btn" id="copy">' + t('copy', 'copy path:line') + '</button></p>' +
       '<h4>' + t('comments', 'Comments') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
       (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>');
@@ -576,7 +587,7 @@ export const INSPECTOR_JS = `
     document.getElementById('close').addEventListener('click', function () { window.doanClearSelection(); });
     document.dispatchEvent(new CustomEvent('doan:select', { detail: { el: el } }));
     document.getElementById('copy').addEventListener('click', function () {
-      var text = file + (line ? ':' + line : '') + '  ' + path;
+      var text = fileOf(el) + (line ? ':' + line : '') + '  ' + path;
       if (navigator.clipboard) navigator.clipboard.writeText(text);
       document.getElementById('copy').textContent = t('copied', 'copied');
     });
@@ -760,11 +771,14 @@ export const PROTO_JS = `
   function leaves(f, screen, state) { return f.screen === screen && (!f.in || f.in.indexOf(state) >= 0); }
   function arm(root, screen, state) {
     var mine = flows.filter(function (f) { return leaves(f, screen, state) && f.gesture !== 'timeout'; });
+    // a flow with via leaves from that part of a component (bar/primary), so two buttons in one bar are two hotspots
     var byFrom = {};
-    mine.forEach(function (f) { (byFrom[f.from] = byFrom[f.from] || []).push(f); });
+    mine.forEach(function (f) { var k = f.via ? f.from + '/' + f.via : f.from; (byFrom[k] = byFrom[k] || []).push(f); });
     Object.keys(byFrom).forEach(function (from) {
       var list = byFrom[from];
-      root.querySelectorAll('.el[data-id="' + from + '"]').forEach(function (el) {
+      var hits = root.querySelectorAll('.el[data-id="' + from + '"]');
+      if (!hits.length && from.indexOf('/') > 0) hits = root.querySelectorAll('.el[data-id="' + from.split('/')[0] + '"]');
+      hits.forEach(function (el) {
         if (el.getAttribute('data-disabled') === 'true') return;
         el.classList.add('hotspot');
         if (list.every(function (f) { return f.style === 'conditional'; })) el.classList.add('hotspot-cond');
@@ -990,7 +1004,7 @@ export const CANVAS_JS = `
       if (src0 && isBack(f, src0)) { backs.push({ src: src0, f: f }); return; }
       var src = frames[f.screen + '|' + fromState] || frames[f.screen + '|Default'] || (cols[f.screen] || [])[0]; if (!src) return;
       var s = src.r, start = { x: s.x + s.w, y: s.y + s.h / 2 };
-      var anchor = src.el.querySelector('.el[data-id="' + f.from + '"]');
+      var anchor = (f.via && src.el.querySelector('.el[data-id="' + f.from + '/' + f.via + '"]')) || src.el.querySelector('.el[data-id="' + f.from + '"]');
       if (anchor) { var ar = rectOf(anchor), ay = ar.y + ar.h / 2; if (ay > s.y && ay < s.y + s.h) start.y = ay; }
       // a short label: what it waits for when it says, else what is pressed; a timeout says so
       var text = (f.gesture === 'timeout' ? '⏱ ' : '') + (f.when || (f.from + (f.via ? '.' + f.via : '')));

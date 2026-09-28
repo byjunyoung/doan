@@ -244,8 +244,9 @@ export const kinds = {
   'search-bar'(el) {
     return `<div class="search"><span class="search-icon">⌕</span><input readonly placeholder="${h(el.placeholder ?? D.select)}"></div>`;
   },
+  // no selected is nothing chosen yet (a required option the person has not picked), not the first
   segment(el) {
-    return `<div class="seg">${list(el.options).map((o, i) => `<span class="${String(o) === String(el.selected ?? list(el.options)[0]) ? 'on' : ''}">${v(o)}</span>`).join('')}</div>`;
+    return `<div class="seg">${list(el.options).map((o) => `<span class="${el.selected !== undefined && el.selected !== null && String(o) === String(el.selected) ? 'on' : ''}">${v(o)}</span>`).join('')}</div>`;
   },
   stepper(el) {
     return `<div class="stepper"><span class="step-btn">−</span><span class="step-val">${v(el.value ?? 1)}</span><span class="step-btn">+</span></div>`;

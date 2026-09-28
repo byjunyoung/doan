@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.1 — 2026-09-28
+
+- **A flow's `via` picks the part of a component** — `{ from: bar, via: primary }` makes only the bar's primary button the prototype hotspot and the canvas arrow's origin, so two buttons in one bar are two hotspots. A `via` with no such part keeps the whole element, as before.
+- **A dialog on a device covers the screen** — the backdrop fills a phone or tablet frame and the dialog sits in its middle, whatever its height.
+- **Segments can stand apart** — a new slot `idle` fills the options not chosen; with `gap` bound too, the options are separate pills, the chosen one in `bg`. A segment with no `selected` has nothing chosen yet (it no longer picks the first), so a required option not yet picked can be drawn.
+- **The drawer names the file on the canvas** — an element's file is its frame's (`kiosk-cart.yaml`), where the canvas page itself has none; *copy path:line* carries it too.
+- **The spec's element table keeps its shape** — fixed column shares, so a long JSON prop wraps in its own cell instead of squeezing the path into one letter a line and pushing the table off the page. The drawer's props table does the same: a long prop (a header's `actions`) wraps in its cell and the panel keeps its width.
+
 ## 0.16.0 — 2026-09-28
 
 - **No overview.** The viewer opens on the first domain's canvas (`index.html` forwards there, hash kept). The overview repeated the sidebar (domains, screens) and the canvas (the flow map); what only it had — the proposals waiting on a person — is in the sidebar on every page now, one link per proposal, while there is one. The flow map and its ELK layout leave the viewer; `layoutFlows` stays exported and `list_flows` still names flows to nowhere and screens no flow reaches.

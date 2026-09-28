@@ -32,8 +32,10 @@ export const COMPOSITE = {
 };
 
 // `muted` is a second text colour eleven bundled kinds read for their small print (--k-<kind>-muted);
-// it is no one css property, so an adapter root does not take it from outside.
-export const SLOTS = [...Object.keys(SLOT_CSS), 'muted', ...Object.keys(COMPOSITE)];
+// `idle` is the fill of an option not chosen in a segment (--k-segment-idle): with `gap` bound too,
+// the options stand apart as pills, the chosen one in `bg`. Neither is one css property, so an
+// adapter root does not take them from outside.
+export const SLOTS = [...Object.keys(SLOT_CSS), 'muted', 'idle', ...Object.keys(COMPOSITE)];
 
 // One binding as the plain slots it stands for: `font: text.heading` is five, each bound to the
 // part the style defines (`text.heading.font-size`); a part the style leaves out is left out.

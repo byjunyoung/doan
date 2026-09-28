@@ -85,10 +85,12 @@ test('renderProto holds every screen in every state, hidden, with the flows as d
   assert.equal((html.match(/<section class="proto-view"/g) ?? []).length, expected);
   assert.match(html, /<section class="proto-view" data-screen="feed" data-state="Refreshing" hidden>/);
   assert.match(html, /window\.DOAN_FLOWS = \[\{"screen":"cart-sheet"/);
-  assert.match(html, /"from":"list","to":"item-detail","state":"Default","nav":"push"/);
+  assert.match(html, /"from":"list","via":"cell","to":"item-detail","state":"Default","nav":"push"/);
   assert.match(html, /<select id="proto-screen"[^>]*><option value="feed">feed<\/option>/); // sections order: 01. shop first
   assert.match(html, /id="proto-hot" checked/);
   assert.match(html, /querySelectorAll\('\.el\[data-id="' \+ from \+ '"\]'\)/);
+  // a flow with via arms that part of a component (bar/primary), not the whole component
+  assert.match(html, /var k = f\.via \? f\.from \+ '\/' \+ f\.via : f\.from;/);
   assert.match(html, /<nav class="views">[^<]*<a class="" href="canvas-shop\.html">Canvas<\/a><a class="current" href="proto\.html#feed">Prototype<\/a><\/nav>/);
 });
 

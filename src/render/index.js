@@ -694,7 +694,7 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
       ]);
     })
     .join('');
-  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, in: e.in, when: e.when, label: e.label }));
+  const flows = graph.edges.map((e) => ({ screen: e.screen, from: e.from, via: e.via, to: e.target, state: e.state, nav: e.nav, gesture: e.gesture, style: e.style, in: e.in, when: e.when, label: e.label }));
   const body =
     shellOf(project, D, {
       title: D.proto,
@@ -1154,9 +1154,9 @@ export function renderSpec(project, screen, { branch = null, api = false } = {})
   const md = specMarkdown(spec, lang);
   const place = placeOf(project, doc.screen, 'Default');
   const at = (path) => (place.domain ? `canvas-${h(place.domain)}.html#${h(doc.screen)}.Default/${h(path)}` : `${h(doc.screen)}.html`);
-  const table = (head, rows) =>
+  const table = (head, rows, cls = '') =>
     rows.length
-      ? `<table class="index"><thead><tr>${head.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
+      ? `<table class="index${cls ? ` ${cls}` : ''}"><thead><tr>${head.map((x) => `<th>${x}</th>`).join('')}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`
       : `<div class="hint">${D.noneYet}</div>`;
   const kv = (o) => Object.entries(o).map(([k, val]) => `<code>${h(k)}</code> ${h(typeof val === 'string' ? val : JSON.stringify(val))}`).join('<br>');
   const changes = (list) => list.map((c) => `<li><code>${h(c.target)}</code> ${h(c.change)}</li>`).join('');
@@ -1166,7 +1166,7 @@ export function renderSpec(project, screen, { branch = null, api = false } = {})
 <div class="section-title">${D.acceptance} <span class="hint">${spec.acceptance.length}</span></div>
 ${spec.acceptance.length ? `<ul class="list acceptance">${spec.acceptance.map((a) => `<li><label><input type="checkbox"> ${h(a.text)}</label> <span class="hint">${h(a.source)}</span></li>`).join('')}</ul>` : `<div class="hint">${D.noneYet}</div>`}
 <div class="section-title">${D.elementsLabel} <span class="hint">${spec.elements.length}</span></div>
-${table(['id', 'kind', D.codeLabel, 'props', D.path], spec.elements.map((e) => [`<a href="${at(e.path)}"><code>${h(e.id)}</code></a>${e.parent ? `<div class="hint">↳ ${h(e.parent)}</div>` : ''}`, h(e.kind), e.code ? `<code>${h(e.code.snippet)}</code>${e.code.import ? `<div class="hint">${h(e.code.import)}</div>` : ''}` : `<span class="hint">${h(Object.entries(e.component?.maps_to ?? {}).filter(([k]) => k !== 'code').map(([k, v]) => `${k}/${v}`).join(', ') || D.bundled)}</span>`, kv(e.props) + (Object.keys(e.conditions).length ? `<div class="hint">${kv(e.conditions)}</div>` : ''), `<code>${h(e.path)}${e.line ? `:${e.line}` : ''}</code>`]))}
+${table(['id', 'kind', D.codeLabel, 'props', D.path], spec.elements.map((e) => [`<a href="${at(e.path)}"><code>${h(e.id)}</code></a>${e.parent ? `<div class="hint">↳ ${h(e.parent)}</div>` : ''}`, h(e.kind), e.code ? `<code>${h(e.code.snippet)}</code>${e.code.import ? `<div class="hint">${h(e.code.import)}</div>` : ''}` : `<span class="hint">${h(Object.entries(e.component?.maps_to ?? {}).filter(([k]) => k !== 'code').map(([k, v]) => `${k}/${v}`).join(', ') || D.bundled)}</span>`, kv(e.props) + (Object.keys(e.conditions).length ? `<div class="hint">${kv(e.conditions)}</div>` : ''), `<code>${h(e.path)}${e.line ? `:${e.line}` : ''}</code>`]), 'spec-el')}
 <div class="section-title">${D.states}</div>
 ${spec.states.length ? `<ul class="list">${spec.states.map((s) => `<li><b>${h(s.name)}</b>${s.required ? ` <span class="pill tbd">${D.requiredMark}</span>` : ''}<ul>${changes(s.changes) || `<li class="hint">${D.noneYet}</li>`}</ul></li>`).join('')}</ul>` : `<div class="hint">${D.noneYet}</div>`}
 ${spec.variants.length ? `<div class="section-title">${D.variants}</div><ul class="list">${spec.variants.flatMap((v) => v.options.map((o) => `<li><b>${h(v.axis)} = ${h(o.name)}</b><ul>${changes(o.changes) || `<li class="hint">${D.noneYet}</li>`}</ul></li>`)).join('')}</ul>` : ''}
