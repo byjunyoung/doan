@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.0 — 2026-09-28
+
+- **Apply comments from the viewer** — the foot of the live viewer's right panel, fixed under whatever the panel shows, says how many comments are open and has *Ask the agent to apply them* (the viewer's own primary button, full width); pressing it writes a request (`.requests/requests.json`) for the agent watching the project, which proposes and closes it. The button waits while it is open and says when the proposals are in; the person applies them in the viewer. `list_requests` and `close_request` for an agent, `doan requests` (exit 3 while one is open) for a shell watcher. DESIGN.md §7.5.
+
 ## 0.17.0 — 2026-09-28
 
 The layer between the parts and the screens: how the parts are arranged.

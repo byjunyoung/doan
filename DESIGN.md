@@ -512,6 +512,15 @@ The agent behind the loop is not part of this project. The tool exposes MCP verb
 
 The loop reaches the rest of the design the same way (0.14). `propose_files` (CLI `propose <dir> --files path=local,…`) carries whole new texts for `tokens.json`, `tokens/*.json`, `components/*.yaml`, `assets/**/*.svg`, `conventions.yaml` and `sections.yaml` — several in one proposal. The project as it would be is loaded from a temporary copy and linted; nothing is written until a person applies it; apply refuses if any file changed since; undo puts every file back and removes the ones it created. Always pending: a style change is never "text only". The proposal page shows the style board as it is beside as it would be, each in its own frame so the two token sets never meet, then each file AS-IS beside TO-BE with changed lines marked.
 
+### 7.5 Asking from the viewer
+
+Decided 2026-09-28: the owner did not want to go to the terminal to type "apply the comments" every time. The viewer cannot call an agent — any agent, since doan is not tied to one — so the foot of the live viewer's right panel — fixed, beside where comments are written, the viewer's own primary button — says how many are open and asks the agent, and pressing it writes a request to `<project>/.requests/requests.json`. An agent watching the project takes it: reads the comments, proposes, and closes the request with the proposal ids (`list_requests`, `close_request`; `doan requests` exits 3 while one is open, for a shell watcher). The button waits while the request is open and says the proposals are in when it closes; the person applies them in the viewer as ever. One open request per kind — pressing twice asks once.
+
+| Decision | Why |
+|---|---|
+| A request queue, not the viewer starting an agent | the owner chose the live session: it keeps the conversation's context and the person's rules; a request left when no session is watching waits for the next one. Starting `claude -p` from the server would tie doan to one agent and spend tokens out of sight |
+| The agent never applies | the button asks for proposals; the viewer's Apply stays the person's yes |
+
 ## 8. Lifecycle
 
 ```

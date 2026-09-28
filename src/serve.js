@@ -11,6 +11,7 @@ import { lintProject, currentBranch, specScreen } from './verbs.js';
 import { listProposals, applyProposal, rejectProposal, projectWith } from './proposals.js';
 import { rm } from 'node:fs/promises';
 import { authorOf, addComment, listComments, resolveComment } from './comments.js';
+import { addRequest, listRequests, closeRequest } from './requests.js';
 
 // The local viewer: the same pages `render` writes, served live from the files, plus the
 // three things a static page cannot do — take a comment, apply or reject a proposal, and
@@ -61,6 +62,8 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       const project = await loadProject(dir);
       // the sidebar lists what waits on a person on every page
       project.pending = await listProposals(dir, { status: 'pending' });
+      // the top bar's "apply comments" button: how many are open, and whether it was already pressed
+      project.live = { openComments: (await listComments(dir, { status: 'open' })).length, requests: await listRequests(dir) };
       const adapter = await resolveAdapter(project, components);
       // no overview: the viewer opens on the first domain's canvas
       if (path === '/' || path === '/index.html') return html(res, await renderIndex(project));
@@ -125,6 +128,9 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
         // who said yes: the name sent, or the project's git author — the viewer has no login
         return json(res, 200, await applyProposal(dir, { id: m[1], approved_by: body.by || authorOf(dir) }));
       }
+      if (method === 'GET' && path === '/api/requests') return json(res, 200, { requests: await listRequests(dir, { status: url.searchParams.get('status') ?? 'open' }) });
+      if (method === 'POST' && path === '/api/requests') return json(res, 201, await addRequest(dir, { ...(await readBody(req)), by: authorOf(dir) }));
+      if (method === 'POST' && (m = path.match(/^\/api\/requests\/(r_[a-z0-9]+)\/close$/))) return json(res, 200, await closeRequest(dir, { id: m[1], ...(await readBody(req)) }));
       if (method === 'POST' && (m = path.match(/^\/api\/proposals\/(p_[a-z0-9]+)\/reject$/))) return json(res, 200, await rejectProposal(dir, { id: m[1], ...(await readBody(req)) }));
       return json(res, 404, { error: 'no such api' });
     } catch (err) {

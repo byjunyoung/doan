@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, listPatterns, specScreen, listFlows } from './verbs.js';
 import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
+import { listRequests, closeRequest } from './requests.js';
 
 // The agent's entrance. Same verbs as the CLI, same JSON; plus the two reads agents ask
 // for most: the merged view of one screen, and only the findings that mean "missing".
@@ -273,6 +274,25 @@ server.registerTool(
     inputSchema: { id: z.string(), by: z.string().default('agent'), note: z.string().default('') },
   },
   guard((input) => resolveComment(dir, input)),
+);
+
+server.registerTool(
+  'list_requests',
+  {
+    description:
+      'What the person asked for from the viewer without going to a terminal — today one kind, "apply-comments": they pressed Apply comments on the top bar. Open ones by default. Take one by doing it: read list_comments, turn the open comments into proposals (propose / propose_files, with the comment ids), then call close_request with the proposal ids. Never apply — the person applies in the viewer.',
+    inputSchema: { status: z.enum(['open', 'done', 'all']).default('open') },
+  },
+  guard((input) => listRequests(dir, input)),
+);
+
+server.registerTool(
+  'close_request',
+  {
+    description: 'Close a request from the viewer once it is done: the proposal ids it produced and a line on what was done (or why nothing was — e.g. a comment that needs the person to decide). The viewer\'s button then says the proposals are in.',
+    inputSchema: { id: z.string(), proposals: z.array(z.string()).default([]), note: z.string().default(''), by: z.string().default('agent') },
+  },
+  guard((input) => closeRequest(dir, input)),
 );
 
 server.registerTool(

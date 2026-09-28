@@ -285,6 +285,38 @@ function topBar(project, D, { title, meta = '', mode = null, place = {}, tools =
   return `<header class="top"><div class="where" title="${h(String(meta).replace(/<[^>]+>/g, ''))}"><button class="btn side-toggle" id="side-toggle" type="button" aria-label="${h(D.menuLabel)}">☰</button><h1>${title}</h1><span class="meta">${meta}</span></div>${viewTabs(project, mode, D, { domain: place.domain ?? null, screen: screenRef })}<div class="tools"><button class="btn panel-toggle" id="panel-toggle" type="button">${D.panelLabel}</button>${tools}${modeControls(project)}</div></header>`;
 }
 
+// "Apply comments" at the foot of the right panel, on every page of the live viewer — beside where
+// comments are written. The viewer cannot call an agent, so the button writes a request
+// (src/requests.js) that the watching agent takes; while it is open the button is off and says the
+// agent is at it, and when the agent closes it the button says the proposals are in (DESIGN.md §7.5).
+// It is the viewer's own primary button, as "Leave comment" is, only full width.
+function askFoot(project, D) {
+  if (!project.live) return '';
+  const n = project.live.openComments ?? 0;
+  const open = (project.live.requests ?? []).find((r) => r.kind === 'apply-comments' && r.status === 'open');
+  return `<div class="drawer-foot"><div class="hint" id="ask-count">${n ? `${D.openCommentsN.replace('{n}', n)}` : D.askNone}</div><button class="btn btn-primary" id="ask-comments" type="button"${open || !n ? ' disabled' : ''} data-request="${open ? h(open.id) : ''}">${h(open ? D.askWaiting : D.askComments)}</button><script>(function () {
+  var b = document.getElementById('ask-comments'); if (!b) return;
+  var T = ${JSON.stringify({ waiting: D.askWaiting, done: D.askDone })};
+  function wait(id) {
+    b.disabled = true; b.textContent = T.waiting;
+    var t = setInterval(function () {
+      fetch('/api/requests?status=all').then(function (r) { return r.json(); }).then(function (j) {
+        var r = (j.requests || []).filter(function (x) { return x.id === id; })[0];
+        if (!r || r.status === 'open') return;
+        clearInterval(t); b.disabled = false; b.textContent = T.done;
+        b.onclick = function () { location.reload(); };
+      }).catch(function () {});
+    }, 4000);
+  }
+  if (b.getAttribute('data-request')) wait(b.getAttribute('data-request'));
+  b.addEventListener('click', function () {
+    if (b.onclick) return;
+    fetch('/api/requests', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'apply-comments' }) })
+      .then(function (r) { return r.json(); }).then(function (r) { wait(r.id); });
+  });
+})();</script></div>`;
+}
+
 function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
   // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint.
   // The prototype selects nothing — its panel says so and lists the flows instead (PROTO_JS)
@@ -296,6 +328,7 @@ ${topBar(project, D, { title, meta, mode, place, tools })}
 ${content}
 </main>
 <aside id="inspector" class="drawer">${panel ?? empty}</aside>
+${askFoot(project, D)}
 </div>`;
 }
 

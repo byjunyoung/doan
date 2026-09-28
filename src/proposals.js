@@ -168,7 +168,7 @@ function cleanPath(p) {
 // The project as it would be with these files — a copy in a temporary directory, loaded.
 export async function projectWith(dir, files) {
   const tmp = await mkdtemp(join(tmpdir(), 'doan-files-'));
-  await cp(dir, tmp, { recursive: true, filter: (src) => !/[\\/]\.(proposals|comments)([\\/]|$)/.test(src.slice(dir.length)) });
+  await cp(dir, tmp, { recursive: true, filter: (src) => !/[\\/]\.(proposals|comments|requests)([\\/]|$)/.test(src.slice(dir.length)) });
   for (const f of files) {
     const at = join(tmp, f.path);
     if (f.after === null) await rm(at, { force: true });

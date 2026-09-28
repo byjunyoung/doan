@@ -225,6 +225,11 @@ body.cv-no-arrows .cv-arrows { display: none; }
 .hotspot { cursor: pointer; }
 body.show-hotspots .hotspot { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 body.show-hotspots .hotspot-cond { outline-style: dashed; }
+/* the foot of the right panel: a fixed strip under whatever the panel shows — the apply-comments ask */
+.drawer-foot { display: none; }
+.shell.workspace .drawer-foot { display: block; position: fixed; right: 0; bottom: 0; width: var(--drawer-w); box-sizing: border-box; padding: var(--space-sm) var(--space-md) var(--space-md); background: var(--color-bg); border-top: 1px solid var(--color-border); border-left: 1px solid var(--color-border); z-index: 5; }
+.shell.workspace:has(.drawer-foot) .drawer { padding-bottom: 96px; }
+.drawer-foot { font-size: 12px; } .drawer-foot .hint { margin: 0 0 var(--space-xs); } .drawer-foot .btn { width: 100%; }
 /* the patterns page: a card per pattern, its skeleton as the stack of parts a screen is made of */
 .pat-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin: 0 0 var(--space-lg); }
 .pat-card h2 { font-size: 16px; margin: 0 0 var(--space-xs); } .pat-card p { margin: 0 0 var(--space-xs); }
@@ -342,6 +347,9 @@ td .sub { color: var(--color-muted); font-size: 11px; }
   .shell.workspace .drawer { display: none; }
   body.panel-open .shell.workspace .drawer { display: block; position: fixed; right: 0; top: 0; height: 100vh; width: min(var(--drawer-w), 90vw); z-index: 40; box-shadow: -8px 0 24px rgba(0,0,0,.12); }
   .panel-toggle { display: inline-flex; }
+  /* the panel's foot follows the panel: hidden with it, over it when it slides in */
+  .shell.workspace .drawer-foot { display: none; }
+  body.panel-open .shell.workspace .drawer-foot { display: block; width: min(var(--drawer-w), 90vw); z-index: 41; }
 }
 @media (max-width: 860px) {
   .shell.workspace { grid-template-columns: minmax(0, 1fr) 0; }
@@ -371,7 +379,8 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-button-group .seg { border-color: var(--k-button-group-border, var(--color-border)); } .el-button-group .seg .on { background: var(--k-button-group-bg, var(--color-primary)); color: var(--k-button-group-text, var(--color-primary-text)); }
 .el-segment .seg { border-color: var(--k-segment-border, var(--color-border)); border-radius: var(--k-segment-radius, var(--radius-sm)); }
 /* a segment's options: gap binds them apart, idle fills the ones not chosen, each takes the segment's radius — the chosen one reads as a pill */
-.el-segment .seg { gap: var(--k-segment-gap, 0px); } .el-segment .seg span { background: var(--k-segment-idle, transparent); border-radius: var(--k-segment-radius, 0); justify-content: center; } .el-segment .seg .on { background: var(--k-segment-bg, var(--color-primary)); color: var(--k-segment-text, var(--color-primary-text)); }
+.el-segment .seg { gap: var(--k-segment-gap, 0px); overflow: visible; flex-wrap: wrap; } .el-segment .seg span { background: var(--k-segment-idle, transparent); border-radius: var(--k-segment-radius, 0); justify-content: center; padding: 4px var(--k-segment-padding, 10px); white-space: nowrap; flex: 0 0 auto; }
+/* padding on a segment is each option's side margin — with a short label and a tall control, it is what keeps a pill a pill and not a circle */ .el-segment .seg .on { background: var(--k-segment-bg, var(--color-primary)); color: var(--k-segment-text, var(--color-primary-text)); }
 .el-pagination .pager .on { color: var(--k-pagination-text, var(--color-primary)); }
 .el-detail-card th, .el-detail-card td { border-bottom-color: var(--k-detail-card-border, var(--color-border)); } .el-detail-card th { color: var(--k-detail-card-muted, var(--color-muted)); }
 .el-kv-table th, .el-kv-table td { border-bottom-color: var(--k-kv-table-border, var(--color-border)); } .el-kv-table th { color: var(--k-kv-table-muted, var(--color-muted)); }

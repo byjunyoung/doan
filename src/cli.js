@@ -30,6 +30,8 @@ usage: doan <verb> …
         every file under assets/ with who names it, the references that name no file, the files nothing names.
   patterns <project-dir> [--json]
         every pattern under patterns/ — what it binds, its skeleton, and which screens follow it or break it (L29).
+  requests <project-dir> [--all] [--json]
+        what the person asked for from the viewer (Apply comments) — open ones unless --all; exit 3 when one is open, for a watcher.
 
   lint <project-dir> [--branch <name>] [--today YYYY-MM-DD] [--json]
         validate every screen file against the schema and run rules L01–L15.
@@ -72,7 +74,7 @@ function parseArgs(argv) {
   const opts = { _: [] };
   for (let i = 0; i < rest.length; i++) {
     const a = rest[i];
-    if (a === '--json' || a === '--force' || a === '--write' || a === '--md') opts[a.slice(2)] = true;
+    if (a === '--json' || a === '--force' || a === '--write' || a === '--md' || a === '--all') opts[a.slice(2)] = true;
     else if (a.startsWith('--') && rest[i + 1] !== undefined) opts[a.slice(2)] = rest[++i];
     else opts._.push(a);
   }
@@ -229,6 +231,15 @@ async function assetsCommand(opts) {
   for (const m of r.missing) process.stdout.write(`warn   ${m.file ?? ''}  ${m.at}  "${m.path}" names no file\n`);
   return 0;
 }
+async function requestsCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const { listRequests } = await import('./requests.js');
+  const list = await listRequests(dir, { status: opts.all ? 'all' : 'open' });
+  if (opts.json) process.stdout.write(JSON.stringify({ requests: list }, null, 2) + '\n');
+  else for (const r of list) process.stdout.write(`${r.id}  ${r.kind.padEnd(16)} ${r.status.padEnd(6)} ${r.created}${r.by ? `  ${r.by}` : ''}\n`);
+  return list.some((r) => r.status === 'open') ? 3 : 0;
+}
 async function patternsCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
@@ -298,7 +309,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, requests: requestsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };
