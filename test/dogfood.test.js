@@ -89,3 +89,11 @@ test("a text style may carry Figma's Case — textCase becomes text-transform; a
   assert.equal(r.tokens.text.odd['text-transform'], undefined);
   assert.ok(r.problems.some((x) => x.severity === 'warning' && /textCase "shout"/.test(x.message)));
 });
+
+test("a project's own copy of the set draws a card as the bundled set does — its box, not a library's root", async () => {
+  const p = await project({ 'components/card.yaml': readFileSync(src('contracts/card.yaml'), 'utf8'), 'screens/t.yaml': screen('  - id: meta\n    kind: card\n    children:\n      - { id: a, kind: caption, text: A }\n') }, { own: true });
+  const html = renderScreen(p, p.screens[0]);
+  assert.match(html, /data-id="meta" data-kind="card"/);
+  assert.doesNotMatch(html, /data-id="meta"[^>]*data-drawn=/, 'no library mark, so .el-card:not([data-drawn]) draws the box');
+  assert.match(html, /\.el-card:not\(\[data-drawn\]\) \{ padding: var\(--k-card-padding/);
+});

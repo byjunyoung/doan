@@ -127,7 +127,9 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       // set and a library adapter alike — nothing draws from a default of its own
       // a compound's wrapper takes its defaults too, so a variant on it (selected: false) is an attribute
       const drawn = contract ? withContract(contract, el) : el;
-      const byAdapter = !el.$expanded && !!adapter?.kinds?.[el.kind];
+      // a project's own copy of the set (base: none) is the bundled set, not a library: it takes the
+      // bundled css as it is (a card's box, a fieldset's frame), so it carries no data-drawn mark
+      const byAdapter = !el.$expanded && !!adapter?.kinds?.[el.kind] && adapter.name !== 'own';
       const fn = el.$expanded ? kinds.group : (adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic);
       const known = lines.get(el.id) ?? (el.$from ? { path: `${el.$from.file} › ${el.$from.path}`, line: null } : undefined);
       const style = layoutStyle(layout[el.id], { container: !!el.children?.length });

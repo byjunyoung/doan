@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.20.1 — 2026-09-28
+
+- **A project's own copy of the set draws as the bundled set** — with `base: none` every element carried a library's mark (`data-drawn="own"`), so the bundled css that draws a card's box, a fieldset's frame and a modal's panel stood aside, and the contract's bindings painted each child instead: a card of rows had no border and a padding on every row. The copy is the bundled set, so it takes its css as it is. The kiosk and the three examples draw the same; the portfolio's meta table gets its border.
+
 ## 0.20.0 — 2026-09-28
 
 Eight things the portfolio site showed when it was written as doan files — places where the file said one thing and the picture another, or could not say it at all.
