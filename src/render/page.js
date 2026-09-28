@@ -445,6 +445,7 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .el-segment .seg { border-color: var(--k-segment-border, var(--color-border)); border-radius: var(--k-segment-radius, var(--radius-sm)); }
 /* a segment's options: gap binds them apart, idle fills the ones not chosen, each takes the segment's radius — the chosen one reads as a pill */
 .el-segment .seg { gap: var(--k-segment-gap, 0px); overflow: visible; flex-wrap: wrap; } .el-segment .seg span { background: var(--k-segment-idle, transparent); border-radius: var(--k-segment-radius, 0); justify-content: center; padding: 4px var(--k-segment-padding, 10px); white-space: nowrap; flex: 0 0 auto; }
+/* an option not chosen reads the segment's second text colour */ .el-segment .seg span:not(.on) { color: var(--k-segment-muted, inherit); }
 /* padding on a segment is each option's side margin — with a short label and a tall control, it is what keeps a pill a pill and not a circle */ .el-segment .seg .on { background: var(--k-segment-bg, var(--color-primary)); color: var(--k-segment-text, var(--color-primary-text)); }
 .el-pagination .pager .on { color: var(--k-pagination-text, var(--color-primary)); }
 .el-detail-card th, .el-detail-card td { border-bottom-color: var(--k-detail-card-border, var(--color-border)); } .el-detail-card th { color: var(--k-detail-card-muted, var(--color-muted)); }

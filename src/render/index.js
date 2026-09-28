@@ -497,6 +497,12 @@ function componentCss(project) {
         if (v.own.length) rules.push(`${selector} { ${decl(v.own)}; }`);
         rules.push(...partRules(selector, v.parts));
       }
+    // a segment whose options stand apart (gap bound, 0.16.1) is a row of buttons: the border leaves the
+    // track and goes round each option, the chosen one's in its own fill — a site's bordered tabs
+    if (c.kind === 'segment') {
+      const apart = [['', c.tokens], ...Object.entries(c.variants ?? {}).flatMap(([prop, options]) => Object.entries(options ?? {}).map(([opt, b]) => [`[data-${attrName(prop)}="${h(opt)}"]`, b]))].filter(([, b]) => b && 'gap' in b);
+      for (const [at] of apart) rules.push(`.el-segment${at} .seg { border-color: transparent; } .el-segment${at} .seg span { border: 1px solid var(--k-segment-border, var(--color-border)); } .el-segment${at} .seg .on { border-color: var(--k-segment-bg, var(--color-primary)); }`);
+    }
     // a compound is drawn as the tree it declares, its wrapper a plain box: the bindings dress the box
     if (compound) {
       const bound = [...new Set([...base.own, ...Object.values(c.variants ?? {}).flatMap((o) => Object.values(o ?? {}).flatMap((b) => split(b).own))].map(([s]) => s))].filter((s) => SLOT_CSS[s]);

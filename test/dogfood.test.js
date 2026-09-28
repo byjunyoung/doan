@@ -97,3 +97,13 @@ test("a project's own copy of the set draws a card as the bundled set does — i
   assert.doesNotMatch(html, /data-id="meta"[^>]*data-drawn=/, 'no library mark, so .el-card:not([data-drawn]) draws the box');
   assert.match(html, /\.el-card:not\(\[data-drawn\]\) \{ padding: var\(--k-card-padding/);
 });
+
+test('a segment whose options stand apart borders each option, and an option not chosen reads muted', async () => {
+  const contract = readFileSync(src('contracts/segment.yaml'), 'utf8').replace(/^tokens:\n/m, 'tokens:\n  muted: color.muted\n') + 'variants:\n  apart:\n    "true": { gap: space.xs }\n';
+  const withProp = contract.replace(/^props:\n/m, 'props:\n  apart: { type: boolean, default: false }\n');
+  const p = await project({ 'components/segment.yaml': withProp, 'screens/t.yaml': screen('  - { id: s, kind: segment, options: [Posts, HW UX], selected: Posts, apart: true }\n') }, { own: true });
+  const html = renderScreen(p, p.screens[0]);
+  assert.match(html, /\.el-segment\[data-apart="true"\] \.seg \{ border-color: transparent; \} \.el-segment\[data-apart="true"\] \.seg span \{ border: 1px solid var\(--k-segment-border/);
+  assert.match(html, /\.el-segment \.seg span:not\(\.on\) \{ color: var\(--k-segment-muted, inherit\); \}/);
+  assert.match(html, /data-id="s"[^>]*data-apart="true"/);
+});

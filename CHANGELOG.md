@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.20.2 — 2026-09-28
+
+- **A segment whose options stand apart is a row of bordered buttons** — with `gap` bound (0.16.1) the border leaves the track and goes round each option, the chosen one's in its fill; bound in a variant (`apart: true`), only that variant does. A site's bordered tabs draw as they are.
+- **An option not chosen reads `muted`** — the segment's second text colour, so the unchosen tab can be grey beside the chosen one in white.
+
 ## 0.20.1 — 2026-09-28
 
 - **A project's own copy of the set draws as the bundled set** — with `base: none` every element carried a library's mark (`data-drawn="own"`), so the bundled css that draws a card's box, a fieldset's frame and a modal's panel stood aside, and the contract's bindings painted each child instead: a card of rows had no border and a padding on every row. The copy is the bundled set, so it takes its css as it is. The kiosk and the three examples draw the same; the portfolio's meta table gets its border.
