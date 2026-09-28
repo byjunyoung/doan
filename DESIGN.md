@@ -367,7 +367,7 @@ Shipped 2026-09-23, later: the first adapter, `antd`. `--components antd` resolv
 
 Decided 2026-09-23 after the antd adapter: **the tool never owns a team's components, and no library is required.** `init` asks for a base — `none` copies the bundled set into `design/components/kinds.js`, which is then the team's own component library, editable, 100% theirs; `antd` maps kinds to a library (others are listed as planned and refused until an adapter exists). `render` resolves the choice from `conventions.render`, a project-owned module first, then a library, then the bundled set. The bundled set is a starting point a team copies, not a dependency a team keeps.
 
-What render will not offer, on purpose: drag, resize, nudge. The moment a hand can move a box, the file and the picture can disagree, the diff stops being readable, and the product becomes one more canvas competing with three funded ones. The cost is real and named: a spacing change that would take one drag takes one sentence (§7).
+What render will not offer, on purpose: drag, resize, nudge. (Since 0.18.1 the panel's *Layout* section lets a person pick a direction, a gap or padding token, an alignment or a width for the selected element — a value from the file's vocabulary, never a pixel — and that pick becomes a proposal that changes one line, `layout.<id>`, which the person applies like any other. The loop stays; there is a second way into it besides a sentence.) The moment a hand can move a box, the file and the picture can disagree, the diff stops being readable, and the product becomes one more canvas competing with three funded ones. The cost is real and named: a spacing change that would take one drag takes one sentence (§7).
 
 ### 6.4 The flow map
 

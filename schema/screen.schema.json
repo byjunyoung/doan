@@ -201,7 +201,8 @@
           "type": "string"
         },
         "padding": {
-          "type": "string"
+          "description": "a space token for every side, or [vertical, horizontal] — as Figma's two padding fields and CSS's two values",
+          "oneOf": [{ "type": "string" }, { "type": "array", "items": { "type": ["string", "number"] }, "minItems": 2, "maxItems": 2 }]
         },
         "align": {
           "type": "string",

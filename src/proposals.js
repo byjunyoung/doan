@@ -9,6 +9,7 @@ import { validateScreen } from './validate.js';
 import { lint, summarize } from './lint.js';
 import { diffScreens, renderDiffMarkdown } from './diff.js';
 import { listComments, resolveComment, reopenComment } from './comments.js';
+import { parseDocument } from 'yaml';
 
 // The edit loop's write half (DESIGN.md §7). An agent proposes a whole new version of one
 // screen file — or a screen that does not exist yet, which the proposal creates as
@@ -91,6 +92,71 @@ const fileOf = (dir, p) => join(dir, isAbsolute(p.file) ? join('screens', basena
 async function write(dir, proposal, text) {
   await mkdir(join(dir, 'screens'), { recursive: true });
   await writeFile(fileOf(dir, proposal), text);
+}
+
+// A layout picked in the viewer's panel: the screen file with only layout.<id> changed — the rest of
+// the file, its comments and order, as they were — proposed like any other change. The panel is a
+// way to say it, not a way around the loop: the person still applies it (DESIGN.md §6.12).
+// A layout rule as one flow line, the way the files write them: { kind: stack, gap: space.md }
+function flowLine(rule) {
+  const v = (x) => (Array.isArray(x) ? `[${x.map(v).join(', ')}]` : typeof x === 'string' ? (/^[\p{L}\p{N}_.-]+$/u.test(x) ? x : JSON.stringify(x)) : String(x));
+  return `{ ${Object.entries(rule).map(([k, x]) => `${k}: ${v(x)}`).join(', ')} }`;
+}
+// Change one key under the top-level `layout:` block by editing its lines only — the rest of the
+// file stays byte for byte as the person wrote it (a YAML round trip re-spaces comments and lists).
+function replaceLayoutLine(text, id, rule) {
+  const lines = text.split('\n');
+  const top = (l) => /^[^\s#-][^:]*:/.test(l);
+  let start = lines.findIndex((l) => /^layout:\s*(#.*)?$/.test(l));
+  const want = Object.keys(rule).length ? `  ${id}: ${flowLine(rule)}` : null;
+  if (start < 0) {
+    if (!want) return text;
+    let at = lines.findIndex((l) => /^(states|variants|breakpoints|flows|notes|refs):/.test(l));
+    if (at < 0) at = lines.length;
+    lines.splice(at, 0, 'layout:', want, '');
+    return lines.join('\n');
+  }
+  let end = start + 1;
+  while (end < lines.length && !top(lines[end])) end++;
+  // the block's last content line, so an addition goes before the blank line that ends it
+  let last = end - 1;
+  while (last > start && lines[last].trim() === '') last--;
+  const keyAt = lines.findIndex((l, n) => n > start && n < end && new RegExp(`^  ${id.replace(/[-]/g, '\\-')}:(\\s|$)`).test(l));
+  if (keyAt < 0) {
+    if (want) lines.splice(last + 1, 0, want);
+    return lines.join('\n');
+  }
+  let stop = keyAt + 1;
+  while (stop < end && (lines[stop].startsWith('   ') || lines[stop].trim() === '') && stop <= last) stop++;
+  const tail = /\s+#.*$/.exec(lines[keyAt]);
+  const keep = stop === keyAt + 1 && tail && !lines[keyAt].slice(0, tail.index).includes('#') ? tail[0] : '';
+  lines.splice(keyAt, stop - keyAt, ...(want ? [want + keep] : []));
+  return lines.join('\n');
+}
+const LAYOUT_KEYS = ['kind', 'direction', 'columns', 'gap', 'padding', 'align', 'justify', 'size', 'grow', 'wrap', 'scroll', 'min'];
+export async function proposeLayout(dir, { screen, id, rule, lang = 'en' }, opts = {}) {
+  if (!/^[\p{L}\p{N}_-]+$/u.test(String(id ?? ''))) throw new Error(`"${id}" is not an element id a layout can name`);
+  const project = await loadProject(dir);
+  const s = project.screens.find((x) => x.doc.screen === screen);
+  if (!s) throw new Error(`no screen "${screen}"`);
+  const clean = Object.fromEntries(Object.entries(rule ?? {}).filter(([k, v]) => LAYOUT_KEYS.includes(k) && v !== '' && v !== null && v !== undefined && v !== false));
+  // a padding pair's none is the number 0, as YAML reads it back
+  if (Array.isArray(clean.padding)) clean.padding = clean.padding.map((x) => (String(x) === '0' ? 0 : x));
+  const text = await readFile(s.file, 'utf8');
+  const after = replaceLayoutLine(text, id, clean);
+  // the edit touched one rule and nothing else — checked on the parsed documents, not trusted
+  const was = parseDocument(text).toJS() ?? {}, now = parseDocument(after).toJS() ?? {};
+  const without = (d) => { const c = JSON.parse(JSON.stringify(d)); if (c.layout) delete c.layout[id]; if (c.layout && !Object.keys(c.layout).length) delete c.layout; return c; };
+  if (JSON.stringify(without(was)) !== JSON.stringify(without(now)) || JSON.stringify(now.layout?.[id] ?? null) !== JSON.stringify(Object.keys(clean).length ? clean : null))
+    throw new Error(`could not change layout.${id} alone in ${basename(s.file)} — ask the agent instead`);
+  const { layoutInWords } = await import('./render/changes.js');
+  const words = Object.keys(clean).length ? layoutInWords(clean, lang) : lang === 'ko' ? '규칙 없음' : 'no rule';
+  return propose(dir, {
+    screen,
+    after,
+    summary: lang === 'ko' ? `배치 — ${id}: ${words}` : `Layout — ${id}: ${words}`,
+    decisions: [{ item: lang === 'ko' ? `${id} 배치` : `${id} layout`, decision: words, why: lang === 'ko' ? '뷰어 패널에서 값을 골라 제안' : 'picked in the viewer panel' }],
+  }, opts);
 }
 
 export async function propose(dir, { screen, after, summary = '', decisions = [], comments = [] }, opts = {}) {

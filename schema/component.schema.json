@@ -13,7 +13,19 @@
       "pattern": "^[a-z][a-z0-9-]*$"
     },
     "description": {
-      "type": "string"
+      "type": "string",
+      "description": "what it is for, in one sentence a person reads — as a design system's page opens: \"lets people pick one option for a drink, such as temperature or size\""
+    },
+    "usage": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "when to use it and when not — a design system's usage guidance",
+      "properties": { "when": { "type": "string" }, "not": { "type": "string" } }
+    },
+    "anatomy": {
+      "type": "object",
+      "description": "the parts as a person names them, in order — part id: name (for a compound, its elements' ids)",
+      "additionalProperties": { "type": "string" }
     },
     "anchors": {
       "type": "array",

@@ -365,7 +365,7 @@ server.registerPrompt(
 
 4. Show the decisions as a table, and the component as a text sketch — one per variant that looks different.
 
-5. Only then write components/${kind}.yaml — props, slots, tokens, variants, elements and layout for a compound, sample — and call propose_files with it (and any token it needs), the summary in the person's words and the decisions.
+5. Only then write components/${kind}.yaml — description as a design system opens a page (what it lets people do, one sentence: \"lets people pick one option for a drink\", never how it is laid out), usage { when, not }, anatomy (the parts as a person names them), props, slots, tokens, variants, elements and layout for a compound, sample — and call propose_files with it (and any token it needs), the summary in the person's words and the decisions.
 
 6. Tell the person to open the proposal page: the foundations board shows the component in each variant, as it is beside as it would be. Wait for their answer; you do not call apply.
 

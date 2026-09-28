@@ -104,7 +104,9 @@ main.bare { padding: 16px; }
 .status-bar { position: relative; }
 .home-indicator { height: 20px; display: flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 .home-indicator span { width: 134px; height: 5px; border-radius: 3px; background: var(--color-text); opacity: .8; }
-.stage.stage-device { background: var(--color-surface); border: 0; display: flex; justify-content: center; }
+.stage.stage-device { background: var(--color-surface); border: 0; display: flex; justify-content: flex-start; }
+/* a device frame keeps its own width in a narrow stage — the fitter scales it down; letting flex shrink it would re-lay the screen at the stage's width (a tablet drawn as a tall strip) */
+.stage.stage-device > .frame { flex: 0 0 auto; }
 /* mobile kinds */
 .el-app-bar { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; min-height: 44px; padding: 0 var(--space-sm); }
 .ab-back { font-size: 26px; color: var(--color-primary); padding: 0 var(--space-xs); } .ab-title { text-align: center; font-weight: 600; } .ab-actions { display: flex; gap: var(--space-xs); justify-content: flex-end; }
@@ -136,6 +138,68 @@ main.bare { padding: 16px; }
 table.index { width: 100%; border-collapse: collapse; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 13px; }
 table.index th, table.index td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
 table.index th { color: var(--color-muted); font-weight: 500; font-size: 12px; }
+/* the right panel in sections, as Figma's: a head with the name, then titled sections divided edge to edge */
+.pn-head { display: flex; align-items: baseline; gap: var(--space-xs); font-size: 14px; padding: 0 0 var(--space-md); } .pn-head .hint { font-size: 12px; } .pn-head .close { margin-left: auto; cursor: pointer; color: var(--color-muted); }
+.pn-sec { margin: 0 calc(-1 * var(--space-md)); padding: var(--space-md); border-top: 1px solid var(--color-border); }
+.pn-sec > h5 { margin: 0 0 var(--space-sm); font-size: 11px; font-weight: 600; color: var(--color-text); }
+.pn-sec table { margin: 0; } .pn-sec ul { margin: 0 0 var(--space-sm); } .pn-sec textarea { margin: var(--space-xs) 0; }
+.pn-line { display: flex; align-items: baseline; justify-content: space-between; gap: var(--space-sm); } .pn-line > :first-child { min-width: 0; }
+.pn-link { color: #2f6fed; text-decoration: none; white-space: nowrap; background: none; border: 0; padding: 0; font: inherit; cursor: pointer; } .pn-link:hover { text-decoration: underline; }
+.pn-code { margin: var(--space-xs) 0 0; } .pn-note { margin: var(--space-sm) 0 0; } .pn-actions { display: flex; align-items: center; gap: var(--space-sm); margin: var(--space-xs) 0 0; }
+.pn-buttons { display: flex; flex-wrap: wrap; gap: var(--space-xs); }
+/* the panel's layout editor — Figma's auto layout panel: direction icons, fields with their icon inside, a small 3x3 alignment on the right, a chip for fill; the proposal appears once something changed */
+.lay-dir { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; }
+.lay-dir button { border: 0; width: 30px; height: 26px; background: var(--color-bg); color: var(--color-muted); font: inherit; font-size: 13px; cursor: pointer; } .lay-dir button + button { border-left: 1px solid var(--color-border); }
+.lay-dir button.on { background: var(--color-text); color: var(--color-bg); }
+.lay-align { display: grid; grid-template-columns: repeat(3, 16px); grid-template-rows: repeat(3, 16px); gap: var(--space-xs); padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-surface); }
+.lay-align button { border: 0; padding: 0; background: none; cursor: pointer; display: flex; align-items: center; justify-content: center; } .lay-align button i { width: 4px; height: 4px; border-radius: 50%; background: var(--color-border); }
+.lay-align button:hover i { background: var(--color-muted); } .lay-align button.on i { width: 10px; height: 10px; border-radius: 2px; background: #2f6fed; }
+.lay-send { margin: var(--space-md) 0 0; } .lay-send[hidden] { display: none; }
+/* Figma's spacing overlay on the selected frame: padding hatched, gaps filled, each with its number */
+.sp-ov { position: absolute; pointer-events: none; z-index: 30; display: flex; align-items: center; justify-content: center; }
+.sp-pad { background: repeating-linear-gradient(45deg, rgba(236,72,153,.28) 0 2px, rgba(236,72,153,.08) 2px 7px); }
+.sp-gap { background: rgba(236,72,153,.22); }
+.sp-ov span { background: #ec4899; color: #fff; font: 600 11px/1 system-ui, sans-serif; padding: 2px 4px; border-radius: 3px; }
+/* the alignment box: the chosen cell shows three item bars laid out in the frame's direction */
+.lay-align .bars { display: none; gap: var(--bar-gap, 1px); } .lay-align button.on i { display: none; } .lay-align button.on .bars { display: flex; }
+.lay-align .bars b { display: block; background: #2f6fed; border-radius: 1px; }
+.fg[data-flow="column"] .lay-align .bars, .fg[data-flow=""] .lay-align .bars { flex-direction: column; } .fg[data-flow="column"] .lay-align .bars b { width: 10px; height: 2px; } .fg[data-flow="column"] .lay-align .bars b:nth-child(2) { width: 6px; }
+.fg[data-flow="row"] .lay-align .bars { flex-direction: row; align-items: flex-end; } .fg[data-flow="row"] .lay-align .bars b { width: 2px; height: 10px; } .fg[data-flow="row"] .lay-align .bars b:nth-child(2) { height: 6px; }
+.fg[data-flow="grid"] .lay-align .bars { display: none; } .fg[data-flow="grid"] .lay-align button.on i { display: block; }
+.fg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-sm); align-items: start; }
+.fg-flow { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); padding: 2px; background: var(--color-surface); border-radius: var(--radius-sm); }
+.fg-flow button { height: 28px; border: 0; border-radius: calc(var(--radius-sm) - 1px); background: none; color: var(--color-muted); font: inherit; font-size: 14px; cursor: pointer; }
+.fg-flow button.on { background: var(--color-bg); color: var(--color-text); box-shadow: 0 0 0 1px var(--color-border); }
+.fg-field { display: flex; align-items: center; gap: var(--space-sm); height: 32px; padding: 0 var(--space-sm); border-radius: var(--radius-sm); background: var(--color-surface); border: 1px solid transparent; position: relative; min-width: 0; } .fg-field[hidden] { display: none; }
+.fg-field:hover { border-color: var(--color-border); } .fg-field:focus-within { border-color: #2f6fed; }
+.fg-field::after { content: '⌄'; position: absolute; right: var(--space-sm); top: 6px; color: var(--color-muted); pointer-events: none; } .lay-cols::after { content: none; }
+.fg-k { flex: 0 0 auto; min-width: 12px; color: var(--color-muted); font-size: 11px; display: inline-flex; align-items: center; }
+.drawer .fg-field select, .drawer .fg-field input { flex: 1; min-width: 0; width: auto; margin: 0; border: 0; background: none; font: inherit; font-size: 12px; color: var(--color-text); -webkit-appearance: none; appearance: none; padding: 0 14px 0 0; cursor: pointer; }
+.fg-stack { display: flex; flex-direction: column; gap: var(--space-sm); }
+.fg .lay-align { width: 100%; height: 72px; box-sizing: border-box; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: var(--space-xs); border: 0; }
+.fg .lay-send { grid-column: 1 / -1; margin: var(--space-xs) 0 0; }
+
+.lay-live { display: flex; align-items: center; gap: var(--space-xs); margin: 0 0 var(--space-xs); color: #2f6fed; } .lay-live i { width: 6px; height: 6px; border-radius: 50%; background: #2f6fed; }
+/* a proposal on the canvas: its changed elements marked, the panel's list pointing at them */
+.el.ch-mark { outline: 2px dashed var(--color-primary); outline-offset: 3px; }
+@keyframes ch-flash { from { box-shadow: 0 0 0 6px rgba(47,111,237,.45); } to { box-shadow: 0 0 0 0 rgba(47,111,237,0); } } .el.ch-flash { animation: ch-flash 1.2s ease-out; }
+.prop-panel h4 .close { text-decoration: none; } .prop-summary { font-size: 13px; font-weight: 600; margin: 0 0 var(--space-sm); line-height: 1.45; }
+.prop-sides { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; margin: 0 0 var(--space-md); }
+.prop-sides a { text-align: center; padding: 6px 0; color: var(--color-muted); text-decoration: none; font-weight: 600; } .prop-sides a.on { background: var(--color-text); color: var(--color-bg); }
+.drawer .changes.prop-changes { padding: 0; margin: 0; } .drawer .changes.prop-changes li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: var(--space-xs); align-items: baseline; padding: 6px 10px; }
+.drawer .changes.prop-changes .ch-what { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .drawer .changes.prop-changes .ch-area { margin: 0; white-space: nowrap; }
+.prop-decided > summary { cursor: pointer; font-size: 11px; font-weight: 600; }
+.drawer .changes li { display: block; padding: 8px 10px; line-height: 1.5; } .drawer .changes li[data-el] { cursor: pointer; } .drawer .changes li[data-el]:hover { background: var(--color-surface); }
+.drawer .changes .ch-area { margin: 0 6px; } .drawer .changes code { word-break: normal; overflow-wrap: anywhere; }
+/* a proposal's what-changes list: one line per change, in words; the path table folded under it */
+.changes { list-style: none; margin: 0 0 var(--space-sm); padding: 0; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); font-size: 13px; }
+.changes li { display: grid; grid-template-columns: 64px 48px 1fr; gap: var(--space-sm); align-items: baseline; padding: 8px 12px; border-top: 1px solid var(--color-border); } .changes li:first-child { border-top: 0; }
+.ch-op { font-weight: 600; font-size: 12px; } .ch-added .ch-op { color: #1a7f37; } .ch-removed .ch-op { color: var(--color-danger); } .ch-changed .ch-op, .ch-moved .ch-op { color: var(--color-primary); }
+.ch-area { color: var(--color-muted); font-size: 12px; } .ch-how { color: var(--color-text); }
+.raw-diff { margin: 0 0 var(--space-md); } .raw-diff > summary { cursor: pointer; color: var(--color-muted); font-size: 12px; margin: 0 0 var(--space-xs); }
+/* a proposal's what-changes table: where · AS-IS · TO-BE in fixed shares, long values wrap in their own cell */
+table.diff-table { table-layout: fixed; } table.diff-table th:nth-child(1) { width: 18%; } table.diff-table th:nth-child(2), table.diff-table th:nth-child(3) { width: 41%; }
+table.diff-table td { vertical-align: top; overflow-wrap: anywhere; } table.diff-table td code { white-space: pre-wrap; }
 /* the spec's element table: fixed shares, so one long cell (a JSON prop) cannot squeeze the rest; id and kind keep one line, the rest wrap */
 table.spec-el { table-layout: fixed; }
 table.spec-el th:nth-child(1) { width: 14%; } table.spec-el th:nth-child(2) { width: 11%; } table.spec-el th:nth-child(3) { width: 27%; } table.spec-el th:nth-child(4) { width: 28%; } table.spec-el th:nth-child(5) { width: 20%; }
@@ -229,7 +293,7 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .drawer-foot { display: none; }
 .shell.workspace .drawer-foot { display: block; position: fixed; right: 0; bottom: 0; width: var(--drawer-w); box-sizing: border-box; padding: var(--space-sm) var(--space-md) var(--space-md); background: var(--color-bg); border-top: 1px solid var(--color-border); border-left: 1px solid var(--color-border); z-index: 5; }
 .shell.workspace:has(.drawer-foot) .drawer { padding-bottom: 96px; }
-.drawer-foot { font-size: 12px; } .drawer-foot .hint { margin: 0 0 var(--space-xs); } .drawer-foot .btn { width: 100%; }
+.drawer-foot { font-size: 12px; } .drawer-foot .foot-row { display: grid; grid-template-columns: 1fr 2fr; gap: var(--space-xs); } #verdict:empty { display: none; } .drawer-foot .hint { margin: 0 0 var(--space-xs); } .drawer-foot .btn { width: 100%; }
 /* the patterns page: a card per pattern, its skeleton as the stack of parts a screen is made of */
 .pat-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin: 0 0 var(--space-lg); }
 .pat-card h2 { font-size: 16px; margin: 0 0 var(--space-xs); } .pat-card p { margin: 0 0 var(--space-xs); }
@@ -398,6 +462,14 @@ body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; 
 .ctx-menu { position: fixed; z-index: 1000; background: #fff; border: 1px solid #d9dbe0; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.14); padding: 4px; display: flex; flex-direction: column; min-width: 180px; font: 13px/1.4 system-ui, sans-serif; }
 .ctx-menu button { text-align: left; background: none; border: 0; padding: 6px 10px; border-radius: 4px; cursor: pointer; color: #1f2328; } .ctx-menu button:hover { background: #f1f3f5; }
 .inst-path { font-size: 12px; } .inst-path a { color: #2f6fed; text-decoration: none; }
+/* a component as a design system's page reads: name and code tag, what it is for, picture, anatomy, usage */
+.lib-head { display: flex; align-items: baseline; gap: var(--space-sm); } .lib-head h3 { margin: 0; }
+.lib-code { font: 11px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--color-muted); background: var(--color-surface); padding: 2px 6px; border-radius: var(--radius-sm); }
+.lib-desc { margin: var(--space-xs) 0 var(--space-md); font-size: 14px; color: var(--color-text); }
+.lib-anat { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-xs) var(--space-md); margin: var(--space-md) 0 0; font-size: 13px; }
+.lib-part { display: inline-flex; align-items: center; gap: var(--space-xs); } .lib-part i { font-style: normal; font-size: 11px; width: 16px; height: 16px; border-radius: 50%; background: var(--color-text); color: var(--color-bg); display: inline-flex; align-items: center; justify-content: center; }
+.lib-usage { display: flex; flex-direction: column; gap: var(--space-xs); margin: var(--space-sm) 0 0; font-size: 13px; }
+.lib-k { color: var(--color-muted); font-size: 12px; margin-right: var(--space-sm); min-width: 64px; display: inline-block; }
 /* the components page in groups: used here first, by category; the bundled rest folded */
 .lib-group { margin: 0 0 var(--space-lg); } .lib-group > h2, .lib-group > summary { font-size: 15px; margin: 0 0 var(--space-sm); cursor: pointer; } .lib-group > summary { list-style: none; } .lib-group > summary::before { content: '▸  '; color: var(--color-muted); } .lib-group[open] > summary::before { content: '▾  '; }
 .lib-cat { font-size: 12px; font-weight: 600; color: var(--color-muted); margin: var(--space-lg) 0 var(--space-sm); padding-bottom: 4px; border-bottom: 1px solid var(--color-border); scroll-margin-top: 16px; }
@@ -570,6 +642,158 @@ export const INSPECTOR_JS = `
   });
   document.addEventListener('click', closeCtx);
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeCtx(); });
+  // the layout of the selected element, as Figma's auto layout panel shows it: direction, gap,
+  // padding, a 3x3 alignment, width and fill. Picking a value marks it changed; "Propose this layout"
+  // turns the element's rule into a proposal (POST /api/layout) and opens it on the canvas, where
+  // the person applies it as any other. A compound's parts are its component's to arrange.
+  function sec(title, body) { return '<section class="pn-sec"><h5>' + title + '</h5>' + body + '</section>'; }
+  function flowOf(r) { return r.kind === 'grid' || r.kind === 'columns' ? 'grid' : r.kind === 'row' || (r.kind === 'stack' && r.direction === 'row') ? 'row' : r.kind === 'stack' ? 'column' : ''; }
+  // Layout as Figma UI3 draws it (Auto layout for a frame that holds others, Layout for any other
+  // layer): the flow buttons (none · vertical · horizontal · grid) in one grey group; W and H as fields
+  // showing Hug, Fill or the fixed width; the 3x3 alignment box beside the gap; horizontal and vertical
+  // padding. Figma's words, untranslated. Values map onto the file: size, grow, kind, gap, padding.
+  function layoutSection(el) {
+    if (el.getAttribute('data-layout-owner') === 'component') return sec(t('pnLayout', 'Layout'), '<p class="hint">' + t('layOwner', 'arranged by its component') + '</p>');
+    var raw = el.getAttribute('data-layout'); if (raw === null) return '';
+    var r = {}; try { r = JSON.parse(raw || '{}'); } catch (_) {}
+    var box = !!el.querySelector('.el');
+    var space = window.DOAN_SPACE || [];
+    function num(v) { return String(v || '').replace('px', ''); }
+    function opts(cur) { return '<option value="0">0</option>' + space.map(function (s) { return '<option value="' + esc(s.name) + '"' + (s.name === cur ? ' selected' : '') + '>' + esc(num(s.value)) + '</option>'; }).join(''); }
+    function px(z) { return num((getComputedStyle(document.documentElement).getPropertyValue('--size-' + z) || '').trim()) || z; }
+    function fieldSel(k, icon, tip, inner) { return '<label class="fg-field" title="' + tip + '"><span class="fg-k">' + icon + '</span><select data-k="' + k + '">' + inner + '</select></label>'; }
+    var w = r.size === 'full' ? 'fill' : r.size ? r.size : 'hug', hh = r.grow ? 'fill' : 'hug';
+    var pad = [].concat(r.padding === undefined ? [] : r.padding), pv = pad.length ? String(pad[0]) : '0', ph = pad.length ? String(pad[pad.length > 1 ? 1 : 0]) : '0';
+    var f = flowOf(r), cells = '', A = ['start', 'center', 'end'];
+    for (var y = 0; y < 3; y++) for (var x = 0; x < 3; x++) cells += '<button type="button" title="' + A[x] + ' ' + A[y] + '" data-a="' + A[x] + '" data-j="' + A[y] + '"' + (r.align === A[x] && r.justify === A[y] ? ' class="on"' : '') + '><i></i><span class="bars"><b></b><b></b><b></b></span></button>';
+    var dirs = [['', '⁘', 'No auto layout'], ['column', '↓', 'Vertical layout'], ['row', '→', 'Horizontal layout'], ['grid', '▦', 'Grid']];
+    var rows = '';
+    if (box) rows += '<div class="fg-flow" data-k="flow">' + dirs.map(function (d) { return '<button type="button" data-v="' + d[0] + '" title="' + d[2] + '"' + (d[0] === f ? ' class="on"' : '') + '>' + d[1] + '</button>'; }).join('') + '</div>';
+    rows += fieldSel('w', 'W', 'Width', '<option value="hug"' + (w === 'hug' ? ' selected' : '') + '>Hug</option><option value="fill"' + (w === 'fill' ? ' selected' : '') + '>Fill</option>' + ['sm', 'md', 'lg'].map(function (z) { return '<option value="' + z + '"' + (w === z ? ' selected' : '') + '>' + esc(px(z)) + '</option>'; }).join(''));
+    rows += fieldSel('h', 'H', 'Height', '<option value="hug"' + (hh === 'hug' ? ' selected' : '') + '>Hug</option><option value="fill"' + (hh === 'fill' ? ' selected' : '') + '>Fill</option>');
+    if (box) {
+      rows += '<div class="lay-align" title="Alignment">' + cells + '</div>';
+      rows += '<div class="fg-stack">' + fieldSel('gap', f === 'row' ? '⇆' : '⇅', 'Gap between items', opts(r.gap || '0')) + '<label class="fg-field lay-cols" title="Columns"' + (f === 'grid' ? '' : ' hidden') + '><span class="fg-k">≡</span><input type="number" min="1" max="12" data-k="columns" value="' + esc(typeof r.columns === 'number' ? r.columns : '') + '"></label></div>';
+      rows += fieldSel('pad-h', '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor"><path d="M1.5 1v10M10.5 1v10"/><rect x="4" y="4" width="4" height="4" rx="1"/></svg>', 'Horizontal padding', opts(ph)) + fieldSel('pad-v', '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor"><path d="M1 1.5h10M1 10.5h10"/><rect x="4" y="4" width="4" height="4" rx="1"/></svg>', 'Vertical padding', opts(pv));
+    }
+    return sec(box ? t('pnAutoLayout', 'Auto layout') : t('pnLayout', 'Layout'), '<div id="lay-edit" class="fg" data-flow="' + (f || 'column') + '">' + rows +
+      (api ? '<div class="lay-send" hidden><p class="lay-live"><i></i>' + t('layPreview', 'previewing') + '</p><div class="pn-actions"><button class="btn btn-primary" id="lay-send" type="button">' + t('laySend', 'Propose this layout') + '</button><button class="pn-link" id="lay-reset" type="button">' + t('layReset', 'reset') + '</button><span class="hint" id="lay-state"></span></div></div>' : '') +
+      '</div>');
+  }
+  // Figma's spacing overlay: the selected frame's padding and the gaps between its items, drawn over the
+  // picture with their sizes. Redrawn after a preview; gone when something else is selected.
+  function clearSpacing() { document.querySelectorAll('.sp-ov').forEach(function (n) { n.remove(); }); }
+  function drawSpacing(el) {
+    clearSpacing();
+    var kids = Array.prototype.filter.call(el.querySelectorAll('.el'), function (k) { return k.parentElement.closest('.el') === el; });
+    if (!kids.length) return;
+    // drawn on a layer of its own, never inside the picture: the canvas (so it pans and zooms with it),
+    // else the stage, else the page — the element and its children are not touched
+    var host = el.closest('.cv-canvas') || el.closest('.stage') || document.body;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    var hr = host.getBoundingClientRect(), hs = hr.width / (host.offsetWidth || hr.width || 1);
+    var er = el.getBoundingClientRect(), es = er.width / (el.offsetWidth || er.width || 1), cs = getComputedStyle(el);
+    function band(x, y, w, h, label, cls) {
+      if (w < 0.5 || h < 0.5) return;
+      var d = document.createElement('div'); d.className = 'sp-ov ' + cls;
+      d.style.left = (er.left - hr.left + x) / hs + 'px'; d.style.top = (er.top - hr.top + y) / hs + 'px';
+      d.style.width = w / hs + 'px'; d.style.height = h / hs + 'px';
+      if (label !== '') { var t2 = document.createElement('span'); t2.textContent = label; t2.style.transform = 'scale(' + (1 / hs) + ')'; d.appendChild(t2); }
+      host.appendChild(d);
+    }
+    var W = er.width, H = er.height;
+    var pt = (parseFloat(cs.paddingTop) || 0) * es, pr = (parseFloat(cs.paddingRight) || 0) * es, pb = (parseFloat(cs.paddingBottom) || 0) * es, pl = (parseFloat(cs.paddingLeft) || 0) * es;
+    band(0, 0, W, pt, pt ? Math.round(pt / es) : '', 'sp-pad'); band(0, H - pb, W, pb, '', 'sp-pad');
+    band(0, pt, pl, H - pt - pb, pl && !pt ? Math.round(pl / es) : '', 'sp-pad'); band(W - pr, pt, pr, H - pt - pb, '', 'sp-pad');
+    var rects = kids.map(function (k) { var r = k.getBoundingClientRect(); return { x: r.left - er.left, y: r.top - er.top, w: r.width, h: r.height }; });
+    var row = /row/.test(cs.flexDirection) && cs.display.indexOf('flex') >= 0;
+    for (var i = 0; i + 1 < rects.length; i++) {
+      var a = rects[i], b = rects[i + 1];
+      if (row && b.x > a.x + a.w) band(a.x + a.w, pt, b.x - a.x - a.w, H - pt - pb, Math.round((b.x - a.x - a.w) / es), 'sp-gap');
+      else if (!row && b.y > a.y + a.h) band(pl, a.y + a.h, W - pl - pr, b.y - a.y - a.h, Math.round((b.y - a.y - a.h) / es), 'sp-gap');
+    }
+  }
+  function wireLayout(el) {
+    var box = document.getElementById('lay-edit'); if (!box) return;
+    var r = {}; try { r = JSON.parse(el.getAttribute('data-layout') || '{}'); } catch (_) {}
+    var next = JSON.parse(JSON.stringify(r)), send = document.getElementById('lay-send'), bar = box.querySelector('.lay-send');
+    // live preview: every copy of this element on the page (each state's frame) takes the style the rule draws
+    function restore() { if (window.doanLayPrev) { window.doanLayPrev.forEach(function (p) { if (p[1] === null) p[0].removeAttribute('style'); else p[0].setAttribute('style', p[1]); }); window.doanLayPrev = null; } }
+    restore();
+    var scr = el.closest('[data-screen]') ? el.closest('[data-screen]').getAttribute('data-screen') : null;
+    var copies = Array.prototype.slice.call(document.querySelectorAll((scr && document.querySelector('.cv-frame') ? '.cv-frame[data-screen="' + scr + '"] ' : '') + '.el[data-id="' + el.getAttribute('data-id') + '"]'));
+    var holds = !!el.querySelector('.el'), timer = null;
+    if (holds) drawSpacing(el); else clearSpacing();
+    function preview() {
+      if (!window.DOAN_API) return;
+      clearTimeout(timer);
+      timer = setTimeout(function () {
+        fetch('/api/layout-style', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rule: next, container: holds }) })
+          .then(function (res) { return res.json(); }).then(function (j) {
+            if (!window.doanLayPrev) window.doanLayPrev = copies.map(function (c) { return [c, c.getAttribute('style')]; });
+            copies.forEach(function (c) { c.setAttribute('style', j.style || ''); });
+            if (holds) setTimeout(function () { drawSpacing(el); }, 30);
+          });
+      }, 60);
+    }
+    function changed() { var same = JSON.stringify(next) === JSON.stringify(r); if (bar) bar.hidden = same; if (same) { restore(); if (holds) drawSpacing(el); } else preview(); }
+    box.querySelectorAll('.fg-flow button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        box.querySelectorAll('.fg-flow button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        var v = b.getAttribute('data-v');
+        delete next.direction; delete next.columns;
+        if (v === 'grid') { next.kind = 'grid'; next.columns = Number((box.querySelector('[data-k="columns"]') || {}).value) || 2; }
+        else if (v === 'row') { next.kind = 'stack'; next.direction = 'row'; }
+        else if (v === 'column') { next.kind = 'stack'; next.direction = 'column'; }
+        else { delete next.kind; delete next.gap; delete next.padding; delete next.align; delete next.justify; }
+        var cols = box.querySelector('.lay-cols'); if (cols) cols.hidden = v !== 'grid';
+        box.setAttribute('data-flow', v);
+        changed();
+      });
+    });
+    box.querySelectorAll('select[data-k], input[data-k]').forEach(function (inp) {
+      inp.addEventListener('change', function () {
+        var k = inp.getAttribute('data-k'), v = inp.type === 'number' ? Number(inp.value) || null : inp.value;
+        // W and H in Figma's words, onto the file's vocabulary: Fill container is size: full (W) or grow (H)
+        if (k === 'w') { k = 'size'; v = v === 'hug' ? '' : v === 'fill' ? 'full' : v; }
+        if (k === 'h') { k = 'grow'; v = v === 'fill' ? true : ''; }
+        if (k === 'gap' && v === '0') v = '';
+        // padding: Figma's horizontal and vertical fields onto one token, or [vertical, horizontal]
+        if (k === 'pad-h' || k === 'pad-v') {
+          var hv = box.querySelector('[data-k="pad-h"]').value, vv = box.querySelector('[data-k="pad-v"]').value;
+          k = 'padding'; v = hv === '0' && vv === '0' ? '' : hv === vv ? hv : [vv, hv];
+        }
+        if (v === '' || v === null) delete next[k]; else next[k] = v;
+        changed();
+      });
+    });
+    box.querySelectorAll('.lay-seg2 button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var g = b.parentNode, k = g.getAttribute('data-k'), v = b.getAttribute('data-v');
+        g.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+        if (k === 'size') { var fx = box.querySelector('[data-k="size-fixed"]'); if (fx) { fx.value = ''; fx.parentNode.classList.remove('on'); } }
+        if (!v) delete next[k]; else next[k] = k === 'grow' ? true : v;
+        changed();
+      });
+    });
+    box.querySelectorAll('.lay-align button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        box.querySelectorAll('.lay-align button').forEach(function (x) { x.className = x === b ? 'on' : ''; });
+        next.align = b.getAttribute('data-a'); next.justify = b.getAttribute('data-j');
+        changed();
+      });
+    });
+    var reset = document.getElementById('lay-reset');
+    if (reset) reset.addEventListener('click', function () { openDrawer(el); });
+    if (send) send.addEventListener('click', function () {
+      send.disabled = true;
+      var screen = el.closest('[data-screen]') ? el.closest('[data-screen]').getAttribute('data-screen') : window.DOAN_SCREEN;
+      fetch('/api/layout', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: screen, id: el.getAttribute('data-id'), rule: next }) })
+        .then(function (res) { return res.json(); })
+        .then(function (j) { var st = document.getElementById('lay-state'); if (j.error) { st.textContent = j.error; send.disabled = false; return; } st.textContent = t('laySent', 'proposed'); location.href = j.href; });
+    });
+  }
+
   // drawer inspector: one delegated click
   function openDrawer(el) {
     if (window.doanPanelOpen) window.doanPanelOpen();
@@ -587,20 +811,26 @@ export const INSPECTOR_JS = `
     if (props.reveals) conds.push('reveals: ' + Object.keys(props.reveals).join(', '));
     var id = el.getAttribute('data-id');
     var mine = comments.filter(function (c) { return (c.element ? c.element === id : c.path === path) && sameScreen(c, el); });
+    // the panel in sections, as Figma's: what it is, how it is laid out, what it carries, what people
+    // said — and where it lives in the file last, as one line for a developer
     panel.innerHTML =
-      '<h4>' + esc(el.getAttribute('data-id')) + ' <span class="hint">' + esc(el.getAttribute('data-kind')) + '</span><span class="close" id="close">×</span></h4>' +
-      '<div class="inst-path">' + t('component', 'component') + ' ' + instancePath(el) + '</div>' +
-      '<p><a class="btn" href="components.html#k-' + esc(el.getAttribute('data-kind')) + '">\u25c7 ' + t('goToComponent', 'Go to main component') + '</a></p>' +
-      (maps ? '<div class="hint">' + esc(maps) + '</div>' : '') +
-      (el.getAttribute('data-code') ? '<p><span class="k">' + t('codeLabel', 'code') + '</span> <code>' + esc(el.getAttribute('data-code')) + '</code></p>' : '') +
-      (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
-      '<table>' + rows + '</table>' +
-      '<p class="hint">' + t('samplesNote', 'values shown in the picture are samples unless the file sets them') + '</p>' +
-      '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(fileOf(el)) + '</code><br><span class="k">' + t('path', 'path') + '</span> <code>' + esc(path) + '</code>' + (line ? '<br><span class="k">' + t('line', 'line') + '</span> <code>' + esc(line) + '</code>' : '') + '</p>' +
-      '<p><button class="btn" id="copy">' + t('copy', 'copy path:line') + '</button></p>' +
-      '<h4>' + t('comments', 'Comments') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
-      (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>');
+      '<div class="pn-head"><b>' + esc(el.getAttribute('data-id')) + '</b><span class="hint">' + esc(el.getAttribute('data-kind')) + '</span><span class="close" id="close">×</span></div>' +
+      sec(t('pnComponent', 'Component'),
+        '<div class="pn-line"><span class="inst-path">' + instancePath(el) + '</span><a class="pn-link" href="components.html#k-' + esc(el.getAttribute('data-kind')) + '">' + t('goToComponent', 'Go to main component') + ' →</a></div>' +
+        (el.getAttribute('data-code') ? '<div class="pn-code"><code>' + esc(el.getAttribute('data-code')) + '</code></div>' : '') +
+        (maps ? '<div class="hint">' + esc(maps) + '</div>' : '')) +
+      layoutSection(el) +
+      (rows || conds.length ? sec(t('pnProps', 'Properties'),
+        (rows ? '<table>' + rows + '</table>' : '') +
+        (conds.length ? '<ul>' + conds.map(function (c) { return '<li class="cond-line">' + esc(c) + '</li>'; }).join('') + '</ul>' : '') +
+        '<p class="hint pn-note">' + t('samplesNote', 'values shown in the picture are samples unless the file sets them') + '</p>') : '') +
+      sec(t('pnComments', 'Comments'),
+        (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('noneOnElement', 'none on this element') + '</div>') +
+        (api ? '<textarea id="ctext" rows="3" placeholder="' + t('sayWhat', 'say what should change') + '"></textarea><div class="pn-actions"><button class="btn btn-primary" id="csend">' + t('send', 'Comment') + '</button> <span class="hint" id="cstate"></span></div>' : '<div class="hint">' + t('liveOnly', 'open the live viewer (doan serve) to comment') + '</div>')) +
+      sec(t('pnFile', 'File'),
+        '<div class="pn-line"><span><code>' + esc(fileOf(el)) + '</code> <span class="hint">' + esc(path) + (line ? ' · ' + t('line', 'line') + ' ' + esc(line) : '') + '</span></span><button class="pn-link" id="copy" type="button">' + t('copy', 'copy path:line') + '</button></div>');
     shell.classList.add('drawer-open');
+    wireLayout(el);
     document.getElementById('close').addEventListener('click', function () { window.doanClearSelection(); });
     document.dispatchEvent(new CustomEvent('doan:select', { detail: { el: el } }));
     document.getElementById('copy').addEventListener('click', function () {
@@ -625,7 +855,7 @@ export const INSPECTOR_JS = `
     if (!box || !window.DOAN_API) return;
     fetch('/api/comments').then(function (r) { return r.json(); }).then(function (j) {
       var mine = (j.comments || []).filter(function (c) { return !c.screen; });
-      box.innerHTML = '<h4>' + t('commonComments', 'Comments on the whole') + '</h4>' +
+      box.innerHTML = '<section class="pn-sec"><h5>' + t('pnComments', 'Comments') + '</h5>' +
         (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + esc(c.text) + '</li>'; }).join('') + '</ul>' : '') +
         '<textarea id="gtext" rows="3" placeholder="' + t('sayWhatAll', 'a note on the whole — nothing needs to be selected') + '"></textarea><button class="btn btn-primary" id="gsend">' + t('send', 'Comment') + '</button> <span class="hint" id="gstate"></span>';
     });
@@ -660,6 +890,7 @@ export const INSPECTOR_JS = `
   });
   window.doanSelect = openDrawer;
   window.doanClearSelection = function () {
+    clearSpacing();
     if (selected) selected.classList.remove('selected');
     selected = null;
     if (shell.classList.contains('workspace')) { panel.innerHTML = emptyPanel; general(); } else { shell.classList.remove('drawer-open'); }
@@ -756,6 +987,28 @@ export const INSPECTOR_JS = `
   if (reject) reject.addEventListener('click', function () { verdict('reject'); });
 
   fit();
+})();
+`;
+
+// The canvas showing a pending proposal: mark the elements it changes in every frame of its screen,
+// open on that screen's Default frame without selecting it (the panel holds the proposal), and let
+// a line of the panel's change list take you to its element. No template literal inside.
+export const PROPOSAL_VIEW_JS = `
+(function () {
+  var P = window.DOAN_PROPOSAL || {}; if (!P.screen) return;
+  function marks() {
+    document.querySelectorAll('.cv-frame[data-screen="' + P.screen + '"]').forEach(function (f) {
+      (P.changed || []).forEach(function (id) { f.querySelectorAll('.el[data-id="' + id + '"]').forEach(function (el) { el.classList.add('ch-mark'); }); });
+    });
+  }
+  function go(node) { if (window.doanZoomTo && node) window.doanZoomTo(node, 120); }
+  marks();
+  setTimeout(function () { go(document.querySelector('.cv-frame[data-screen="' + P.screen + '"][data-state="Default"]')); }, 350);
+  document.addEventListener('click', function (e) {
+    var li = e.target.closest && e.target.closest('.prop-panel .changes li[data-el]'); if (!li) return;
+    var el = document.querySelector('.cv-frame[data-screen="' + P.screen + '"][data-state="Default"] .el[data-id="' + li.getAttribute('data-el') + '"]');
+    if (!el) return; go(el); el.classList.remove('ch-flash'); void el.offsetWidth; el.classList.add('ch-flash');
+  });
 })();
 `;
 
@@ -1094,6 +1347,7 @@ export const CANVAS_JS = `
     scale = Math.max(0.05, Math.min(1, (W - pad * 2) / r.w, (H - pad * 2) / r.h));
     tx = Math.round(W / 2 - (r.x + r.w / 2) * scale); ty = Math.round(H / 2 - (r.y + r.h / 2) * scale); apply();
   }
+  window.doanZoomTo = zoomTo; // the proposal view takes the canvas to a frame or an element
   var selectedFrame = null;
   function markFrame(frame) {
     document.querySelectorAll('.cv-frame.selected').forEach(function (f) { f.classList.remove('selected'); });
@@ -1118,11 +1372,11 @@ export const CANVAS_JS = `
     var screen = frame.getAttribute('data-screen'), state = frame.getAttribute('data-state');
     var mine = (window.DOAN_FLOWS || []).filter(function (f) { return f.screen === screen; });
     panel.innerHTML =
-      '<h4>' + esc(screen) + '-' + esc(state) + ' <span class="hint">' + esc(frame.getAttribute('data-type') || '') + ' \\u00b7 ' + esc(frame.getAttribute('data-platform') || '') + '</span><span class="close" id="close">\\u00d7</span></h4>' +
-      '<p><span class="k">' + t('file', 'file') + '</span> <code>' + esc(frame.getAttribute('data-file') || '') + '</code></p>' +
-      '<p><a class="btn" href="' + esc(screen) + '.html#state-' + esc(state) + '">' + t('screen', 'screen') + '</a> <a class="btn" href="proto.html#' + esc(screen) + (state !== 'Default' ? '.' + esc(state) : '') + '">\\u25b6 ' + t('proto', 'Prototype') + '</a> <a class="btn" href="spec-' + esc(screen) + '.html">' + t('specFor', 'developer spec') + '</a></p>' +
+      '<div class="pn-head"><b>' + esc(screen) + '-' + esc(state) + '</b><span class="hint">' + esc(frame.getAttribute('data-type') || '') + ' \\u00b7 ' + esc(frame.getAttribute('data-platform') || '') + '</span><span class="close" id="close">\\u00d7</span></div>' +
+      '<section class="pn-sec"><h5>' + t('pnScreen', 'Screen') + '</h5><div class="pn-buttons"><a class="btn" href="' + esc(screen) + '.html#state-' + esc(state) + '">' + t('screen', 'screen') + '</a><a class="btn" href="proto.html#' + esc(screen) + (state !== 'Default' ? '.' + esc(state) : '') + '">\\u25b6 ' + t('proto', 'Prototype') + '</a><a class="btn" href="spec-' + esc(screen) + '.html">' + t('specFor', 'developer spec') + '</a></div></section>' +
       frameComments(screen, state) +
-      '<h4>' + t('flows', 'Flows') + '</h4>' + (mine.length ? '<ul>' + mine.map(function (f) { return '<li><code>' + esc(f.from) + '</code> \\u2192 ' + esc(f.to) + (f.state !== 'Default' ? '.' + esc(f.state) : '') + (f.label ? ' <span class="hint">' + esc(f.label) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('none', 'none') + '</div>');
+      '<section class="pn-sec"><h5>' + t('pnFlows', 'Flows') + '</h5>' + (mine.length ? '<ul>' + mine.map(function (f) { return '<li><code>' + esc(f.from) + '</code> \\u2192 ' + esc(f.to) + (f.state !== 'Default' ? '.' + esc(f.state) : '') + (f.label ? ' <span class="hint">' + esc(f.label) + '</span>' : '') + '</li>'; }).join('') + '</ul>' : '<div class="hint">' + t('none', 'none') + '</div>') + '</section>' +
+      '<section class="pn-sec"><h5>' + t('pnFile', 'File') + '</h5><code>' + esc(frame.getAttribute('data-file') || '') + '</code></section>';
     var close = document.getElementById('close'); if (close) close.addEventListener('click', clearAll);
     var send = document.getElementById('fsend');
     if (send) send.addEventListener('click', function () {
@@ -1135,9 +1389,9 @@ export const CANVAS_JS = `
   // comments on a screen as a whole — no element — listed on its frame's panel, with a box to add one
   function frameComments(screen, state) {
     var mine = (window.DOAN_COMMENTS || []).filter(function (c) { return c.screen === screen && !c.element && !c.path; });
-    return '<h4>' + t('comments', 'Comments') + '</h4>' +
+    return '<section class="pn-sec"><h5>' + t('pnComments', 'Comments') + '</h5>' +
       (mine.length ? '<ul>' + mine.map(function (c) { return '<li><b>' + esc(c.author) + '</b> ' + (c.state ? '<span class="hint">' + esc(c.state) + '</span> ' : '') + esc(c.text) + '</li>'; }).join('') + '</ul>' : '') +
-      (window.DOAN_API ? '<textarea id="ftext" rows="3" placeholder="' + t('sayWhatScreen', 'say what should change on this screen') + '"></textarea><button class="btn btn-primary" id="fsend">' + t('send', 'Comment') + '</button> <span class="hint" id="fstate"></span>' : '');
+      (window.DOAN_API ? '<textarea id="ftext" rows="3" placeholder="' + t('sayWhatScreen', 'say what should change on this screen') + '"></textarea><div class="pn-actions"><button class="btn btn-primary" id="fsend">' + t('send', 'Comment') + '</button> <span class="hint" id="fstate"></span></div>' : '') + '</section>';
   }
   // a frame whose screen has comments of its own carries a blue dot on its title
   (window.DOAN_COMMENTS || []).forEach(function (c) {

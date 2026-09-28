@@ -234,7 +234,7 @@ test('files: the proposal page shows the style board as it is beside as it would
   assert.equal(frames.length, 2);
   assert.match(html, /#e4572e/);
   assert.match(html, /<span class="chg">\{&quot;color&quot;:\{&quot;primary&quot;:&quot;#e4572e&quot;\}\}<\/span>/);
-  assert.match(html, /id="apply"/);
+  assert.match(html, /<div class="drawer-foot"><div class="hint">[^<]*<\/div><div class="foot-row"><button class="btn btn-danger" id="reject" type="button" data-id="p_[a-z0-9]+">[^<]*<\/button><button class="btn btn-primary" id="approve"/);
 });
 
 test('files: lint after runs the schema of every file — a conventions key the schema does not know blocks', async () => {

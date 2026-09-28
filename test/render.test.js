@@ -309,7 +309,7 @@ test('the components page reads in two levels — used here by category, the bun
   const lib = renderLibrary(project, { branch: 'x' });
   assert.match(lib, /<div class="lib-group"><h2>Used in this project <span class="hint">\d+<\/span><\/h2><h3 class="lib-cat" id="used-action">Actions/);
   assert.match(lib, /<details class="lib-group" id="unused"( open)?><summary>Bundled, not used here|^(?![\s\S]*id="unused")/);
-  assert.match(lib, /<details class="lib-more"><summary>Props and styles<\/summary>/);
+  assert.match(lib, /<details class="lib-more"><summary>Props and styles <span class="hint">· components\/[a-z-]+\.yaml/);
   assert.match(lib, /<a class="side-link subsub" href="#used-action"><span class="name">Actions<\/span>/);
   const f = renderFoundations(project, { branch: 'x' });
   assert.match(f, /<div class="b-role">Base<\/div>/);

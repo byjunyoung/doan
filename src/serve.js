@@ -3,15 +3,16 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
 import { renderFilesProposal } from './render/index.js';
-import { renderPatterns, renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
+import { layoutStyle, changedIds, renderPatterns, renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { assetFile, assetType } from './assets.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { lintProject, currentBranch, specScreen } from './verbs.js';
-import { listProposals, applyProposal, rejectProposal, projectWith } from './proposals.js';
+import { listProposals, applyProposal, rejectProposal, projectWith, proposeLayout } from './proposals.js';
 import { rm } from 'node:fs/promises';
 import { authorOf, addComment, listComments, resolveComment } from './comments.js';
 import { addRequest, listRequests, closeRequest } from './requests.js';
+import { languageOf } from './render/i18n.js';
 
 // The local viewer: the same pages `render` writes, served live from the files, plus the
 // three things a static page cannot do — take a comment, apply or reject a proposal, and
@@ -78,7 +79,23 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       if (m) {
         const spec = canvasPages(project).find((p) => p.slug === decodeURIComponent(m[1]));
         if (!spec) return json(res, 404, { error: `no domain "${m[1]}"` });
-        return html(res, renderCanvas(project, spec, { branch: opts.branch, adapter, api: true, comments: await listComments(dir, { status: 'open' }) }));
+        const comments = await listComments(dir, { status: 'open' });
+        // ?proposal=<id>: the canvas as the pending proposal would leave it (TO-BE), or as it is
+        // (&side=asis), with the proposal in the right panel
+        const pid = url.searchParams.get('proposal');
+        const full = pid && /^p_[a-z0-9]+$/.test(pid) ? await readFile(join(dir, '.proposals', `${pid}.json`), 'utf8').then(JSON.parse, () => null) : null;
+        if (full && full.status === 'pending') {
+          const side = url.searchParams.get('side') === 'asis' ? 'asis' : 'tobe';
+          const files = full.kind === 'files' ? full.files : [{ path: full.file, after: full.after }];
+          const { project: after, tmp } = await projectWith(dir, files);
+          try {
+            const shown = side === 'asis' ? project : Object.assign(after, { dir: project.dir, pending: project.pending, live: project.live });
+            return html(res, renderCanvas(shown, spec, { branch: opts.branch, adapter: side === 'asis' ? adapter : await resolveAdapter(after, components), api: true, comments, proposalView: { proposal: full, side, changed: changedIds(full, languageOf(project)) } }));
+          } finally {
+            await rm(tmp, { recursive: true, force: true });
+          }
+        }
+        return html(res, renderCanvas(project, spec, { branch: opts.branch, adapter, api: true, comments }));
       }
       m = path.match(/^\/proposal-(p_[a-z0-9]+)\.html$/);
       if (m) {
@@ -127,6 +144,19 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
         const body = await readBody(req);
         // who said yes: the name sent, or the project's git author — the viewer has no login
         return json(res, 200, await applyProposal(dir, { id: m[1], approved_by: body.by || authorOf(dir) }));
+      }
+      // the panel's live preview: the css a rule draws, from the same function the picture is drawn with
+      if (method === 'POST' && path === '/api/layout-style') {
+        const body = await readBody(req);
+        return json(res, 200, { style: layoutStyle(body.rule ?? {}, { container: !!body.container }) });
+      }
+      if (method === 'POST' && path === '/api/layout') {
+        const body = await readBody(req);
+        const project = await loadProject(dir);
+        const p = await proposeLayout(dir, { ...body, lang: languageOf(project) }, { branch: opts.branch, today: opts.today });
+        const s = project.screens.find((x) => x.doc.screen === body.screen);
+        const slug = canvasPages(project).find((pg) => pg.sections.some((sec) => sec.screens.some((x) => x.screen === body.screen)))?.slug;
+        return json(res, 201, { id: p.id, status: p.status, href: p.status === 'pending' && slug ? `canvas-${slug}.html?proposal=${p.id}` : s ? `${body.screen}.html` : '/' });
       }
       if (method === 'GET' && path === '/api/requests') return json(res, 200, { requests: await listRequests(dir, { status: url.searchParams.get('status') ?? 'open' }) });
       if (method === 'POST' && path === '/api/requests') return json(res, 201, await addRequest(dir, { ...(await readBody(req)), by: authorOf(dir) }));

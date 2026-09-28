@@ -196,9 +196,7 @@ const rules = {
         out.push(finding('L13', 'blocking', s, [...base, 'kind'], `layout container "${rule.kind}" is not in layout.containers`));
       if (rule.size && vocab.size_classes?.length && !vocab.size_classes.includes(rule.size))
         out.push(finding('L13', 'blocking', s, [...base, 'size'], `size "${rule.size}" is not in layout.size_classes`));
-      for (const key of ['gap', 'padding']) {
-        const v = rule[key];
-        if (v === undefined) continue;
+      for (const key of ['gap', 'padding']) for (const v of [].concat(rule[key] ?? []).filter((x) => String(x) !== '0')) {
         if (BARE_UNIT.test(String(v))) out.push(finding('L13', 'blocking', s, [...base, key], `${key} "${v}" is a bare unit; use a token name`));
         else if (vocab.spacing_tokens && !String(v).startsWith(vocab.spacing_tokens))
           out.push(finding('L13', 'blocking', s, [...base, key], `${key} "${v}" does not start with ${vocab.spacing_tokens}`));
@@ -270,9 +268,8 @@ const rules = {
     const tokens = mergeTokens(DEFAULT_TOKENS, ctx.tokens ?? {});
     const out = [];
     const check = (s, rule, base) => {
-      for (const key of ['gap', 'padding']) {
-        const v = rule[key];
-        if (v === undefined || BARE_UNIT.test(String(v)) || isTbd(v)) continue;
+      for (const key of ['gap', 'padding']) for (const v of [].concat(rule[key] ?? []).filter((x) => String(x) !== '0')) {
+        if (BARE_UNIT.test(String(v)) || isTbd(v)) continue;
         if (!hasToken(tokens, v)) out.push(finding('L18', 'warning', s, [...base, key], `${key} "${v}" names no token`));
       }
     };
@@ -300,9 +297,8 @@ const rules = {
     const primitive = (name) => stems.includes(stem(origins[String(name)]));
     const out = [];
     const check = (s, rule, base) => {
-      for (const key of ['gap', 'padding']) {
-        const v = rule[key];
-        if (v !== undefined && primitive(v)) out.push(finding('L19', 'blocking', s, [...base, key], `${key} "${v}" is a primitive token; name the semantic token that uses it`));
+      for (const key of ['gap', 'padding']) for (const v of [].concat(rule[key] ?? []).filter((x) => String(x) !== '0')) {
+        if (primitive(v)) out.push(finding('L19', 'blocking', s, [...base, key], `${key} "${v}" is a primitive token; name the semantic token that uses it`));
       }
     };
     for (const s of ctx.screens) {

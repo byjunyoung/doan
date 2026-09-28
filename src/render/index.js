@@ -7,13 +7,14 @@ import { resolveFlowTarget } from '../flows.js';
 import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
 import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
-import { CSS, INSPECTOR_JS, PROTO_JS, CANVAS_JS } from './page.js';
+import { CSS, INSPECTOR_JS, PROTO_JS, CANVAS_JS, PROPOSAL_VIEW_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
 import { flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
 import { appliesTo, matchSkeleton } from '../patterns.js';
+import { describeChanges, OP_MARK, opWord } from './changes.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
 import { SLOT_CSS, TYPE_SLOTS, expandBinding } from '../slots.js';
 
@@ -91,7 +92,8 @@ export function layoutStyle(rule, { container = true } = {}) {
   // a list that is longer than the frame scrolls inside it — a kiosk menu board — and whatever
   // grows toward it may shrink, so the bar below stays on the screen
   if (rule.scroll === 'vertical') s.push('overflow-y:auto', 'min-height:0');
-  if (rule.padding) s.push(`padding:${tokenVar(rule.padding)}`);
+  // one token for every side, or [vertical, horizontal] as Figma's two padding fields
+  if (rule.padding) s.push(`padding:${[].concat(rule.padding).map((x) => (String(x) === '0' ? '0' : tokenVar(x))).join(' ')}`);
   if (rule.grow) s.push('flex:1 1 auto', 'min-height:0');
   if (rule.size) s.push(`width:var(--size-${rule.size})`);
   return s.filter(Boolean).join(';');
@@ -126,6 +128,8 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       const fn = el.$expanded ? kinds.group : (adapter?.kinds?.[el.kind] ?? kinds[el.kind] ?? kinds.generic);
       const known = lines.get(el.id) ?? (el.$from ? { path: `${el.$from.file} › ${el.$from.path}`, line: null } : undefined);
       const style = layoutStyle(layout[el.id], { container: !!el.children?.length });
+      // the panel's layout editor reads the rule; a compound's parts are arranged by its contract, not the screen
+      const layoutAttr = el.$from || String(el.id).includes('/') ? ' data-layout-owner="component"' : ` data-layout="${h(JSON.stringify(layout[el.id] ?? {}))}"`;
       const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => k !== 'children' && !k.startsWith('$')))));
       const cls = ['el', `el-${el.kind}`, kinds[el.kind] || el.$expanded ? '' : 'el-unknown', el.disabled_when ? 'is-disabled' : ''].filter(Boolean).join(' ');
       // `repeat: N` (what an import writes for a run of identical instances) draws the element N times in a row.
@@ -134,7 +138,7 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       // each enum prop the contract declares becomes data-<prop>, which is what a variant's css binds to
       const code = contract && !el.$expanded ? codeOf(contract, el) : null;
       const attrs = Object.entries(enumAttrs(contract, drawn)).map(([k, val]) => ` data-${attrName(k)}="${h(val)}"`).join('') + (byAdapter ? ` data-drawn="${h(adapter.name)}"` : '') + (code ? ` data-code="${h(code.snippet)}"` : '');
-      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${attrs}${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
+      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${layoutAttr}${attrs}${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
     },
     children(el) {
       return (el.children ?? []).map((c) => r.element(c)).join('');
@@ -221,6 +225,13 @@ function placeOf(project, screenName, state = null) {
   return { domain: spec?.slug ?? null, screen: screenName ?? null, state };
 }
 
+// where a pending proposal is looked at in the live viewer: the canvas of the domain its screen is in
+function proposalHref(project, p) {
+  const pages = canvasPages(project);
+  const slug = (p.screen && placeOf(project, p.screen).domain) || pages[0]?.slug;
+  return slug ? `canvas-${h(slug)}.html?proposal=${h(p.id)}` : `proposal-${h(p.id)}.html`;
+}
+
 function navSidebar(project, D, place = {}, { findings = null, comments = [], proposals = [] } = {}) {
   const found = findings ?? lint(project, { branch: null });
   const pillsOf = (screen) => {
@@ -272,7 +283,7 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
   const pending = proposals.length ? proposals : project.pending ?? [];
   const waiting = pending.length
     ? `<div class="tree-sec">${D.waitingForPerson} <span class="pill cm">${pending.length}</span></div>` +
-      pending.map((p) => `<a class="side-link sub${place.proposal === p.id ? ' current' : ''}" href="proposal-${h(p.id)}.html"><span class="name">${h(p.screen ?? p.label ?? p.id)}</span><span class="hint">${h(p.id)}</span></a>`).join('')
+      pending.map((p) => `<a class="side-link sub${place.proposal === p.id ? ' current' : ''}" href="${project.live ? proposalHref(project, p) : `proposal-${h(p.id)}.html`}"><span class="name">${h(p.screen ?? p.label ?? p.id)}</span><span class="hint">${h(p.id)}</span></a>`).join('')
     : '';
   const base = `<div class="base">${waiting}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('patterns', 'patterns.html', D.patterns, `<span class="hint">${Object.keys(project.patterns ?? {}).length}</span>`)}${place.page === 'patterns' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
@@ -290,6 +301,18 @@ function topBar(project, D, { title, meta = '', mode = null, place = {}, tools =
 // (src/requests.js) that the watching agent takes; while it is open the button is off and says the
 // agent is at it, and when the agent closes it the button says the proposals are in (DESIGN.md §7.5).
 // It is the viewer's own primary button, as "Leave comment" is, only full width.
+// what a proposal changes, one line per change: a mark, the area, what, and how (src/render/changes.js)
+function changeList(rows, lang) {
+  if (!rows.length) return '';
+  return `<ul class="changes">${rows.map((r) => `<li class="ch-${r.op}"${r.id ? ` data-el="${h(r.id)}"` : ''}><span class="ch-op">${OP_MARK[r.op]} ${h(opWord(r.op, lang))}</span><span class="ch-area">${h(r.area)}</span><span class="ch-what">${r.subject}${r.detail ? ` <span class="ch-how">— ${r.detail}</span>` : ''}</span></li>`).join('')}</ul>`;
+}
+
+// A pending proposal's decision at the foot of the right panel — the panel's place for what the page
+// asks of the person, in the panel's own buttons (the page script posts it, INSPECTOR_JS)
+function decisionFoot(D, id) {
+  return `<div class="drawer-foot"><div class="hint">${D.decideHint}</div><div class="foot-row"><button class="btn btn-danger" id="reject" type="button" data-id="${h(id)}">${D.reject}</button><button class="btn btn-primary" id="approve" type="button" data-id="${h(id)}">${D.apply}</button></div><div class="hint" id="verdict"></div></div>`;
+}
+
 function askFoot(project, D) {
   if (!project.live) return '';
   const n = project.live.openComments ?? 0;
@@ -317,7 +340,7 @@ function askFoot(project, D) {
 })();</script></div>`;
 }
 
-function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [] }) {
+function shellOf(project, D, { title, meta = '', mode = null, place = {}, tools = '', content, mainClass = '', panel = null, findings = null, comments = [], proposals = [], foot = null }) {
   // the zoom keys exist only on the canvas; the other pages keep the same empty panel without the hint.
   // The prototype selects nothing — its panel says so and lists the flows instead (PROTO_JS)
   const empty = mode === 'proto' ? `<div class="hint">${D.protoHelp}</div>` : `<div class="hint">${D.clickToInspect}</div>${mode === 'canvas' ? `<p class="hint">${D.shortcutsHint}</p>` : ''}<div id="general"></div>`;
@@ -328,7 +351,7 @@ ${topBar(project, D, { title, meta, mode, place, tools })}
 ${content}
 </main>
 <aside id="inspector" class="drawer">${panel ?? empty}</aside>
-${askFoot(project, D)}
+${foot ?? askFoot(project, D)}
 </div>`;
 }
 
@@ -479,7 +502,7 @@ function page({ title, tokens, modeCss = '', componentCss = '', extraCss = '', f
 <style>${tokensToCss(DEFAULT_TOKENS)}\n${productCss(tokens)}\n${modeCss}\n${componentCss}\n${CSS}</style>${fonts}${extraCss}</head>
 <body data-file="${h(file)}">
 ${body}
-<script>window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, state: c.state ?? null, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
+<script>window.DOAN_SPACE = ${JSON.stringify(Object.entries(tokens?.space ?? {}).filter(([, v]) => typeof v === 'string').map(([k, v]) => ({ name: `space.${k}`, value: v })))}; window.DOAN_API = ${api ? 'true' : 'false'}; window.DOAN_SCREEN = ${JSON.stringify(screen)}; window.DOAN_COMMENTS = ${JSON.stringify(comments.map((c) => ({ id: c.id, screen: c.screen, element: c.element ?? null, path: c.path, state: c.state ?? null, author: c.author, text: c.text })))}; window.DOAN_I18N = ${JSON.stringify(pageStrings(lang))};</script>
 <script>${INSPECTOR_JS}</script>
 </body></html>`;
 }
@@ -606,17 +629,25 @@ export function renderLibrary(project, { branch = null, adapter = null, api = fa
         .flatMap(([prop, options]) => Object.keys(options ?? {}).map((opt) => `<div class="lib-variant"><div class="hint">${h(prop)} = ${h(opt)}</div>${picture(c, { ...sample, id: `${sample.id}-${prop}-${opt}`, [prop]: c.props?.[prop]?.type === 'boolean' ? opt === 'true' : opt })}</div>`))
         .join('');
       const compound = Array.isArray(c.elements) && c.elements.length;
-      const codeMap = c.maps_to?.code && typeof c.maps_to.code === 'object' ? `${D.codeLabel}: ${h([c.maps_to.code.import, c.maps_to.code.name ?? c.kind].filter(Boolean).join(' '))}` : '';
-      const meta = [c.file ? `components/${h(basenameOf(c.file))}` : `<span class="bad">${D.legacyKind}</span>`, maps[c.kind] ? `${h(maps[c.kind])}` : '', codeMap, compound ? D.compound : ''].filter(Boolean).join(' · ');
+      // as a design system's page reads: the name and what it is for, the picture, its parts, when to use it;
+      // the code name a small tag, the file and the library names in the fold with the props
+      const code = c.maps_to?.code && typeof c.maps_to.code === 'object' ? c.maps_to.code : null;
+      const codeTag = code ? `<span class="lib-code" title="${h([code.import, code.name ?? c.kind].filter(Boolean).join(' '))}">${h(code.name ?? c.kind)}</span>` : '';
+      const partIds = compound ? c.elements.flatMap(function walk(e) { return e && e.id ? [e.id, ...(e.children ?? []).flatMap(walk)] : []; }) : [];
+      const parts = c.anatomy ? Object.values(c.anatomy) : [];
+      const anatomy = parts.length ? `<div class="lib-anat"><span class="lib-k">${D.anatomyLabel}</span>${parts.map((p, i) => `<span class="lib-part"><i>${i + 1}</i>${h(p)}</span>`).join('')}</div>` : '';
+      const usage = c.usage?.when || c.usage?.not ? `<div class="lib-usage">${c.usage.when ? `<div><span class="lib-k">${D.whenLabel}</span>${h(c.usage.when)}</div>` : ''}${c.usage.not ? `<div><span class="lib-k">${D.notLabel}</span>${h(c.usage.not)}</div>` : ''}</div>` : '';
+      const where = [c.file ? `components/${h(basenameOf(c.file))}` : `<span class="bad">${D.legacyKind}</span>`, maps[c.kind] ? h(maps[c.kind]) : '', code ? h([code.import, code.name ?? c.kind].filter(Boolean).join(' ')) : '', partIds.length && !parts.length ? partIds.map((p) => `<code>${h(p)}</code>`).join(' ') : ''].filter(Boolean).join(' · ');
       const props = Object.entries(c.props ?? {});
       return `<section class="lib" id="k-${h(c.kind)}">
-<h3>${h(c.kind)}</h3><div class="hint">${h(c.description ?? '')}</div><div class="hint lib-meta">${meta}</div>
+<div class="lib-head"><h3>${h(c.kind)}</h3>${codeTag}</div>${c.description ? `<p class="lib-desc">${h(c.description)}</p>` : ''}
 <div class="lib-row">${picture(c, sample)}${variantPics ? `<div class="lib-variants">${variantPics}</div>` : ''}</div>
-${props.length || c.slots?.length || c.tokens || c.variants ? `<details class="lib-more"><summary>${D.propsAndStyle}</summary>
+${anatomy}${usage}
+<details class="lib-more"><summary>${D.propsAndStyle} <span class="hint">· ${where}</span></summary>
 ${props.length ? `<div class="section-title">${D.propsLabel}</div><table class="props">${props.map(propRow).join('')}</table>` : ''}
 ${c.slots?.length ? `<div class="section-title">${D.slotsLabel}</div><div class="hint">${c.slots.map((s) => `<code>${h(s)}</code>`).join(' ')}</div>` : ''}
 ${c.tokens || c.variants ? `<div class="section-title">${D.bindingsLabel}</div><table class="props">${bindingRows(c)}</table>` : ''}
-</details>` : ''}
+</details>
 </section>`;
   };
   // two levels, as a design system's page reads: what this project uses, then the bundled rest
@@ -665,7 +696,38 @@ function viewTabs(project, current, D, { domain = null, screen = null } = {}) {
   return `<nav class="views">${tab('canvas', canvas, D.viewCanvas)}${tab('proto', proto, D.proto)}</nav>`;
 }
 
-export function renderCanvas(project, pageSpec, { branch = null, adapter = null, api = false, comments = [] } = {}) {
+// A pending proposal seen where the screens are: the canvas drawn as the proposal would leave it
+// (TO-BE) or as it is (AS-IS), the changed elements marked, and the right panel holding the
+// proposal — what it says, what was agreed, what changes (a line points at its element) and the
+// decision at the panel's foot. The side-by-side proposal page stays, one link away.
+function proposalPanel(project, proposal, { side, lang, D, slug }) {
+  const base = `canvas-${h(slug)}.html?proposal=${h(proposal.id)}`;
+  const plain = (html) => String(html ?? '').replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'");
+  let rows = [];
+  if (proposal.kind === 'files') rows = (proposal.files ?? []).map((f) => ({ op: f.creates ? 'added' : f.after === null ? 'removed' : 'changed', area: D.fileLabel, subject: `<code>${h(f.path)}</code>`, detail: '' }));
+  else {
+    const before = proposal.before ? parseScreenText(proposal.before, proposal.file).doc : { elements: [] };
+    rows = describeChanges(before, parseScreenText(proposal.after, proposal.file).doc, lang);
+  }
+  // one line per change — what, and which kind of change; the rest on hover, the line takes you to its element
+  const list = rows.length
+    ? `<ul class="changes prop-changes">${rows.map((r) => `<li class="ch-${r.op}"${r.id ? ` data-el="${h(r.id)}"` : ''} title="${h(plain(`${r.subject} ${r.detail ? `— ${r.detail}` : ''}`).trim())}"><span class="ch-op">${OP_MARK[r.op]}</span><span class="ch-what">${r.subject}</span><span class="ch-area">${h(r.area)} ${h(opWord(r.op, lang))}</span></li>`).join('')}</ul>`
+    : '';
+  const decisions = (proposal.decisions ?? []).map((d) => `<li><b>${h(d.item)}</b> — ${h(d.decision)}</li>`).join('');
+  return `<div class="prop-panel" data-screen="${h(proposal.screen ?? '')}"><div class="pn-head"><b>${D.pnProposal}</b><span class="hint">${h(proposal.screen ?? proposal.label ?? proposal.id)}</span><a class="close" href="canvas-${h(slug)}.html" title="${h(D.closeProposal)}">×</a></div>
+<p class="prop-summary">${h(proposal.summary || D.noSummary)}</p>
+<div class="prop-sides"><a class="${side === 'tobe' ? 'on' : ''}" href="${base}">TO-BE</a><a class="${side === 'asis' ? 'on' : ''}" href="${base}&amp;side=asis">AS-IS</a></div>
+<section class="pn-sec"><h5>${D.pnChanges} <span class="hint">${rows.length}</span></h5>${list}</section>
+${decisions ? `<section class="pn-sec"><details class="prop-decided"><summary>${D.pnDecisions} <span class="hint">${(proposal.decisions ?? []).length}</span></summary><ul class="list">${decisions}</ul></details></section>` : ''}</div>`;
+}
+
+export function changedIds(proposal, lang = 'en') {
+  if (proposal.kind === 'files' || !proposal.after) return [];
+  const before = proposal.before ? parseScreenText(proposal.before, proposal.file).doc : { elements: [] };
+  return [...new Set(describeChanges(before, parseScreenText(proposal.after, proposal.file).doc, lang).filter((r) => r.id && r.area !== (lang === 'ko' ? '배치' : 'layout')).map((r) => r.id))];
+}
+
+export function renderCanvas(project, pageSpec, { branch = null, adapter = null, api = false, comments = [], proposalView = null } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);
   setLanguage(lang);
@@ -689,9 +751,11 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
   const body =
     shellOf(project, D, {
       title: h(pageSpec.domain),
-      meta: `${pageSpec.sections.length} ${D.sectionsN} · ${nScreens} ${D.screens}${branch ? ` · ${h(branch)}` : ''}`,
+      meta: `${proposalView ? `${D.proposal} · ${proposalView.side === 'asis' ? 'AS-IS' : 'TO-BE'} · ` : ''}${pageSpec.sections.length} ${D.sectionsN} · ${nScreens} ${D.screens}${branch ? ` · ${h(branch)}` : ''}`,
       mode: 'canvas',
-      place: { domain: pageSpec.slug },
+      place: { domain: pageSpec.slug, ...(proposalView ? { proposal: proposalView.proposal.id } : {}) },
+      panel: proposalView ? proposalPanel(project, proposalView.proposal, { side: proposalView.side, lang, D, slug: pageSpec.slug }) : null,
+      foot: proposalView ? decisionFoot(D, proposalView.proposal.id) : null,
       tools: `<button class="toggle" id="cv-out" type="button">−</button><span class="toggle zoom" id="cv-zoom">100%</span><button class="toggle" id="cv-in" type="button">+</button><button class="toggle" id="cv-fit" type="button">${D.fitLabel}</button><label class="toggle"><input type="checkbox" id="cv-show-arrows" checked> ${D.arrowsLabel}</label>`,
       mainClass: 'cv-main',
       comments: api ? comments : [],
@@ -699,7 +763,7 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
     }) +
     `
 <script>window.DOAN_FLOWS = ${JSON.stringify(flows)}; window.DOAN_CANVAS = ${JSON.stringify({ domain: pageSpec.domain, screens: inDomain })}; window.DOAN_SCREEN_DOMAIN = ${JSON.stringify(screenDomain)};</script>
-<script>${CANVAS_JS}</script>`;
+<script>${CANVAS_JS}</script>${proposalView ? `<script>window.DOAN_PROPOSAL = ${JSON.stringify({ screen: proposalView.proposal.screen ?? null, changed: proposalView.changed ?? [] })};</script><script>${PROPOSAL_VIEW_JS}</script>` : ''}`;
   return page({ title: pageSpec.domain, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), extraCss: adapter?.styles ? adapter.styles() : '', body, api, screen: '', comments, lang });
 }
 
@@ -766,12 +830,13 @@ export function renderFilesProposal(project, proposal, { after = null, branch = 
   const boards = after ? `<div class="section-title">${D.foundations}</div><div class="fdiff-pair"><div><div class="hint">AS-IS</div>${board(project)}</div><div><div class="hint">TO-BE</div>${board(after)}</div></div>` : '';
   const la = proposal.lint?.after ?? {};
   const findings = (la.findings ?? []).length ? `<ul class="list">${la.findings.map((f) => `<li><span class="${f.severity === 'blocking' ? 'bad' : 'hint'}">${h(f.id)}</span> <code>${h(f.file ?? '')}</code> ${h(f.message)}</li>`).join('')}</ul>` : '';
-  const actions = proposal.status === 'pending' && api ? `<div class="actions"><button class="btn btn-primary" id="apply">${D.apply}</button> <button class="btn" id="reject">${D.reject}</button></div><script>(function(){var id=${JSON.stringify(proposal.id)};function go(a){fetch('/api/proposals/'+id+'/'+a,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({})}).then(function(r){return r.json()}).then(function(){location.href='index.html'});}document.getElementById('apply').onclick=function(){go('apply')};document.getElementById('reject').onclick=function(){go('reject')};})();</script>` : '';
-  const content = `<p>${h(proposal.summary)}</p>${decisions}<div class="section-title">lint</div><p class="hint">${proposal.lint?.before?.blocking ?? 0} → <b class="${la.blocking ? 'bad' : ''}">${la.blocking ?? 0}</b> ${D.blocking}, ${la.warning ?? 0} ${D.warning}</p>${findings}${actions}${boards}${files}`;
+  const pending = proposal.status === 'pending' && api;
+  const content = `<p>${h(proposal.summary)}</p>${decisions}<div class="section-title">lint</div><p class="hint">${proposal.lint?.before?.blocking ?? 0} → <b class="${la.blocking ? 'bad' : ''}">${la.blocking ?? 0}</b> ${D.blocking}, ${la.warning ?? 0} ${D.warning}</p>${findings}${boards}${files}`;
   const body = shellOf(project, D, {
     title: `${h(proposal.label)} <span class="hint">${D.proposal}</span>`,
     meta: `${h(proposal.status)} · ${proposal.files.length} ${D.filesN}${branch ? ` · ${h(branch)}` : ''}`,
     place: { page: 'proposal', proposal: proposal.id },
+    foot: pending ? decisionFoot(D, proposal.id) : null,
     content,
   });
   return page({ title: `${D.proposal} ${proposal.id}`, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, lang });
@@ -810,11 +875,11 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
     ...proposal.diff.added.map((e) => [e.path.join('.'), undefined, e.after]),
     ...proposal.diff.removed.map((e) => [e.path.join('.'), e.before, undefined]),
   ];
-  const diff = `<table class="index"><thead><tr><th>${D.where}</th><th>${D.asis}</th><th>${D.tobe}</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
+  const diff = `<table class="index diff-table"><thead><tr><th>${D.where}</th><th>${D.asis}</th><th>${D.tobe}</th></tr></thead><tbody>${rows.map(([w, a, b]) => `<tr><td>${h(w)}</td><td>${cell(a)}</td><td>${cell(b)}</td></tr>`).join('')}</tbody></table>`;
   const lintLine = `lint ${proposal.lint.before.blocking}→${proposal.lint.after.blocking} ${D.blocking}, ${proposal.lint.before.warning}→${proposal.lint.after.warning} ${D.warning}`;
   const verdict =
     api && proposal.status === 'pending'
-      ? `<p><button class="btn btn-primary" id="approve" data-id="${h(proposal.id)}">${D.apply}</button> <button class="btn btn-danger" id="reject" data-id="${h(proposal.id)}">${D.reject}</button> <span class="hint" id="verdict"></span></p>`
+      ? ''
       : `<p class="hint">${D.toAccept}: <code>doan apply &lt;project&gt; ${h(proposal.id)} --by &lt;you&gt;</code> · ${D.toDecline}: <code>doan reject &lt;project&gt; ${h(proposal.id)} --reason "…"</code></p>`;
 
   const body = shellOf(project, D, {
@@ -822,10 +887,10 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
     meta: `${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}`,
     place: { ...placeOf(project, proposal.screen), proposal: proposal.id },
     tools: `<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
-    content: `<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>
+    foot: api && proposal.status === 'pending' ? decisionFoot(D, proposal.id) : null,
+    content: `<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>${api && proposal.status === 'pending' ? '' : verdict}
 <div class="section-title">${D.decided}</div>${decisions}
-<div class="section-title">${D.whatChanges}</div>${diff}
-${verdict}
+<div class="section-title">${D.whatChanges}</div>${changeList(describeChanges(before.doc, after.doc, lang), lang)}<details class="raw-diff"><summary>${D.showCode}</summary>${diff}</details>
 <div class="section-title">${D.asisTobe}</div>
 <div class="tabs-row">${tabs}</div>
 <div class="states">${panels}</div>`,

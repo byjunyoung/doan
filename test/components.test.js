@@ -269,6 +269,19 @@ test('the library page draws every contract from its sample, one picture per var
   const dir = await dirWith({ 'conventions.yaml': 'meta: { language: ko }\n', 'sections.yaml': '- A\n', 'components/menu-card.yaml': MENU_CARD + 'sample: { name: 아메리카노, price: "4,500원" }\n', 'screens/kiosk.yaml': KIOSK });
   const kiosk = await loadProject(dir);
   const lib = renderLibrary(kiosk);
-  assert.match(lib, /복합 — 자기 elements로 그림/);
+  assert.doesNotMatch(lib, /복합 — 자기 elements로 그림/, 'no machine words on the card');
+  assert.match(lib, /<details class="lib-more"><summary>속성·스타일 <span class="hint">· components\/menu-card\.yaml[^\n]*?<code>name<\/code>[^\n]*?<\/summary>/, 'a compound with no anatomy lists its part ids in the fold');
   assert.match(lib, /data-id="sample-menu-card\/name"[\s\S]*아메리카노/);
+});
+
+test('a component card reads as a design system page: name and code tag, what it is for, the picture, its anatomy numbered, when to use it and when not', async () => {
+  const { renderLibrary } = await import('../src/render/index.js');
+  const card = MENU_CARD.replace(/^description:.*$/m, 'description: lets people pick a drink from the menu board') + 'anatomy: { image: Photo, name: Name, price: Price }\nusage: { when: a menu board of drinks, not: a list of orders — use order-row }\nsample: { name: Latte, price: "5,000" }\n';
+  const dir = await dirWith({ 'conventions.yaml': 'meta: { language: en }\n', 'sections.yaml': '- A\n', 'components/menu-card.yaml': card, 'screens/kiosk.yaml': KIOSK });
+  const lib = renderLibrary(await loadProject(dir));
+  assert.match(lib, /<div class="lib-head"><h3>menu-card<\/h3>/);
+  assert.match(lib, /<p class="lib-desc">lets people pick a drink from the menu board<\/p>/);
+  assert.match(lib, /<span class="lib-k">Anatomy<\/span><span class="lib-part"><i>1<\/i>Photo<\/span><span class="lib-part"><i>2<\/i>Name<\/span>/);
+  assert.match(lib, /<span class="lib-k">When to use<\/span>a menu board of drinks/);
+  assert.match(lib, /<span class="lib-k">When not to use<\/span>a list of orders — use order-row/);
 });
