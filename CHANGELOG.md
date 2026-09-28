@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.17.0 — 2026-09-28
+
+The layer between the parts and the screens: how the parts are arranged.
+
+- **Patterns** — `patterns/<name>.yaml` says how the parts are arranged on this product's screens: what it binds (`applies_to` — types, platforms, screens, except), a **skeleton** of the screen's top-level elements in order (`many`, `optional`), rules in words (`notes`) and the component it became (`graduated_to`). DESIGN.md §4.8.
+- **L29** warns where a screen breaks the skeleton of a pattern that binds it — one finding per screen and pattern, the first break; a pattern file that is not one blocks.
+- **The patterns page** — Design system › Patterns, between foundations and components: each pattern's skeleton drawn as the stack of parts a screen is made of, its rules, the screens that follow it and the ones that break it and why.
+- **Agents look up patterns first** — `list_patterns` (and `doan patterns`); the draw prompt's new step 1½ follows a pattern that binds the screen, writes down an unwritten one from two precedents, or proposes a new one on its own before drawing. `propose_files` takes `patterns/*.yaml`, and a proposal that changes a pattern lists the screens it would break.
+
 ## 0.16.1 — 2026-09-28
 
 - **A flow's `via` picks the part of a component** — `{ from: bar, via: primary }` makes only the bar's primary button the prototype hotspot and the canvas arrow's origin, so two buttons in one bar are two hotspots. A `via` with no such part keeps the whole element, as before.

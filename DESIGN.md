@@ -2,7 +2,7 @@
 
 Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
-What runs: `lint` (schema + L01–L24), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L29), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -271,6 +271,40 @@ A screen that must work at several widths keeps one file. Two things make it res
 
 A contract is the one truth about a kind (0.10.1, after the owner's review found three): every element is drawn with its contract applied first — a default for each prop it left out, an enum value the contract does not list replaced by the declared default — whether the bundled set or a library adapter draws it, and the contract's token bindings reach an adapter-drawn root as CSS (`.el-<kind>[data-drawn] > *` reads the same `--k-<kind>-<slot>` variables). The bundled drawings keep fallbacks of their own only for a project with no contract at all.
 
+### 4.8 Patterns: how the parts are arranged
+
+Decided 2026-09-28, after the kiosk's five screens each invented their own bottom bar — a summary and a small button on two, two full-width buttons on two, nothing on the payment screen — and the owner asked whether doan needed what `fig:draw` has: a pattern page. It did. The design system had the parts (tokens, contracts) and the screens had the result; the rule in between, *how the parts are arranged here*, lived nowhere, so every screen made it up. Inconsistency is rarely carelessness: it is what happens when there was nothing to refer to.
+
+| Layer | What lives there | The question it answers |
+|---|---|---|
+| Foundations (`tokens/`) | colours, type, surfaces | what does the product look like |
+| Components (`components/`) | the parts | what does a button look like |
+| **Patterns (`patterns/`)** | **how the parts are arranged** | **what closes every screen; where back goes** |
+| Screens (`screens/`) | the result | what is on this screen |
+
+```yaml
+# patterns/screen-frame.yaml
+pattern: screen-frame
+description: every screen is three parts — header / body / bar
+applies_to: { except: [kiosk-option] }        # types · platforms · screens · except
+skeleton:                                      # the top-level elements, in order — L29 checks this
+  - { role: header, kind: [page-header, group] }
+  - { role: body, kind: any, many: true }      # many: one or more; optional: may be absent
+  - { role: bar, kind: action-bar }
+notes:                                         # rules in words — read, not checked
+  - back goes in the bar's secondary button, never in the header
+graduated_to: action-bar                       # the compound component the bar became
+```
+
+| Decision | Why |
+|---|---|
+| A skeleton template, not a rule language | the owner chose the smallest thing lint can check — the order and kind of a screen's top-level elements — over conditions like "no back in the header", which would need a language of their own. What lint cannot check is a note, shown on the page and read by the agent |
+| One finding per screen and pattern, the first break | a cascade of findings after one misplaced element says nothing new; fix the first and the next shows |
+| `applies_to` on the pattern, not a `pattern:` key on the screen | the screen that forgets is exactly the one a pattern exists for; binding by type, platform or name catches it without the screen's help |
+| The draw prompt looks up patterns first (step 1½) | as in `fig:draw`: follow one that binds; with two or more precedents and no pattern, write the pattern first, behind its own yes; with nothing, a new pattern binds every later screen and is proposed on its own |
+| A pattern graduates to a component | the kiosk's bar became `action-bar`; the pattern keeps the arrangement (where the bar goes), the contract keeps the part (what it is made of) |
+| A proposal that changes a pattern shows the screens it would break | its lint after lists every L29 finding, not only those in the changed files |
+
 ## 5. Lint catalogue
 
 Blocking stops handoff; warning is reported and counted. Each rule names the `fig` rule it descends from.
@@ -305,6 +339,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L26 breakpoint-known | warning | a screen adapts to a breakpoint `conventions.breakpoints` does not name | — (new) |
 | L27 ready-open | warning | a screen with status ready or done still holds a `$tbd` | — (new) |
 | L28 slot-unknown | warning | a contract binds a token to a slot the picture does not read | — (new) |
+| L29 pattern-skeleton | warning; blocking for a pattern file that is not one | a screen's top-level elements break the skeleton of a pattern that binds it — one finding per screen and pattern, the first break | `fig:draw` pattern page, now checked (§4.8) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -441,6 +476,7 @@ Decided 2026-09-27, when the owner looked at a burger-kiosk reference beside the
 |---|---|---|---|---|---|
 | Foundations | `foundation` prompt | `tokens/` — colour roles, `text.*` text styles (DTCG typography), `surface.*`, scales, fonts | `foundations.html` — board and variables tabs | L18–L20, L28 | `propose_files` |
 | Components | `component` prompt | `components/<kind>.yaml` | components (samples in every variant) | L21, L22, L28 | `propose_files` |
+| Patterns | `draw` prompt, step 1½ | `patterns/<name>.yaml` | patterns (skeleton, rules, who follows) | L29 | `propose_files` |
 | Assets | — | `assets/**` (svg through proposals) | assets | L25 | `propose_files` |
 | Screens | `draw` prompt | `screens/*.yaml` | screen, canvas | all | `propose` |
 

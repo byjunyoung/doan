@@ -8,6 +8,7 @@ import { COMPOSITE } from './slots.js';
 import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 import { SLOTS } from './slots.js';
+import { patternsFor, matchSkeleton } from './patterns.js';
 import { childKindOf } from './render/index.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
@@ -410,6 +411,19 @@ const rules = {
           }
           if (!SLOTS.includes(key)) out.push(fileFinding('L28', 'warning', c.file, path, `"${key}" is not a slot the picture reads (${SLOTS.join(', ')})`));
         }
+    return out;
+  },
+  // L29 — a screen follows the skeleton of every pattern that binds it (src/patterns.js): its
+  // top-level elements in the order the pattern names. One finding per screen and pattern — the
+  // first place it breaks. A pattern file that is not a pattern blocks.
+  L29(ctx) {
+    const out = (ctx.patternSet?.problems ?? []).map((p) => fileFinding('L29', p.severity, p.file, String(p.path ?? '').split('/').filter(Boolean), p.message));
+    for (const s of ctx.screens)
+      for (const pattern of patternsFor(ctx, s)) {
+        if (!Array.isArray(pattern.skeleton)) continue;
+        for (const m of matchSkeleton(pattern.skeleton, s.doc.elements))
+          out.push(finding('L29', 'warning', s, m.index === null ? ['elements'] : ['elements', m.index], `pattern "${pattern.pattern}": ${m.message}`));
+      }
     return out;
   },
   // L27 — a screen marked ready for developers must be clean: no blocking finding, no $tbd

@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { resolve } from 'node:path';
-import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, specScreen, listFlows } from './verbs.js';
+import { lintProject, listMissing, listScreens, getScreen, prepScreen, diffScreen, renderProject, importFigma, mapFigma, listTokens, listComponents, listAssets, listPatterns, specScreen, listFlows } from './verbs.js';
 import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
 import { addComment, listComments, resolveComment } from './comments.js';
 
@@ -93,6 +93,16 @@ server.registerTool(
     inputSchema: {},
   },
   guard(() => listAssets(dir)),
+);
+
+server.registerTool(
+  'list_patterns',
+  {
+    description:
+      'Every pattern under patterns/ — how the parts are arranged on this product\'s screens: what each binds (applies_to), its skeleton (the top-level elements in order, which L29 checks), its rules in words (notes), the component it graduated to, and which screens follow it or break it and where. Read this before arranging a screen: follow a pattern that binds it; never invent an arrangement a pattern already settles.',
+    inputSchema: {},
+  },
+  guard(() => listPatterns(dir)),
 );
 
 server.registerTool(
@@ -190,7 +200,7 @@ server.registerTool(
   'propose_files',
   {
     description:
-      'Propose new texts for the rest of the design — tokens/*.json (the style: colours, text styles, surfaces, scales), components/<kind>.yaml (a contract), assets/**/*.svg, conventions.yaml, sections.yaml — several files in one proposal. ' +
+      'Propose new texts for the rest of the design — tokens/*.json (the style: colours, text styles, surfaces, scales), components/<kind>.yaml (a contract), patterns/<name>.yaml (an arrangement rule, see list_patterns), screens/*.yaml, assets/**/*.svg, conventions.yaml, sections.yaml — several files in one proposal. ' +
       'Always pending: the person sees each file AS-IS beside TO-BE and the foundations board as it is beside as it would be, then applies or rejects. content: null deletes a file. See the "foundation" and "component" prompts for how to get there.',
     inputSchema: {
       files: z.array(z.object({ path: z.string().describe('relative to the project: tokens/light.tokens.json, components/tile.yaml, assets/icons/x.svg'), content: z.string().nullable().describe('the complete new text; null deletes') })).min(1),
@@ -362,6 +372,12 @@ server.registerPrompt(
           text: `You are about to draw or change the screen "${screen}"${request ? ` because the person asked: "${request}"` : ''}. Work in this order and do not skip a step.
 
 1. Anchor. Call list_screens, then get_screen for "${screen}" if it exists and for its nearest relative if it does not (same section, same type). If the product's look is not defined yet (foundations.html shows only the bundled defaults), say so and suggest the foundation prompt first. Call list_components — the kinds you may use and the props, slots and enum options each declares; nothing else goes on an element; maps_to.code is what a kind is in the team's code, which the handoff spec will quote — and list_tokens — the semantic tokens a layout may name; never a primitive — and list_assets — the files under assets/ a screen may name by path (src on an image, icon on any kind); never invent a path. Read conventions: the required states for its type, the layout vocabulary, and breakpoints — a screen that must work at several widths gets a breakpoints block (patches per name, applied last) and layout that adapts on its own (columns: auto with min, wrap, scroll: horizontal). New work inherits the shell every screen in the section shares.
+
+1½. Pattern first. Call list_patterns. Inconsistency is rarely carelessness — it is what happens when there was nothing to refer to. For each part being arranged (the frame of the screen, a list row, where back and the main action sit, an empty panel), one of three:
+   a. A pattern binds this screen → follow its skeleton and its notes; say which you follow.
+   b. No pattern, but two or more screens already do it the same way → that is an unwritten pattern: propose it as patterns/<name>.yaml with propose_files, say which screens it will bind, and take its own yes before drawing from it.
+   c. Nothing anywhere → a new pattern binds every screen after this one, so it is not a detail of this screen: propose it on its own, say what it binds, and wait.
+   The screen proposal comes after the pattern is settled, never in the same step.
 
 2. List what has to be decided, numbered, before asking anything — so the person sees the size of it. Typical items: which elements, which columns or fields, which states beyond the required ones, where each action leads, what the empty and error copy says, what stays out of scope.
 

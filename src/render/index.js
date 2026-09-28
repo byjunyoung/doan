@@ -13,6 +13,7 @@ import { enumAttrs } from '../components.js';
 import { expandComponents } from '../expand.js';
 import { flowGraph } from '../flowmap.js';
 import { canvasPages } from '../canvas.js';
+import { appliesTo, matchSkeleton } from '../patterns.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
 import { SLOT_CSS, TYPE_SLOTS, expandBinding } from '../slots.js';
 
@@ -273,7 +274,7 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
     ? `<div class="tree-sec">${D.waitingForPerson} <span class="pill cm">${pending.length}</span></div>` +
       pending.map((p) => `<a class="side-link sub${place.proposal === p.id ? ' current' : ''}" href="proposal-${h(p.id)}.html"><span class="name">${h(p.screen ?? p.label ?? p.id)}</span><span class="hint">${h(p.id)}</span></a>`).join('')
     : '';
-  const base = `<div class="base">${waiting}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
+  const base = `<div class="base">${waiting}<div class="tree-sec">${D.designSystem}</div>${link('foundations', 'foundations.html', D.foundations, `<span class="hint">${nTokens}</span>`)}${place.page === 'foundations' || place.page === 'tokens' ? subs(place.sub) : ''}${link('patterns', 'patterns.html', D.patterns, `<span class="hint">${Object.keys(project.patterns ?? {}).length}</span>`)}${place.page === 'patterns' ? subs(place.sub) : ''}${link('components', 'components.html', D.library, `<span class="hint">${nComponents}</span>`)}${place.page === 'components' ? subs(place.sub) : ''}${link('assets', 'assets.html', D.assets, `<span class="hint">${nAssets}</span>`)}</div>`;
   return `<nav class="side"><div class="brand">${h(basenameOf(project.dir ?? 'design'))} <span class="hint">${project.screens.length} ${D.screens}</span></div>${base}<input class="tree-search" id="tree-search" type="search" placeholder="${h(D.searchTree)}"><div class="tree">${tree}</div></nav>`;
 }
 
@@ -979,6 +980,54 @@ const VARS_SCRIPT = `
 // natural dimensions (the browser reads them) and who names it; then the references that
 // name no file and the files nothing names. A card selects into the inspect panel;
 // `#a:<path>` deep-links to it.
+// The patterns page: how the parts are arranged on this product's screens (src/patterns.js). One
+// card per pattern — what it binds, its skeleton drawn as the stack of parts a screen is made of,
+// the rules in words, and which screens follow it and which break it and where (L29).
+export function renderPatterns(project, { branch = null, api = false } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const list = Object.values(project.patterns ?? {}).sort((a, b) => a.pattern.localeCompare(b.pattern));
+  const names = (x) => [].concat(x ?? []);
+  const scopeOf = (a = {}) => {
+    const parts = [];
+    if (a.types) parts.push(`${D.typeLabel} ${names(a.types).map((t) => `<code>${h(t)}</code>`).join(' ')}`);
+    if (a.platforms) parts.push(`${D.platformLabel} ${names(a.platforms).map((t) => `<code>${h(t)}</code>`).join(' ')}`);
+    if (a.screens) parts.push(names(a.screens).map((t) => screenLinkOf(project, t)).join(' '));
+    if (!parts.length) parts.push(D.allScreens);
+    if (a.except) parts.push(`${D.exceptLabel} ${names(a.except).map((t) => screenLinkOf(project, t)).join(' ')}`);
+    return parts.join(' · ');
+  };
+  const kindCell = (k) => names(k ?? 'any').map((x) => (x === 'any' ? `<span class="hint">${D.anyKind}</span>` : project.components?.[x] ? `<a href="components.html#k-${h(x)}"><code>${h(x)}</code></a>` : `<code>${h(x)}</code>`)).join(' | ');
+  const card = (p) => {
+    const rows = (p.skeleton ?? []).map((slot) => `<div class="pat-slot${slot.many ? ' many' : ''}${slot.optional ? ' optional' : ''}"><b>${h(slot.role)}</b><span>${kindCell(slot.kind)}</span><span class="hint">${[slot.many ? D.manyMark : '', slot.optional ? D.optionalMark : '', slot.note ? h(slot.note) : ''].filter(Boolean).join(' · ')}</span></div>`).join('');
+    const bound = project.screens.filter((s) => appliesTo(p, s, project.conventions));
+    const follow = [], brk = [];
+    for (const s of bound) {
+      const m = Array.isArray(p.skeleton) ? matchSkeleton(p.skeleton, s.doc.elements) : [];
+      (m.length ? brk : follow).push({ s, m: m[0] });
+    }
+    const screens = `${follow.map(({ s }) => `<span class="pill ok">✓ ${screenLinkOf(project, s.doc.screen)}</span>`).join(' ')} ${brk.map(({ s, m }) => `<div class="pat-break"><span class="pill tbd">⚠ ${screenLinkOf(project, s.doc.screen)}</span> <span class="hint">${h(m.message)}</span></div>`).join('')}` || `<span class="hint">${D.noneBound}</span>`;
+    return `<section class="pat-card" id="p-${h(p.pattern)}"><h2>${h(p.pattern)}</h2>${p.description ? `<p>${h(p.description)}</p>` : ''}<div class="hint">${D.appliesLabel} ${scopeOf(p.applies_to)} · <code>patterns/${h(basenameOf(p.file ?? ""))}</code>${p.graduated_to ? ` · ${D.graduatedTo} <a href="components.html#k-${h(p.graduated_to)}">◇ ${h(p.graduated_to)}</a>` : ''}</div>
+<div class="section-title">${D.skeletonLabel}</div><div class="pat-skeleton">${rows}</div>
+${p.notes?.length ? `<div class="section-title">${D.rulesLabel}</div><ul class="list">${p.notes.map((n) => `<li>${h(n)}</li>`).join('')}</ul>` : ''}
+<div class="section-title">${D.screens} <span class="hint">${follow.length} ✓ · ${brk.length} ⚠</span></div><div class="pat-screens">${screens}</div></section>`;
+  };
+  const body = shellOf(project, D, {
+    title: D.patterns,
+    meta: `${list.length} ${D.patternsN}${branch ? ` · ${h(branch)}` : ''}`,
+    place: { page: 'patterns', sub: list.map((p) => ({ href: `#p-${p.pattern}`, label: p.pattern })) },
+    content: list.length ? list.map(card).join('') : `<div class="pat-empty"><p>${D.noPatterns}</p><pre>patterns/screen-frame.yaml
+pattern: screen-frame
+skeleton:
+  - { role: header, kind: page-header }
+  - { role: body, kind: any, many: true }
+  - { role: bar, kind: action-bar }</pre></div>`,
+  });
+  return page({ title: D.patterns, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api, screen: '', comments: [], lang });
+}
+
 export function renderAssets(project, { branch = null, api = false } = {}) {
   const lang = languageOf(project);
   const D = dictionary(lang);

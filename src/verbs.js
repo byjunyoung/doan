@@ -13,7 +13,7 @@ import { mergeState } from './merge.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { renderFilesProposal } from './render/index.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
+import { renderPatterns, renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { specOf, specMarkdown } from './spec.js';
 import { tokensCss, tokensTailwind } from './export.js';
@@ -131,6 +131,8 @@ export async function renderProject(dir, opts = {}) {
   await writeFile(join(out, 'index.html'), await renderIndex(project));
   pages.push(join(out, 'index.html'));
   await writeFile(join(out, 'components.html'), renderLibrary(project, { branch, adapter }));
+  await writeFile(join(out, 'patterns.html'), renderPatterns(project, { branch }));
+  pages.push(join(out, 'patterns.html'));
   await writeFile(join(out, 'foundations.html'), renderFoundations(project, { branch, adapter }));
   pages.push(join(out, 'foundations.html'));
   pages.push(join(out, 'components.html'));
@@ -306,6 +308,29 @@ export async function listAssets(dir) {
     missing: missing.map(rel),
     unused,
   };
+}
+
+// Every pattern (patterns/*.yaml): what it binds, its skeleton, its rules, and which screens follow
+// it and which break it and where — what an agent reads before arranging a screen.
+export async function listPatterns(dir) {
+  const project = await loadProject(dir);
+  const { appliesTo, matchSkeleton } = await import('./patterns.js');
+  const patterns = Object.values(project.patterns ?? {}).map((p) => {
+    const bound = project.screens.filter((s) => appliesTo(p, s, project.conventions));
+    const check = bound.map((s) => ({ screen: s.doc.screen, breaks: Array.isArray(p.skeleton) ? matchSkeleton(p.skeleton, s.doc.elements)[0] ?? null : null }));
+    return {
+      pattern: p.pattern,
+      description: p.description ?? null,
+      file: relative(dir, p.file),
+      applies_to: p.applies_to ?? {},
+      skeleton: p.skeleton ?? [],
+      notes: p.notes ?? [],
+      graduated_to: p.graduated_to ?? null,
+      follow: check.filter((c) => !c.breaks).map((c) => c.screen),
+      break: check.filter((c) => c.breaks).map((c) => ({ screen: c.screen, ...c.breaks })),
+    };
+  });
+  return { count: patterns.length, patterns, problems: (project.patternSet?.problems ?? []).map((p) => ({ ...p, file: relative(dir, p.file) })) };
 }
 
 // --- handoff ------------------------------------------------------------------------------

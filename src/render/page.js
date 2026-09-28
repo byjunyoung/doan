@@ -225,6 +225,14 @@ body.cv-no-arrows .cv-arrows { display: none; }
 .hotspot { cursor: pointer; }
 body.show-hotspots .hotspot { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 body.show-hotspots .hotspot-cond { outline-style: dashed; }
+/* the patterns page: a card per pattern, its skeleton as the stack of parts a screen is made of */
+.pat-card { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-lg); margin: 0 0 var(--space-lg); }
+.pat-card h2 { font-size: 16px; margin: 0 0 var(--space-xs); } .pat-card p { margin: 0 0 var(--space-xs); }
+.pat-skeleton { display: flex; flex-direction: column; max-width: 520px; border: 1.5px solid var(--color-text); border-radius: var(--radius-md); overflow: hidden; }
+.pat-slot { display: grid; grid-template-columns: 90px 1fr auto; gap: var(--space-sm); align-items: center; padding: 10px 14px; border-top: 1px solid var(--color-border); }
+.pat-slot:first-child { border-top: 0; } .pat-slot.many { padding: 22px 14px; background: var(--color-surface); } .pat-slot.optional { border-top-style: dashed; color: var(--color-muted); }
+.pat-screens { display: flex; flex-wrap: wrap; gap: var(--space-xs); align-items: baseline; } .pat-break { flex-basis: 100%; }
+.pat-empty pre { background: var(--color-surface); padding: var(--space-md); border-radius: var(--radius-md); }
 /* the component library page */
 .lib { background: var(--color-bg); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md) var(--space-lg); margin-bottom: var(--space-md); }
 .lib h3 { margin: 0 0 2px; font-size: 15px; } .lib-meta { margin-bottom: var(--space-sm); font-size: 12px; }

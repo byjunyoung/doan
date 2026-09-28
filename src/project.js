@@ -4,6 +4,7 @@ import { parseDocument, LineCounter, isNode } from 'yaml';
 import { loadTokens } from './tokens.js';
 import { loadComponents } from './components.js';
 import { loadAssets } from './assets.js';
+import { loadPatterns } from './patterns.js';
 
 // A screen file, parsed twice over: `doc` is the plain object every verb works on,
 // `lineOf(path)` maps a YAML path back to a 1-based line so findings can point at it.
@@ -42,5 +43,7 @@ export async function loadProject(dir) {
   const componentSet = await loadComponents(dir, conventions);
   // assets/**: the person's icons and pictures, which screens name by path — see src/assets.js
   const assets = await loadAssets(dir);
-  return { dir, conventions, sections, screens, tokens: tokenSet.tokens, tokenSet, components: componentSet.registry, componentSet, assets, screenName: (s) => basename(s.file) };
+  // patterns/*.yaml: how the parts are arranged — see src/patterns.js
+  const patternSet = await loadPatterns(dir);
+  return { dir, conventions, sections, screens, tokens: tokenSet.tokens, tokenSet, components: componentSet.registry, componentSet, patterns: patternSet.registry, patternSet, assets, screenName: (s) => basename(s.file) };
 }

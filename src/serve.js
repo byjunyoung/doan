@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
 import { renderFilesProposal } from './render/index.js';
-import { renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
+import { renderPatterns, renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
 import { canvasPages } from './canvas.js';
 import { assetFile, assetType } from './assets.js';
 import { resolveAdapter } from './render/adapters/index.js';
@@ -68,6 +68,7 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
       if (path === '/assets.html') return html(res, renderAssets(project, { branch: opts.branch, api: true }));
       if (path === '/style.html') { res.writeHead(301, { location: 'foundations.html' }); return res.end(); }
       if (path === '/foundations.html') return html(res, renderFoundations(project, { branch: opts.branch, adapter, api: true }));
+      if (path === '/patterns.html') return html(res, renderPatterns(project, { branch: opts.branch, api: true }));
       if (path === '/components.html') return html(res, renderLibrary(project, { branch: opts.branch, adapter, api: true }));
       if (path === '/proto.html') return html(res, renderProto(project, { branch: opts.branch, adapter, api: true }));
       let m = path.match(/^\/canvas-(.+)\.html$/);

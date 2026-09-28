@@ -157,11 +157,11 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
 // conventions.yaml; lint runs on the project as it would be; nothing is written until a person
 // applies it; undo puts every file back. Always pending — a style change is never "text only".
 // screens too, when one change spans a screen and the rest (a section renamed and the screens moved into it)
-const EDITABLE = /^(screens\/[^/]+\.yaml|tokens\.json|tokens\/[^/].*\.json|components\/[^/]+\.yaml|assets\/.+\.svg|conventions\.yaml|sections\.yaml)$/;
+const EDITABLE = /^(screens\/[^/]+\.yaml|tokens\.json|tokens\/[^/].*\.json|components\/[^/]+\.yaml|patterns\/[^/]+\.yaml|assets\/.+\.svg|conventions\.yaml|sections\.yaml)$/;
 
 function cleanPath(p) {
   const n = normalize(String(p ?? '')).split('\\').join('/');
-  if (n.startsWith('..') || n.startsWith('/') || !EDITABLE.test(n)) throw new Error(`"${p}" is not a file a proposal may change (screens/*.yaml, tokens.json, tokens/*.json, components/*.yaml, assets/**/*.svg, conventions.yaml, sections.yaml)`);
+  if (n.startsWith('..') || n.startsWith('/') || !EDITABLE.test(n)) throw new Error(`"${p}" is not a file a proposal may change (screens/*.yaml, tokens.json, tokens/*.json, components/*.yaml, patterns/*.yaml, assets/**/*.svg, conventions.yaml, sections.yaml)`);
   return n;
 }
 
@@ -219,7 +219,7 @@ export async function proposeFiles(dir, { files, summary = '', decisions = [], c
       tier: 'structure',
       status: 'pending',
       auto: false,
-      lint: { before: lintBefore, after: { ...summarize(afterFindings), findings: afterFindings.filter((f) => f.severity === 'blocking' || list.some((x) => f.file === x.path)) } },
+      lint: { before: lintBefore, after: { ...summarize(afterFindings), findings: afterFindings.filter((f) => f.severity === 'blocking' || list.some((x) => f.file === x.path) || (f.id === 'L29' && list.some((x) => x.path.startsWith('patterns/')))) } },
     };
     return store(dir, proposal);
   } finally {

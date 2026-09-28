@@ -24,7 +24,7 @@ You don't need to write code. Ask the agent you already use (Claude Code, Cursor
 |---|---|---|
 | ① start | `init`, once | makes the rules, tokens, components and screens folders |
 | ② foundations | show a reference, answer questions | proposes colours, text styles and surfaces into `tokens/` and the contracts |
-| ③ draw | "an order list; a row opens the detail" | asks what is open, one question at a time, and proposes the screen file |
+| ③ draw | "an order list; a row opens the detail" | looks up the arrangement rules (`patterns/`) first, asks what is open one question at a time, and proposes the screen file |
 | ④ look | check the canvas and the prototype | a frame per state, flow arrows, a clickable prototype |
 | ⑤ fix | comment on an element or a screen, then "apply the comments" | a proposal with AS-IS / TO-BE, which you apply |
 | ⑥ hand off | copy the developer spec | acceptance criteria, elements, code mapping and tokens on one page |

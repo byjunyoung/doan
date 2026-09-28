@@ -29,3 +29,6 @@ export const validateConventions = (doc) => run(conventionsValidator, doc);
 
 const componentValidator = ajv.compile(load('component.schema.json'));
 export const validateComponent = (doc) => run(componentValidator, doc);
+
+const patternValidator = ajv.compile(load('pattern.schema.json'));
+export const validatePattern = (doc) => run(patternValidator, doc);
