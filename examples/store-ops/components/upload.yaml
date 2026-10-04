@@ -11,6 +11,8 @@ props:
   multiple:
     type: boolean
     default: false
+    drawn: false
+    drawn_reason: how many files the picker takes; nothing shows it until it is used (the spec page lists it)
 tokens:
   bg: color.bg
   text: color.text

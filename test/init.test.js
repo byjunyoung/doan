@@ -105,3 +105,47 @@ test('init writes DTCG token files with a light/dark resolver; resolved for ligh
   assert.match(html, /:root\[data-theme="dark"\] :is\(\.frame, \.cv-frame, \.proto-view, \.lib-pic, \.lib-variant, \.board\) \{[^}]*--color-bg: #1f2328;/);
   assert.match(html, /<select data-mode="theme"><option value="light" selected>light<\/option><option value="dark">dark<\/option><\/select>/);
 });
+
+// The first five minutes (trust round, A): what init prints and writes is what a person can run.
+test('init writes the published command, a .gitignore for the heartbeat, a starter pattern the starter screen follows', async () => {
+  const dir = join(fresh(), 'design');
+  await initProject(dir);
+  const readme = readFileSync(join(dir, 'README.md'), 'utf8');
+  assert.match(readme, /npx @junyoung735\/doan serve \./);
+  assert.doesNotMatch(readme, /npx doan /, 'a bare `doan` is not on npm');
+  assert.deepEqual(readFileSync(join(dir, '.gitignore'), 'utf8').split('\n').filter(Boolean), ['.requests/agent.json']);
+  assert.ok(existsSync(join(dir, 'patterns', 'list-frame.yaml')));
+  const project = await loadProject(dir);
+  const { lint } = await import('../src/lint.js');
+  assert.deepEqual(lint(project, { branch: 'feature/x' }).filter((f) => f.severity === 'blocking' || f.id === 'L29'), []);
+});
+
+test('init adds to a .gitignore that is there, once', async () => {
+  const dir = fresh();
+  writeFileSync(join(dir, '.gitignore'), 'node_modules/');
+  await initProject(dir);
+  assert.equal(readFileSync(join(dir, '.gitignore'), 'utf8'), 'node_modules/\n.requests/agent.json\n');
+});
+
+test('init --language ko writes the setting and a Korean starter; en stays the default', async () => {
+  const ko = fresh();
+  await initProject(ko, { language: 'ko' });
+  assert.equal(parse(readFileSync(join(ko, 'conventions.yaml'), 'utf8')).meta.language, 'ko');
+  assert.match(readFileSync(join(ko, 'screens', 'sample-list.yaml'), 'utf8'), /title: 샘플 목록/);
+  assert.match(readFileSync(join(ko, 'README.md'), 'utf8'), /화면을 파일로/);
+  const en = fresh();
+  await initProject(en);
+  assert.equal(parse(readFileSync(join(en, 'conventions.yaml'), 'utf8')).meta.language, 'en');
+  await assert.rejects(initProject(fresh(), { language: 'fr' }), /unknown language "fr"/);
+});
+
+test('a self-built project in Korean draws its sample values in Korean: the team\'s copy of the set takes the language too', async () => {
+  const dir = fresh();
+  await initProject(dir, { language: 'ko' });
+  const project = await loadProject(dir);
+  const adapter = await resolveAdapter(project);
+  const html = renderScreen(project, project.screens.find((s) => s.doc.screen === 'sample-list'), { adapter });
+  assert.match(html, /항목 1/);
+  assert.match(html, /문제가 생겼습니다/);
+  assert.doesNotMatch(html, /Something went wrong/);
+});

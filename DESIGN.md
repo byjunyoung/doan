@@ -1,8 +1,8 @@
 # Doan — a design tool where the agent holds the pen
 
-Status: design v0.2.1, code 0.1.0 · 2026-09-24 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
+Status: design v0.2.1, code 0.21.0 · 2026-10-04 · license MIT · home github.com/byjunyoung/doan · named doan (도안) on 2026-09-24.
 
-What runs: `lint` (schema + L01–L29), `prep`, `diff` (files or git refs), `render` (bundled component set, static HTML with inspector), as a CLI and as an MCP server on stdio (`mcp`; plus `list_screens`, `list_tokens`, `get_screen`, `list_missing`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), adapters beyond antd. `prep`, `diff`, `render`, `apply`, `import` and the MCP surface are not built yet.
+What runs: `lint` (schema + L01–L30), `prep`, `diff` (files or git refs), `render` and the live viewer `serve` (bundled component set, antd or MUI), `import figma` / `map figma`, as a CLI and as an MCP server on stdio (`mcp`); the edit loop as `propose` → `apply` / `reject` / `undo` with text-only auto-apply. Not yet: hosting (the local viewer is the seed), and the verbs §9 marks *planned*.
 
 v0.1 (same day) framed this as a management layer that leaves drawing to other canvases. That was the author's reading, not the owner's. The intent is a tool a product team opens **instead of Figma** for its screens. v0.2 keeps v0.1's engine — the model, the checks, the lifecycle — and puts the product on top of it. Every decision carries a one-line *why*; one team's habit appears only as an example and ships as `null`.
 
@@ -12,7 +12,7 @@ A design tool for product screens in which **the agent draws and humans review, 
 
 Three products already let an agent draw. What they are, and where this differs:
 
-- **Claude Design** (Anthropic Labs, 2026-04): prompt → prototype, edited by inline comments, direct text edit and sliders — no drag canvas, the same bet as here. It is single-seat, has no versioning, no per-screen states, no comment threads between people, and hands off as a bundle to Claude Code rather than as components a developer inspects ([review, 2026](https://agence-scroll.com/en/blog/claude-design-anthropic-2026-guide)). It is a generator for one person; this is a file of record for a team.
+- **Claude Design** (Anthropic Labs, 2026-04): prompt → prototype, edited by inline comments, direct text edit and sliders. It launched without a drag canvas — the same bet as here — and has had drag, resize and align since 2026-06-17 ([Anthropic, 2026-06-17](https://claude.com/blog/claude-design-stays-on-brand-for-daily-work)); since 2026-09-16 it lives inside Claude, in an ordinary conversation ([Magic Patterns, 2026-09-25](https://www.magicpatterns.com/blog/claude-design-now-lives-inside-claude)). What still differs is what this holds and a generator does not: states as required objects per screen, lint for what is missing, a git lifecycle, and any agent as the pen. It is a generator; this is a file of record for a team.
 - **Paper** (alpha): HTML/CSS *is* the canvas, with bidirectional MCP — but a hand-driven canvas with an agent attached. This has no hand canvas at all.
 - **pen.dev / OpenPencil**: a geometric `.pen`/`.op` document in the repo, agent-editable, hand-editable, IDE-native. A better Figma for developers; still a canvas.
 
@@ -22,18 +22,20 @@ What none of them hold, and this does: states per screen as required objects, a 
 
 At drawing a screen from a prompt — yes, and it will stay ahead; a generator built by the model's maker is not a fight to pick. So this project does not compete on generation at all. The agent that draws sits outside the tool (§7); Claude Code, Codex or Claude Design's own output can be the pen. What this holds is the layer a generator does not: the screen as a team's file of record, the check for what is missing, the lifecycle, the handoff. An editor, however good, does not make git unnecessary.
 
-| | Claude Design (2026-09) | here |
+| | Claude Design (2026-10) | here |
 |---|---|---|
-| People | single-seat, no realtime | comments and PRs |
-| Versions | none | git |
-| States per screen | none | required per type, linted |
-| Handoff | a bundle to Claude Code; code "not production-ready" | the team's production components, props inspectable |
+| Canvas | drag, resize, align (since 2026-06-17), inside Claude (since 2026-09-16) | none on purpose: the agent places, a person proposes a layout value from the file's vocabulary (§6) |
+| States per screen | not an object of the format | required per type, linted |
+| What is missing | not checked | lint, with file and line |
+| Versions and lifecycle | not git | git: branch = working, PR = queue, main = canonical |
 | Where the result lives | a project on Anthropic's servers | YAML in the team's repo |
 | Which agent | Claude | any, over MCP |
 
+(Rows corrected 2026-10-04: the 2026-09 table said "no drag canvas"; it has one.)
+
 The risk is plain: the left column can be filled by Anthropic at will, versions and collaboration first. The bet is that "the team's file is in git and the agent is swappable" is a direction a model vendor has little reason to take. Open format, git-native, agent-neutral is the ground this stands on.
 
-Rather than compete, the tool takes Claude Design as input: an `import html` adapter (§9) that reads the HTML it exports and produces screen files — `kind` by reverse `maps_to` on the component markup, layout from the flexbox/grid structure, the rest as `$tbd`. Claude Design becomes one front end among several; the question changes from "which draws better" to "where does the drawing live".
+Rather than compete, the tool will take Claude Design as input: an `import html` adapter (§9, planned) that reads the HTML it exports and produces screen files — `kind` by reverse `maps_to` on the component markup, layout from the flexbox/grid structure, the rest as `$tbd`. Claude Design becomes one front end among several; the question changes from "which draws better" to "where does the drawing live".
 
 ## 2. What Figma does for a product team, and what replaces it
 
@@ -325,7 +327,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L10 kind-known | warning | every `kind` has a `components/<kind>.yaml` | component residue (loosely) |
 | L11 canonical-clean | blocking | on the canonical branch: no `$tbd`, no blocking findings | canonical strictness |
 | L12 duplicate-id | blocking | ids unique across the project | — |
-| L13 layout-vocabulary | blocking | `layout` uses only declared containers, size classes and token names; no bare units | — (new) |
+| L13 layout-vocabulary | blocking | `layout` uses only declared containers, size classes and token names; no bare units. Since 0.21 each grid track of `columns` too: a size class, a `size.`/`space.` token, `Nfr`, `auto`, `minmax(a, b)` over those — `320px` and a word css does not know are blocking, the track named | — (new) |
 | L14 layout-orphan | warning | a `layout` key names an element that does not exist in that state | — (new) |
 | L15 variant-shape | warning | a variant axis has ≥ 2 options; no option shares a name with a state | — (new) |
 | L16 flow-vocabulary | warning | `gesture` and `nav` on a flow are words `conventions.flows` lists | arrow line styles |
@@ -342,6 +344,7 @@ Blocking stops handoff; warning is reported and counted. Each rule names the `fi
 | L27 ready-open | warning | a screen with status ready or done still holds a `$tbd` | — (new) |
 | L28 slot-unknown | warning | a contract binds a token to a slot the picture does not read | — (new) |
 | L29 pattern-skeleton | warning; blocking for a pattern file that is not one | a screen's top-level elements break the skeleton of a pattern that binds it — one finding per screen and pattern, the first break | `fig:draw` pattern page, now checked (§4.8) |
+| L30 not-drawn | warning | a prop written in the file and declared by the contract that no drawing path reads — lint was green while the picture ignored the value. Lint runs the bundled drawing functions; a kind a library adapter draws is the contract-coverage test's (`test/coverage.test.js`), which drives every declared prop through the bundled set, antd and MUI. A prop meant for the documentation only says `drawn: false` with a reason. The viewer marks the same prop with a dot | — (new, 0.21) |
 
 Not carried over: section bounds and overlap, arrow elbow geometry, component default residue by property. All are canvas geometry; none exists here.
 
@@ -522,6 +525,7 @@ Decided 2026-09-28: the owner did not want to go to the terminal to type "apply 
 |---|---|
 | A request queue, not the viewer starting an agent | the owner chose the live session: it keeps the conversation's context and the person's rules; a request left when no session is watching waits for the next one. Starting `claude -p` from the server would tie doan to one agent and spend tokens out of sight |
 | The agent never applies | the button asks for proposals; the viewer's Apply stays the person's yes |
+| "The agent is on it" only when one is (0.21) | the first-time-user pass met the waiting text with no agent anywhere, and it never went away. The MCP server, while its process lives, rewrites `.requests/agent.json` (`{pid, started, seen}`) every 20 s; the viewer counts an agent as connected when `seen` is under a minute old, and with none says "No agent connected", how to connect one, and that the request waits. A stopped agent goes stale on its own; nothing has to clean up. The file sits beside the queue it serves, not in a new folder, and `init`'s `.gitignore` keeps it out of git |
 
 ## 8. Lifecycle
 
@@ -547,14 +551,15 @@ The CLI is for CI. MCP is for the agent. The viewer is for people. Same verbs, s
 | `diff <a> <b>` · `diff <file> --from <ref>` | AS-IS/TO-BE table; elements by id (a reorder is one row), scalar lists as one value, object lists by index; later rendered side by side in the viewer | no |
 | `render` | the viewer's pages (static build, or served) | `out/` |
 | `propose <screen> <after>` · `apply <id> --by` · `reject <id>` · `undo <id>` · `proposals` | the edit loop (§7): diff + lint delta + tier; text-only auto-applies; structure waits for a person | that file, and `.proposals/` |
-| `rename <old> <new>` | file and every reference | project |
-| `import html <dir>` | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
+| `rename <old> <new>` — *planned* | file and every reference | project |
+| `import html <dir>` — *planned* | Claude Design / Open Design / any HTML export → screen files: `kind` by reverse `maps_to` on component markup, `layout` from flex/grid structure, unresolved → `$tbd` | new files |
 | `map figma <key> --page [--write]` | the page's component masters (sets) paired with kinds by name → `maps_to.figma` in `components/<kind>.yaml` (the conventions row for a project from before 0.4); unplaced masters listed | component files |
 | `tokens` | every token with its value, per-theme values, file and tier | no |
+| `comments` · `requests` · `requests close <id>` | what people left in the viewer, what they asked from it, and closing a request once an agent has answered it (§7.5) | `.requests/` |
 | `components` | every contract — props, slots, bindings, compound or not | no |
 | `migrate kinds` | the rows of `conventions.kinds` → `components/<kind>.yaml`, the block dropped | components/, conventions.yaml |
 | `import figma <key> --page` | on-ramp for a team already drawing, over the REST API: `{screen}-{state}` frames → files, other states as patches by diffing element trees; `kind` by `maps_to.figma` on the master name, then by node-name hints; `layout` from auto-layout in token names; flows from prototype links; scaffold frames (`[label]`, `-->`) skipped; unresolved → `$tbd` owned by `import`; required states nobody drew → placeholders; no convention at all → one screen per top-level frame, flagged | new files, sections.yaml |
-| `export <adapter>` | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
+| `export <adapter>` — *planned* | Figma / `.pen` / `.op` for teams that still need a canvas elsewhere | adapter target |
 
 MCP adds `list_screens()`, `get_screen(screen, state, variants)` (merged view), `list_missing()` (L03/L08 only), `list_tokens()`, `list_components()` and `list_flows()`, because agents ask those most. Shipped 2026-09-23: `src/mcp.js` on stdio via the official SDK; every tool returns the verb's JSON as `structuredContent` and as text, errors as `isError` with a readable message; one implementation per verb in `src/verbs.js` serves CLI and MCP alike.
 
@@ -611,7 +616,6 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Item | Owner | Note |
 |---|---|---|
 | Proposal records | decided | a proposal names its file relative to the project (0.12.1). With an absolute path, applying a proposal inside a copy of the project wrote into the original — found while previewing the kiosk screens in a scratch copy |
-| Slots | design | 0.12 added type size and weight, control height and shadow, because a kiosk is big type and tall targets. Still no line-height, letter-spacing, width, opacity or transition: each is a line in `src/slots.js` plus a read in the bundled css, added when a project needs it, not before |
 | Handoff: measurements and generation | design | the spec (§6.10, 0.11.0) carries no measured sizes — E2 inspect measurements come next; code generation stays out on purpose, an agent with the spec writes it. An adapter still maps enum options to its own props in code, not from `maps_to.code` |
 | Inline SVG icons | decided | 0.14: an svg icon is drawn as a css mask in the text colour (no inlining, no script to strip); a multi-colour svg under icons/ loses its colours — put it under photos/ |
 | Inline SVG icons (old) | design | an SVG drawn through `<img>` cannot take the text colour (§4.6); inline it — strip `<script>`, `fill: currentColor` — when a team needs themed icons |
@@ -624,7 +628,6 @@ After the fixes: 6 screens, 0 blocking, 2 warnings — both `$tbd`, both real (a
 | Contracts from Figma component sets | later | `map figma` pairs masters; a set's variant properties could fill a contract's enum options and its bound variables the bindings |
 | Canvas arrow avoidance | design | the corridor keeps a back-flow off the frames above its target; a forward flow to a farther column can still cross a frame between. `fig:arrows`' detour rule is the model |
 | Canvas layout tokens | design | column gap 160, frame gap 96, section padding 96, section gap 240 are fixed in css; fig measures them per team (`layout.column_grid` …). A `canvas:` block in conventions when a team asks |
-| Flow map label placement | design | ELK places a label anywhere along its edge; a long self-loop label can sit far from the node. `elk.edgeLabels.placement` and inline labels are the knobs to try |
 | Platform / breakpoint variants | decided | a `breakpoints:` block of patches, one file per screen (§4.7, 2026-09-25); one file per platform rejected — the copies drift |
 | Copy as literal vs key | design | `text: "…"` today; `text: { key: orders.empty }` for i18n teams |
 | Comment storage | decided | a file per screen under `.comments/` in the repo (2026-09-24) — travels with the branch, one store for the local viewer, the MCP server and a hosted viewer; anchored by element id since 0.10.1 — a YAML path moves when something is inserted above it, an id does not |

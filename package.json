@@ -1,6 +1,6 @@
 {
   "name": "@junyoung735/doan",
-  "version": "0.20.3",
+  "version": "0.21.0",
   "description": "도안 — screens as files. The agent draws; you say what to change. Lint, states, proposals, a live viewer, MCP.",
   "type": "module",
   "license": "MIT",
@@ -48,7 +48,7 @@
   ],
   "scripts": {
     "test": "node --test test/*.test.js",
-    "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo && node src/cli.js lint examples/store-ops --branch feature/demo && node src/cli.js render examples/store-ops --out /tmp/doan-check --branch feature/demo",
+    "check": "npm test && node src/cli.js lint examples/orders --branch feature/demo --today 2026-09-28 && node src/cli.js lint examples/store-ops --branch feature/demo --today 2026-09-28 && node src/cli.js render examples/store-ops --out /tmp/doan-check --branch feature/demo",
     "demo": "node src/cli.js serve examples/store-ops --components antd --branch feature/demo",
     "start": "node src/cli.js serve design"
   },
@@ -66,6 +66,7 @@
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^9.4.0",
     "antd": "^6.6.5",
+    "dayjs": "^1.11.23",
     "elkjs": "^0.12.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"

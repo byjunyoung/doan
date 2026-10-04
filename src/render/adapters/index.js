@@ -31,6 +31,11 @@ export async function resolveAdapter(project, override = null) {
     const { resolve } = await import('node:path');
     const mod = await import(pathToFileURL(resolve(project.dir, render.components)).href);
     if (!mod.kinds) throw new Error(`${render.components} must export \`kinds\``);
+    // the team's copy of the set speaks the project's language too: it carries its own dictionary
+    if (typeof mod.setLanguage === 'function') {
+      const { languageOf } = await import('../i18n.js');
+      mod.setLanguage(languageOf(project));
+    }
     return { name: 'own', kinds: mod.kinds, styles: () => (mod.css ? `<style>${mod.css}</style>` : '') };
   }
   if (render.base && render.base !== 'none') return createAdapter(render.base, project);

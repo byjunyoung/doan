@@ -1,0 +1,17 @@
+schema: doan/0.2
+id: scr_trust02
+screen: tracks-bad
+section: "01. Store - Trust cases"
+type: page
+elements:
+  - id: line
+    kind: group
+    children:
+      - { id: name, kind: caption, text: Item }
+  - id: other
+    kind: group
+    children:
+      - { id: unit, kind: caption, text: Unit }
+layout:
+  line: { kind: grid, columns: "320px 1fr", gap: space.sm }
+  other: { kind: grid, columns: [ wide, auto ] }

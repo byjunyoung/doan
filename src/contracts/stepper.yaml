@@ -9,8 +9,12 @@ props:
     default: 1
   min:
     type: number
+    drawn: false
+    drawn_reason: a rule on what can be entered; a still picture does not show it (the spec page lists it)
   max:
     type: number
+    drawn: false
+    drawn_reason: a rule on what can be entered; a still picture does not show it (the spec page lists it)
 tokens:
   text: color.primary
   border: color.border

@@ -62,22 +62,70 @@ notes:
   - This screen was written by init. The $tbd above shows how an undecided value looks in lint and in the viewer.
 `;
 
-const PROJECT_README = (base) => `# design
+// the command a person types: the published name, which is scoped (a bare `doan` is not on npm)
+export const NPX = 'npx @junyoung735/doan';
 
-Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver); your icons and pictures in \`assets/\`, named by path from a screen (\`src: assets/photos/menu.jpg\`).
+// The starter in Korean: the same screen, its words in the project's language. Only what a person
+// reads is translated; ids, kinds and keys stay as the format writes them.
+const STARTER_KO = (text) => text
+  .replace('# a first screen so the viewer is not empty. Delete it when a real one exists.', '# 뷰어가 비어 있지 않게 둔 첫 화면. 실제 화면이 생기면 지우세요.')
+  .replace('"00. Sample - delete me"', '"00. 샘플 - 지워도 됨"')
+  .replace('# list screens must have Empty, Loading and Error states (conventions.yaml)', '# 목록 화면은 Empty·Loading·Error 상태가 있어야 합니다 (conventions.yaml)')
+  .replace('# point this at the spec entry the screen answers to', '# 이 화면이 답하는 기획서 항목을 가리키세요')
+  .replace('title: Sample list', 'title: 샘플 목록')
+  .replace('label: New item', 'label: 새 항목')
+  .replace('# what changes from Default, and nothing else', '# Default에서 바뀌는 것만')
+  .replace('title: Nothing here yet, text: Create the first item.', 'title: 아직 항목이 없어요, text: 첫 항목을 만들어 보세요.')
+  .replace('note: "decide the error copy"', 'note: "오류 문구 정하기"')
+  .replace('This screen was written by init. The $tbd above shows how an undecided value looks in lint and in the viewer.', '이 화면은 init이 썼습니다. 위의 $tbd는 정하지 않은 값이 lint와 뷰어에서 어떻게 보이는지 보여 줍니다.');
+
+// A first pattern, so step ② of the loop (how the parts are arranged) has a starting point: every
+// list screen opens with its header and may close with paging. The starter screen follows it.
+const STARTER_PATTERN = (ko) => `pattern: list-frame
+description: ${ko ? '목록 화면은 머리말로 시작하고, 페이지 넘김으로 끝날 수 있다' : 'a list screen opens with its header and may close with paging'}
+applies_to: { types: [list] }
+skeleton:                                   # ${ko ? '최상위 요소의 순서 — L29가 검사' : 'the top-level elements, in order — L29 checks this'}
+  - { role: header, kind: page-header }
+  - { role: body, kind: any, many: true }
+  - { role: paging, kind: pagination, optional: true }
+notes:                                      # ${ko ? '말로 쓴 규칙 — 검사하지 않고 읽음' : 'rules in words — read, not checked'}
+  - ${ko ? '주요 동작 버튼은 머리말 오른쪽에 둔다' : 'the primary action sits at the right of the header'}
+`;
+
+const PROJECT_README = (base, ko) => ko ? `# design
+
+화면을 파일로. 화면 하나가 \`screens/\` 아래 YAML 하나입니다. 규칙은 \`conventions.yaml\`, 테마는 \`tokens/\`(DTCG 파일: 원시·시맨틱·라이트·다크·리졸버), 배치 규칙은 \`patterns/\`, 아이콘과 그림은 \`assets/\`에 두고 화면에서 경로로 부릅니다(\`src: assets/photos/menu.jpg\`).
+
+컴포넌트 기반: **${base}**${base === 'none' ? ' — 컴포넌트 세트는 `components/kinds.js`에 있고 팀이 고쳐 쓰는 것입니다.' : ' — kind는 `components/<kind>.yaml`의 `maps_to`로 그 라이브러리에 연결됩니다.'}
+
+\`\`\`bash
+${NPX} lint .          # 빠진 것
+${NPX} serve .         # 뷰어 http://127.0.0.1:4870/
+${NPX} mcp .           # 같은 동사를 에이전트에게 (클라이언트 설정은 doan README)
+\`\`\`
+
+\`screens/sample-list.yaml\`과 \`patterns/list-frame.yaml\`은 출발점입니다. 실제 화면이 생기면 지우세요.
+` : `# design
+
+Screens as files. One YAML per screen under \`screens/\`; the rules in \`conventions.yaml\`; the theme in \`tokens/\` (DTCG files: primitives, semantic, light, dark, and the resolver); how the parts are arranged in \`patterns/\`; your icons and pictures in \`assets/\`, named by path from a screen (\`src: assets/photos/menu.jpg\`).
 
 Component base: **${base}**${base === 'none' ? ' — the component set is in `components/kinds.js` and is yours to edit.' : ' — kinds map to that library through `maps_to` in `components/<kind>.yaml`.'}
 
 \`\`\`bash
-npx doan lint .          # what is missing
-npx doan serve .         # the viewer at http://127.0.0.1:4870/
-npx doan mcp .           # the same verbs for an agent (see the project root README for client config)
+${NPX} lint .          # what is missing
+${NPX} serve .         # the viewer at http://127.0.0.1:4870/
+${NPX} mcp .           # the same verbs for an agent (see the doan README for client config)
 \`\`\`
 
-\`screens/sample-list.yaml\` is a starter; delete it when a real screen exists.
+\`screens/sample-list.yaml\` and \`patterns/list-frame.yaml\` are starters; delete them when real ones exist.
 `;
 
-export async function initProject(dir, { base = 'none' } = {}) {
+// what git should not carry: the agent's heartbeat is rewritten every 20 s (src/requests.js)
+const GITIGNORE_LINES = ['.requests/agent.json'];
+
+export async function initProject(dir, { base = 'none', language = 'en' } = {}) {
+  if (!['en', 'ko'].includes(language)) throw new Error(`unknown language "${language}"; choose en or ko`);
+  const ko = language === 'ko';
   const chosen = componentBases().find((b) => b.id === base);
   if (!chosen) throw new Error(`unknown base "${base}"; choose one of ${componentBases().map((b) => b.id).join(', ')}`);
   if (chosen.status !== 'ready') throw new Error(`base "${base}": ${chosen.note}`);
@@ -89,6 +137,7 @@ export async function initProject(dir, { base = 'none' } = {}) {
   // conventions: the example, with the render section set and, for self-built, no maps_to.
   const doc = parseDocument(await readFile(here('../conventions.example.yaml'), 'utf8'));
   doc.setIn(['render', 'base'], base);
+  doc.setIn(['meta', 'language'], language);
   doc.setIn(['render', 'components'], base === 'none' ? './components/kinds.js' : null);
   if (doc.has('kinds')) doc.delete('kinds'); // kinds are files now (components/<kind>.yaml); the block is read only as legacy
   await writeFile(join(dir, 'conventions.yaml'), doc.toString({ lineWidth: 0 }));
@@ -109,14 +158,25 @@ export async function initProject(dir, { base = 'none' } = {}) {
   created.push('components/<kind>.yaml');
   created.push('conventions.yaml');
 
-  await writeFile(join(dir, 'sections.yaml'), '- "00. Sample - delete me"\n');
+  await writeFile(join(dir, 'sections.yaml'), ko ? '- "00. 샘플 - 지워도 됨"\n' : '- "00. Sample - delete me"\n');
   created.push('sections.yaml');
   // A first screen, so the viewer has something to show and the format has an example in
   // the project itself. Delete it once a real screen exists.
-  await writeFile(join(dir, 'screens', 'sample-list.yaml'), STARTER_SCREEN);
+  await writeFile(join(dir, 'screens', 'sample-list.yaml'), ko ? STARTER_KO(STARTER_SCREEN) : STARTER_SCREEN);
   created.push('screens/sample-list.yaml');
-  await writeFile(join(dir, 'README.md'), PROJECT_README(base));
+  await mkdir(join(dir, 'patterns'), { recursive: true });
+  await writeFile(join(dir, 'patterns', 'list-frame.yaml'), STARTER_PATTERN(ko));
+  created.push('patterns/list-frame.yaml');
+  await writeFile(join(dir, 'README.md'), PROJECT_README(base, ko));
   created.push('README.md');
+  // .gitignore: added to, never duplicated, never replaced
+  const ignore = join(dir, '.gitignore');
+  const had = existsSync(ignore) ? await readFile(ignore, 'utf8') : '';
+  const missing = GITIGNORE_LINES.filter((l) => !had.split(/\r?\n/).includes(l));
+  if (missing.length) {
+    await writeFile(ignore, `${had}${had && !had.endsWith('\n') ? '\n' : ''}${missing.join('\n')}\n`);
+    created.push('.gitignore');
+  }
   // tokens/: DTCG files — primitives, the fixed semantic set, one colour file per theme, and
   // the resolver that says how they combine. Resolved for light this is the bundled default.
   // assets/: the person's icons and pictures, named by path from a screen (src/assets.js)
@@ -134,5 +194,5 @@ export async function initProject(dir, { base = 'none' } = {}) {
     await copyFile(here('./render/i18n.js'), join(dir, 'components', 'i18n.js')); // kinds.js imports it; the copy stays self-contained
     created.push('components/kinds.js');
   }
-  return { dir, base, created };
+  return { dir, base, language, created };
 }

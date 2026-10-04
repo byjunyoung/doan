@@ -291,7 +291,7 @@ test('an svg icon is a mask in the text colour — on a button, and as an image 
 });
 
 test('scroll: vertical keeps a long list inside the frame; grow may shrink; a stack aligned center carries it to a drawn card body', () => {
-  assert.match(layoutStyle({ kind: 'grid', columns: 3, scroll: 'vertical', grow: true }), /overflow-y:auto;min-height:0;flex:1 1 auto;min-height:0/);
+  assert.match(layoutStyle({ kind: 'grid', columns: 3, scroll: 'vertical', grow: true }), /overflow-y:auto;min-height:0;flex-wrap:nowrap;flex:1 1 auto;min-height:0/);
   assert.match(layoutStyle({ kind: 'stack', direction: 'column', align: 'center' }), /align-items:center;--lay-align:center/);
 });
 

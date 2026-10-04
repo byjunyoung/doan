@@ -36,7 +36,7 @@
 Node 20 이상.
 
 ```bash
-npx @junyoung735/doan init design --base antd   # --base none: 컴포넌트 세트를 복사해 내 것으로
+npx @junyoung735/doan init design --base antd --language ko   # --base none: 컴포넌트 세트를 복사해 내 것으로
 npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ```
 
@@ -51,17 +51,19 @@ npx @junyoung735/doan serve design              # http://127.0.0.1:4870/
 ## 화면 파일
 
 ```yaml
+schema: doan/0.2
+id: scr_orders1
 screen: order-list
+section: "01. Orders - Order list"          # 이 줄을 sections.yaml에도 추가
 type: list                                  # list는 Empty·Loading·Error가 필수
 elements:
+  - { id: header, kind: page-header, title: 주문 }
   - { id: filter, kind: filter-form, fields: [period, branch, status] }
   - { id: table,  kind: table, columns: [order_no, branch, amount, status] }
 states:                                     # 상태는 사본이 아니라 "무엇이 다른지"
   Empty:   [{ target: table, replace: { kind: empty-notice, text: "주문이 없어요" } }]
   Loading: [{ target: table, replace: { kind: skeleton, rows: 10 } }]
   Error:   [{ target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }]
-flows:
-  - { from: table, via: row, to: order-detail }
 ```
 
 빠진 상태나 정하지 않은 값(`$tbd`)은 `lint`가 파일과 줄 번호로 알려 주고, `main` 브랜치에서는 막습니다.
@@ -90,12 +92,13 @@ flows:
 
 | 동사 | 하는 일 |
 |---|---|
-| `init` · `serve` · `render` | 시작, 살아 있는 뷰어, 정적 HTML |
+| `init` · `serve` · `render` | 시작(`--language ko`면 한국어), 살아 있는 뷰어, 정적 HTML |
 | `lint` · `prep` · `diff` | 검사(차단 시 exit 1), 빠진 상태 채우기, AS-IS / TO-BE |
-| `propose` · `apply` · `reject` · `undo` | 제안 루프 |
+| `propose` · `apply` · `reject` · `undo` | 제안 루프 — 되돌리기는 뷰어에도 있음 |
+| `comments` · `requests` | 뷰어에서 남긴 코멘트와 요청, 답한 요청은 `requests close <id>` |
 | `map figma` · `import figma` | 피그마 페이지를 화면 파일로 |
 
-전체 목록은 `doan --help`. 설계 결정과 이유는 [DESIGN.md](DESIGN.md), 바뀐 것은 [CHANGELOG.md](CHANGELOG.md).
+전체 목록은 `doan --help`, 동사 하나는 `doan --help <동사>`. 설계 결정과 이유는 [DESIGN.md](DESIGN.md), 바뀐 것은 [CHANGELOG.md](CHANGELOG.md).
 
 ## 개발
 

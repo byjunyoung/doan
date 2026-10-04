@@ -2,7 +2,8 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { createCache, extractStyle, StyleProvider } from '@ant-design/cssinjs';
 import * as antd from 'antd';
-import { h, v, isTbd, sample } from '../kinds.js';
+import dayjs from 'dayjs';
+import { h, v, isTbd, sample, layers, cellOf, words } from '../kinds.js';
 import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
 import { isAssetRef } from '../../assets.js';
 
@@ -18,6 +19,12 @@ const label = (c) => (typeof c === 'object' && c && !isTbd(c) ? c.label ?? c.key
 const raw = (html) => e('div', { dangerouslySetInnerHTML: { __html: html } });
 // the children of a container antd draws (card, modal): the box the screen's layout reaches (page.js)
 const body = (html) => e('div', { className: 'lay-body', dangerouslySetInnerHTML: { __html: html } });
+// what a state lays over a card or a dialog (overlay, toast, notice), drawn as the bundled set draws it
+const over = (el, r) => (el.overlay !== undefined || el.toast !== undefined || el.notice !== undefined ? raw(layers(el, r)) : null);
+// a line of small print beside a control: a button's note, an upload's accepted types, a counter
+const note = (cls, x) => (x === undefined || x === null ? null : e('span', { className: cls }, text(x)));
+const both = (...parts) => e(React.Fragment, null, ...parts.filter(Boolean));
+const STATUS = { success: 'success', warning: 'warning', danger: 'error', error: 'error', info: 'processing' };
 const dummyRows = (cols) => Array.from({ length: 3 }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c) => [c.dataIndex, sample(c.title, i)])]));
 
 function themeFrom(tokens) {
@@ -42,14 +49,20 @@ function themeFrom(tokens) {
 // (for children), and each returns a React element.
 const components = {
   // size: sm · md · full → antd small · middle · large, and full is a block button, as the bundled set draws it
-  Button: (el) => e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : undefined }, text(el.label ?? el.title ?? el.id)),
-  Table: (el) => {
-    const columns = list(el.columns).map((c, i) => ({ title: text(label(c)), dataIndex: `c${i}`, sorter: typeof c === 'object' && !!c?.sortable }));
-    return e(antd.Table, { size: 'small', columns, dataSource: dummyRows(columns), pagination: false, rowSelection: el.selectable ? {} : undefined });
+  Button: (el) => both(e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)), note('btn-note', el.note)),
+  // a column's align is antd's; a column's kind draws each cell as the bundled set draws that kind
+  Table: (el, r) => {
+    const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
+    const columns = list(el.columns).map((c, i) => {
+      const obj = typeof c === 'object' && c ? c : {};
+      return { title: text(label(c)), dataIndex: `c${i}`, sorter: !!obj.sortable, align: ALIGN[obj.align], render: obj.kind ? (_, __, row) => raw(cellOf(el, c, row, i, r)) : undefined };
+    });
+    const sel = el.selected_row === undefined || el.selected_row === null ? -1 : Number.isInteger(Number(el.selected_row)) ? Math.max(Number(el.selected_row) - 1, 0) : 0;
+    return both(e(antd.Table, { size: 'small', columns, dataSource: dummyRows(columns), pagination: false, rowSelection: el.selectable ? {} : undefined, rowClassName: (_, i) => (i === sel ? 'row-sel' : '') }), el.row_action ? e('div', { className: 'hint' }, `${words().rowTo} ${text(el.row_action)}`) : null);
   },
-  Pagination: (el) => e(antd.Pagination, { total: 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false }),
-  Empty: (el) => e(antd.Empty, { description: text(el.text ?? el.title ?? 'No data') }),
-  Result: (el) => e(antd.Result, { status: 'error', title: text(el.title ?? 'Something went wrong'), subTitle: text(el.text) }),
+  Pagination: (el) => e(antd.Pagination, { total: 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false, simple: !!el.compact }),
+  Empty: (el) => e(antd.Empty, { description: el.title !== undefined ? e('div', null, e('strong', null, text(el.title)), el.text !== undefined ? e('div', null, text(el.text)) : null) : text(el.text ?? words().noData) }),
+  Result: (el) => e(antd.Result, { status: 'error', title: text(el.title ?? words().wentWrong), subTitle: text(el.text) }),
   Skeleton: (el) => e(antd.Skeleton, { active: false, paragraph: { rows: Math.min(Number(el.rows) || 3, 6) } }),
   Descriptions: (el) => {
     const rows = Array.isArray(el.rows) ? el.rows.flat() : list(el.fields);
@@ -59,26 +72,34 @@ const components = {
   Statistic: (el) => e(antd.Space, { size: 'large', wrap: true }, ...list(el.stats).map((s, i) => e(antd.Statistic, { key: i, title: text(s), value: sample(s, i) }))),
   Form: (el) => e(antd.Form, { layout: 'inline', size: 'small' }, ...list(el.fields).map((f, i) => e(antd.Form.Item, { key: i, label: text(label(f)) }, e(antd.Input, { placeholder: text(label(f)), readOnly: true })))),
   Input: (el) => e(antd.Input, { readOnly: true, value: text(el.text ?? el.value ?? ''), placeholder: text(el.placeholder), disabled: !!el.readonly }),
-  'Input.TextArea': (el) => e(antd.Input.TextArea, { readOnly: true, rows: 2, placeholder: text(el.placeholder), showCount: !!el.max, maxLength: el.max ? Number(el.max) : undefined }),
+  'Input.TextArea': (el) => both(e(antd.Input.TextArea, { readOnly: true, rows: Math.min(Number(el.rows) || 2, 12), placeholder: text(el.placeholder), showCount: !!el.max, maxLength: el.max ? Number(el.max) : undefined }), el.counter !== undefined ? e('div', { className: 'hint' }, text(el.counter)) : null),
   InputNumber: (el) => e(antd.InputNumber, { readOnly: true, value: el.value }),
-  Select: (el) => e(antd.Select, { style: { minWidth: 160 }, value: text(Array.isArray(el.options) ? el.options[0] : el.options ?? 'Select'), options: list(el.options).map((o) => ({ value: text(o) })) }),
-  'Radio.Group': (el) => e(antd.Radio.Group, { value: text(list(el.options)[0]) }, ...list(el.options).map((o, i) => e(antd.Radio, { key: i, value: text(o) }, text(o)))),
-  DatePicker: (el) => e(antd.DatePicker, { format: el.format, placeholder: text(el.format ?? 'YYYY.MM.DD') }),
-  'DatePicker.RangePicker': (el) => e(antd.DatePicker.RangePicker, { format: el.format }),
-  Upload: (el) => e(antd.Button, {}, text(el.label ?? 'Choose file')),
+  // the chosen value; with none, the placeholder, else the first option
+  Select: (el) => e(antd.Select, { style: { minWidth: 160 }, value: el.value !== undefined ? text(el.value) : el.placeholder !== undefined ? undefined : text(Array.isArray(el.options) ? el.options[0] : el.options ?? words().select), placeholder: el.placeholder !== undefined ? text(el.placeholder) : undefined, options: list(el.options).map((o) => ({ value: text(o) })) }),
+  'Radio.Group': (el) => e(antd.Radio.Group, { value: text(el.value ?? list(el.options)[0]) }, ...list(el.options).map((o, i) => e(antd.Radio, { key: i, value: text(o) }, text(o)))),
+  // a value antd can read as a date is the picked date; anything else (a $tbd, a phrase) shows as written
+  DatePicker: (el) => {
+    const day = typeof el.value === 'string' && dayjs(el.value).isValid() ? dayjs(el.value) : undefined;
+    return e(antd.DatePicker, { format: el.format, value: day, placeholder: text(day ? el.format : el.value ?? el.format ?? 'YYYY.MM.DD') });
+  },
+  'DatePicker.RangePicker': (el) => e(antd.DatePicker.RangePicker, { format: el.format, placeholder: el.format ? [text(el.format), text(el.format)] : undefined }),
+  Upload: (el) => both(e(antd.Button, {}, text(el.label ?? words().chooseFile)), el.accept ? note('hint', ` ${text(el.accept)}`) : null),
   Divider: () => e(antd.Divider, { style: { margin: '8px 0' } }),
   Alert: (el) => e(antd.Alert, { type: el.level === 'error' ? 'error' : 'info', message: text(el.text), showIcon: true }),
   message: (el) => e(antd.Alert, { type: el.level === 'error' ? 'error' : 'success', message: text(el.text), showIcon: true, banner: true }),
-  Spin: (el) => e(antd.Spin, { tip: text(el.text ?? 'Loading…') }, e('div', { style: { height: 48 } })),
-  Tag: (el) => e(antd.Tag, {}, text(el.text ?? el.label)),
+  Spin: (el) => e(antd.Spin, { tip: text(el.text ?? words().loading) }, e('div', { style: { height: 48 } })),
+  Tag: (el) => e(antd.Tag, { color: el.color ? STATUS[el.color] ?? text(el.color) : undefined }, text(el.text ?? el.label)),
   Checkbox: (el) => e(antd.Checkbox, { checked: !!el.checked }, text(el.label ?? el.text ?? el.id)),
-  Switch: (el) => e(antd.Switch, { checked: !!el.on }),
+  Switch: (el) => both(e(antd.Switch, { checked: !!el.on }), el.label !== undefined ? e('span', { className: 'sw-label' }, ` ${text(el.label)}`) : null),
   // the contract's padding slot lands on the card root, so the body adds none of its own
-  Card: (el, r) => e(antd.Card, { size: 'small', title: el.title ? text(el.title) : undefined, styles: { body: { padding: 0 } } }, body(r.children(el))),
+  Card: (el, r) => {
+    const title = el.title || el.hint ? e('span', null, text(el.title), el.hint ? e('span', { className: 'hint' }, ` ${text(el.hint)}`) : null) : undefined;
+    return e(antd.Card, { size: 'small', title, styles: { body: { padding: 0 } } }, body(r.children(el)), over(el, r));
+  },
   // the shadow is css (page.js .el-modal[data-drawn] > *), so a contract's shadow slot can replace it
-  Modal: (el, r) => e(antd.Card, { title: text(el.title), styles: { body: { padding: 0 } } }, body(r.children(el))),
+  Modal: (el, r) => e(antd.Card, { title: text(el.title), styles: { body: { padding: 0 } } }, body(r.children(el)), over(el, r)),
   'Modal.confirm': (el) => e(antd.Card, { size: 'small', title: text(el.title) }, e('p', null, text(el.text)), e(antd.Space, null, ...list(el.buttons).map((b, i) => e(antd.Button, { key: i, type: i === list(el.buttons).length - 1 ? 'primary' : 'default' }, text(b))))),
-  Tooltip: (el) => e(antd.Tag, { color: 'default' }, `ⓘ ${text(el.trigger ?? 'tooltip')}`),
+  Tooltip: (el) => e(antd.Tag, { color: 'default', title: list(el.items).map(text).join(' · ') }, `ⓘ ${text(el.trigger ?? 'tooltip')}`),
 };
 
 export function create(project) {

@@ -125,6 +125,18 @@
           },
           "description": {
             "type": "string"
+          },
+          "drawn": {
+            "const": false,
+            "description": "false: the prop is documentation only — no drawing path shows it; the coverage test skips it and the spec page lists it as not drawn. Never used to excuse one library adapter"
+          },
+          "drawn_reason": {
+            "type": "string",
+            "description": "why the prop is not drawn"
+          },
+          "alias_of": {
+            "type": "string",
+            "description": "another prop of this contract this one is a second name for; drawn in its place when that one is absent"
           }
         }
       }

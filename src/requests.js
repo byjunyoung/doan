@@ -22,6 +22,31 @@ async function write(dir, list) {
   await writeFile(fileOf(dir), JSON.stringify(list, null, 2));
 }
 
+// Whether an agent is there to take a request. The MCP server, while its process lives, rewrites
+// .requests/agent.json every 20 s; the viewer counts an agent as connected when that is under a
+// minute old. A stopped agent stops writing and goes stale on its own — nothing has to clean up,
+// and two agents on one project simply take turns refreshing it. Kept out of git (init's .gitignore).
+const heartbeatOf = (dir) => join(dir, '.requests', 'agent.json');
+export const HEARTBEAT_MS = 20000;
+export const STALE_MS = 60000;
+
+export async function writeHeartbeat(dir, { started, now = new Date() } = {}) {
+  await mkdir(join(dir, '.requests'), { recursive: true });
+  const beat = { pid: process.pid, started: started ?? now.toISOString(), seen: now.toISOString() };
+  await writeFile(heartbeatOf(dir), JSON.stringify(beat, null, 2));
+  return beat;
+}
+
+export async function agentStatus(dir, { now = Date.now() } = {}) {
+  try {
+    const beat = JSON.parse(await readFile(heartbeatOf(dir), 'utf8'));
+    const age = now - Date.parse(beat.seen);
+    return { connected: Number.isFinite(age) && age >= 0 && age < STALE_MS, seen: beat.seen, pid: beat.pid };
+  } catch {
+    return { connected: false, seen: null, pid: null };
+  }
+}
+
 export async function listRequests(dir, { status = 'open' } = {}) {
   const all = await read(dir);
   return status === 'all' ? all : all.filter((r) => r.status === status);

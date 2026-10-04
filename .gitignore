@@ -4,3 +4,4 @@ out/
 .proposals/
 * 2.*
 node_modules.nosync/
+.requests/agent.json

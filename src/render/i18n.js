@@ -37,6 +37,10 @@ const EN = {
   undesigned: 'undesigned', nothingHere: 'Nothing here', wentWrong: 'Something went wrong', loading: 'Loading…', image: 'image', select: 'Select', chooseFile: 'Choose file', menu: 'menu', perPage: '/page',
   // samples
   s_item: (n) => `Item ${n}`, s_sample: (n) => `Sample ${n}`, s_stores: ['Gangnam', 'Seongsu', 'Pangyo'], s_status: ['Paid', 'Pending', 'Refunded'], s_method: ['Card', 'Mobile', 'Cash'],
+  notDrawn: (p) => `not drawn — written in the file, not in the picture: ${p}`,
+  askQueued: 'Queued — no agent connected', agentOn: '● agent connected', agentOff: '○ no agent connected — start one with the doan MCP server (README, “Connect your agent”); the request waits until then',
+  lintPillTitle: (n) => `${n} blocking — show them`, lintFindings: 'Lint', undo: 'Undo', appliedHint: 'Applied. Undo puts the file back as it was.', appliedToast: 'Applied', undone: 'Undone', onlyInProposal: 'This section exists only in a pending proposal', onlyInProposalText: (s) => `“${s}” has no applied screen yet. Open the proposal to see it, and apply it to put it on a canvas.`, openProposal: 'Open the proposal', noDomain: 'No such section', noDomainText: (s) => `There is no section “${s}” in this project.`, backHome: 'Back to the canvas',
+  s_duration: ['4m 12s', '3m 48s', '6m 01s'], rowTo: 'row →', revealsLabel: 'reveals:', noData: 'No data', perPageWord: '/page',
 };
 
 const KO = {
@@ -71,6 +75,10 @@ const KO = {
   file: '파일', path: '경로', line: '줄', copy: '경로:줄 복사', copied: '복사됨', noneOnElement: '이 요소에는 없음',
   sayWhat: '무엇을 바꿀지 적어 주세요', send: '코멘트 남기기', liveOnly: '코멘트는 살아있는 뷰어(doan serve)에서', nameFirst: '이름부터 적어 주세요',
   undesigned: '미설계', nothingHere: '비어 있음', wentWrong: '문제가 생겼습니다', loading: '불러오는 중…', image: '이미지', select: '선택', chooseFile: '파일 선택', menu: '메뉴', perPage: '/쪽',
+  notDrawn: (p) => `그려지지 않음 — 파일에는 있는데 그림에 없는 속성: ${p}`,
+  askQueued: '대기 중 — 연결된 에이전트 없음', agentOn: '● 에이전트 연결됨', agentOff: '○ 연결된 에이전트 없음 — doan MCP 서버로 에이전트를 연결하세요(README “에이전트 연결”). 그때까지 요청은 기다립니다',
+  lintPillTitle: (n) => `차단 ${n}건 — 눌러서 보기`, lintFindings: 'Lint', undo: '되돌리기', appliedHint: '적용했습니다. 되돌리기를 누르면 파일이 적용 전으로 돌아갑니다.', appliedToast: '적용됨', undone: '되돌림', onlyInProposal: '아직 제안 안에만 있는 섹션입니다', onlyInProposalText: (s) => `“${s}”에는 적용된 화면이 아직 없습니다. 제안을 열어 보고, 적용하면 캔버스에 올라갑니다.`, openProposal: '제안 열기', noDomain: '없는 섹션', noDomainText: (s) => `이 프로젝트에는 “${s}” 섹션이 없습니다.`, backHome: '캔버스로 돌아가기',
+  s_duration: ['4분 12초', '3분 48초', '6분 01초'], rowTo: '행 →', revealsLabel: '펼쳐지는 것:', noData: '데이터 없음', perPageWord: '/쪽',
   s_item: (n) => `항목 ${n}`, s_sample: (n) => `샘플 ${n}`, s_stores: ['강남', '성수', '판교'], s_status: ['결제완료', '대기', '환불'], s_method: ['카드', '모바일', '현금'],
 };
 
@@ -87,6 +95,6 @@ export function languageOf(project) {
 // The subset the page's own JavaScript needs, as plain strings.
 export function pageStrings(lang) {
   const d = dictionary(lang);
-  const keys = ['pnComponent', 'pnLayout', 'pnAutoLayout', 'pnProps', 'pnComments', 'pnFile', 'pnScreen', 'pnFlows', 'propsTitle', 'layoutLabel', 'layFlow', 'layColumn', 'layRow', 'layGrid', 'layNone', 'layColumns', 'layGap', 'layPadding', 'layAlign', 'laySize', 'layHug', 'layGrow', 'laySend', 'layOwner', 'laySent', 'layReset', 'layAuto', 'layAutoHint', 'layAlignHint', 'laySizing', 'layHeight', 'layFill', 'layGrowFill', 'layFixed', 'layPreview', 'clickToInspect', 'codeLabel', 'specFor', 'goToComponent', 'selectIt', 'sayWhatScreen', 'commonComments', 'sayWhatAll', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName'];
+  const keys = ['pnComponent', 'pnLayout', 'pnAutoLayout', 'pnProps', 'pnComments', 'pnFile', 'pnScreen', 'pnFlows', 'propsTitle', 'layoutLabel', 'layFlow', 'layColumn', 'layRow', 'layGrid', 'layNone', 'layColumns', 'layGap', 'layPadding', 'layAlign', 'laySize', 'layHug', 'layGrow', 'laySend', 'layOwner', 'laySent', 'layReset', 'layAuto', 'layAutoHint', 'layAlignHint', 'laySizing', 'layHeight', 'layFill', 'layGrowFill', 'layFixed', 'layPreview', 'clickToInspect', 'codeLabel', 'specFor', 'goToComponent', 'selectIt', 'sayWhatScreen', 'commonComments', 'sayWhatAll', 'protoHelp', 'flowsFrom', 'chooseFlow', 'noFlowsFrom', 'screen', 'states', 'screen', 'proto', 'flows', 'none', 'shortcutsHint', 'component', 'bundled', 'samplesNote', 'file', 'path', 'line', 'copy', 'copied', 'noneOnElement', 'sayWhat', 'send', 'liveOnly', 'nameFirst', 'comments', 'yourName', 'appliedToast', 'undo', 'undone', 'lintFindings'];
   return Object.fromEntries(keys.map((k) => [k, d[k]]));
 }

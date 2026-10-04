@@ -1,0 +1,36 @@
+schema: doan/0.2
+id: scr_trust03
+screen: drawn
+section: "01. Store - Trust cases"
+type: page
+elements:
+  - id: list
+    kind: group
+    children:
+      - { id: loading, kind: skeleton, rows: 2 }
+      - { id: more, kind: button, label: More }
+  - id: actions
+    kind: group
+    disabled: true
+    children:
+      - { id: save, kind: button, label: Save }
+      - { id: note, kind: input, placeholder: Note }
+  - id: summary
+    kind: card
+    title: Today
+    overlay: { kind: overlay, text: Counting stock }
+  - id: fill
+    kind: progress
+    value: 30
+  - id: items
+    kind: table
+    columns:
+      - { key: name, label: Item }
+      - { key: status, label: Status, kind: tag }
+      - { key: amount, label: Amount, align: right }
+  - id: none
+    kind: empty-notice
+    title: No items yet
+    text: Add the first item
+layout:
+  list: { kind: stack, direction: row, scroll: vertical, gap: space.sm }

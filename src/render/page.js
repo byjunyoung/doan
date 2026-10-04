@@ -316,6 +316,7 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .dot.cond { background: var(--color-muted); }
 .dot.tbd { background: var(--color-tbd-border); }
+.dot.undrawn { background: transparent; box-shadow: inset 0 0 0 1.5px var(--color-danger, #d93025); }
 .dot.cm { background: var(--color-primary); }
 .el-card:not([data-drawn]) { padding: var(--k-card-padding, var(--space-md)); border: 1px solid var(--k-card-border, var(--color-border)); border-radius: var(--k-card-radius, var(--radius-md)); background: var(--k-card-bg, var(--color-bg)); display: flex; flex-direction: column; gap: var(--k-card-gap, var(--space-md)); box-shadow: var(--k-card-shadow, none); min-height: var(--k-card-min-height, auto); }
 .el-fieldset:not([data-drawn]) { padding: var(--k-fieldset-padding, var(--space-md)); border: 1px solid var(--k-fieldset-border, var(--color-border)); border-radius: var(--k-fieldset-radius, var(--radius-md)); background: var(--k-fieldset-bg, var(--color-bg)); display: flex; flex-direction: column; gap: var(--k-fieldset-gap, var(--space-md)); }
@@ -431,6 +432,21 @@ td .sub { color: var(--color-muted); font-size: 11px; }
 .chk-line { display: inline-flex; align-items: center; gap: var(--space-xs); } .box { width: 14px; height: 14px; border: 1px solid var(--color-border); border-radius: 3px; display: inline-block; } .box.on { background: var(--color-primary); border-color: var(--color-primary); }
 .sw { display: inline-block; width: 28px; height: 16px; border-radius: 8px; background: var(--color-border); vertical-align: middle; } .sw.on { background: var(--color-primary); }
 .tag { display: inline-block; padding: 0 6px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 11px; background: var(--color-surface); }
+.tag.tag-colored { border-color: var(--tag); color: var(--tag); background: color-mix(in srgb, var(--tag) 10%, var(--color-bg)); }
+.btn-ico { margin-right: 4px; display: inline-flex; vertical-align: -2px; } .btn-note { margin-left: var(--space-xs); font-size: 11px; color: var(--color-muted); }
+.caption.style-title { font-size: var(--font-size-lg, 16px); font-weight: 600; } .caption.style-strong { font-weight: 600; }
+.el-card, .el-modal { position: relative; }
+.box-overlay { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(255,255,255,.72); border-radius: inherit; z-index: 2; }
+.box-toast { position: absolute; left: 50%; bottom: var(--space-md); transform: translateX(-50%); z-index: 3; }
+.el-modal[data-size="sm"] { max-width: var(--size-sm); } .el-modal[data-size="md"] { max-width: var(--size-md); } .el-modal[data-size="lg"] { max-width: var(--size-lg); }
+tr.row-sel td { background: color-mix(in srgb, var(--color-primary) 10%, var(--color-bg)); }
+.select.is-placeholder { color: var(--color-muted); }
+.applied-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50; display: flex; gap: var(--space-sm); align-items: center; padding: var(--space-sm) var(--space-sm) var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: #1f2329; color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+.agent-line { font-size: 11px; } .agent-line.on { color: var(--color-success, #1a7f37); }
+.applied-toast .btn { color: var(--color-text); background: var(--color-bg); }
+.lint-pill { cursor: pointer; border: 0; font: inherit; } .lint-panel li.is-block b { color: var(--color-danger); }
+.notice-page { padding: var(--space-xl); max-width: 560px; } .notice-page p { margin: 0 0 var(--space-md); }
+.img-name { font-size: 12px; padding: 0 var(--space-xs); text-align: center; }
 .row { display: flex; gap: var(--space-sm); align-items: center; } .row.end { justify-content: flex-end; }
 .el.selected { outline: 2px solid var(--color-primary); outline-offset: 2px; }
 body.dev .el::before { content: attr(data-path); position: absolute; top: -8px; left: 0; font-size: 9px; background: var(--color-text); color: var(--color-bg); padding: 0 4px; border-radius: 2px; z-index: 2; pointer-events: none; }
@@ -977,16 +993,48 @@ export const INSPECTOR_JS = `
   treeFollow();
   window.addEventListener('hashchange', treeFollow);
 
-  // proposal page: apply / reject
-  var approve = document.getElementById('approve'), reject = document.getElementById('reject');
-  function verdict(kind) {
+  // proposal page: apply / reject / undo. After Apply the viewer goes to the applied screen's frame,
+  // which offers Undo in a toast; the server says where (j.href)
+  var approve = document.getElementById('approve'), reject = document.getElementById('reject'), undoBtn = document.getElementById('undo');
+  function verdict(kind, id) {
     var by = (document.getElementById('by') || {}).value || '';
-    var id = (approve || reject).getAttribute('data-id');
     fetch('/api/proposals/' + id + '/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(kind === 'apply' ? { by: by } : { reason: by }) })
-      .then(function (r) { return r.json(); }).then(function (j) { document.getElementById('verdict').textContent = j.error ? j.error : j.status; if (!j.error) setTimeout(function () { location.href = '/'; }, 600); });
+      .then(function (r) { return r.json(); }).then(function (j) { var v = document.getElementById('verdict'); if (v) v.textContent = j.error ? j.error : j.status; if (!j.error) setTimeout(function () { location.href = j.href || '/'; }, 400); });
   }
-  if (approve) approve.addEventListener('click', function () { verdict('apply'); });
-  if (reject) reject.addEventListener('click', function () { verdict('reject'); });
+  if (approve) approve.addEventListener('click', function () { verdict('apply', approve.getAttribute('data-id')); });
+  if (reject) reject.addEventListener('click', function () { verdict('reject', reject.getAttribute('data-id')); });
+  if (undoBtn) undoBtn.addEventListener('click', function () { verdict('undo', undoBtn.getAttribute('data-id')); });
+  // ?applied=<id>: a toast with Undo, on the page the Apply landed on
+  var applied = new URLSearchParams(location.search).get('applied');
+  if (applied && /^p_[a-z0-9]+$/.test(applied)) {
+    var T = window.DOAN_I18N || {};
+    var toast = document.createElement('div');
+    toast.className = 'applied-toast';
+    toast.innerHTML = '<span>' + (T.appliedToast || 'Applied') + '</span> <button class="btn" type="button">' + (T.undo || 'Undo') + '</button>';
+    document.body.appendChild(toast);
+    toast.querySelector('button').addEventListener('click', function () {
+      fetch('/api/proposals/' + applied + '/undo', { method: 'POST' }).then(function (r) { return r.json(); }).then(function (j) {
+        if (j.error) { toast.querySelector('span').textContent = j.error; return; }
+        toast.querySelector('span').textContent = T.undone || 'Undone';
+        setTimeout(function () { location.href = j.href || '/'; }, 400);
+      });
+    });
+    history.replaceState(null, '', location.pathname + location.hash);
+  }
+  // the red lint count beside a screen: its findings in the panel — rule, message, file:line
+  document.querySelectorAll('.lint-pill').forEach(function (b) {
+    b.addEventListener('click', function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var T = window.DOAN_I18N || {}, panel = document.getElementById('inspector'), shell = document.querySelector('.shell');
+      if (!panel) return;
+      var list = []; try { list = JSON.parse(b.getAttribute('data-findings') || '[]'); } catch (e) {}
+      var esc = function (s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); };
+      panel.innerHTML = '<section class="pn-sec lint-panel"><h5>' + (T.lintFindings || 'Lint') + ' · ' + esc(b.getAttribute('data-screen')) + '</h5><ul class="list">' + list.map(function (f) {
+        return '<li class="' + (f.severity === 'blocking' ? 'is-block' : 'is-warn') + '"><b>' + esc(f.id) + '</b> ' + esc(f.message) + '<div class="hint"><code>' + esc(f.where) + '</code></div></li>';
+      }).join('') + '</ul></section>';
+      if (shell) shell.classList.add('drawer-open');
+    });
+  });
 
   fit();
 })();

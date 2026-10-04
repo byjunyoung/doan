@@ -5,4 +5,6 @@ props:
     type: boolean
     default: false
     description: every control inside is disabled
-sample: {}
+sample:
+  children:
+    - { id: save, kind: button, label: Save }

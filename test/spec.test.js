@@ -114,7 +114,7 @@ test('proposing status: ready is a text-tier change — it applies at once, as t
   const { propose } = await import('../src/proposals.js');
   const f = join(dir, 'screens', 'order-list.yaml');
   const text = await readFile(f, 'utf8');
-  const p = await propose(dir, { screen: 'order-list', after: text.replace('type: list', 'type: list\nstatus: ready'), summary: 'ready for developers' });
+  const p = await propose(dir, { screen: 'order-list', after: text.replace('type: list', 'type: list\nstatus: ready'), summary: 'ready for developers' }, { today: '2026-09-28' }); // pinned: the example's $tbd falls due 2026-10-02
   assert.equal(p.tier, 'text');
   assert.equal(p.status, 'applied');
   assert.match(await readFile(f, 'utf8'), /^status: ready$/m);

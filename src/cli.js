@@ -8,15 +8,22 @@ import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
 import { authorOf } from './comments.js';
 import { propose, proposeFiles, applyProposal, rejectProposal, undoProposal, listProposals } from './proposals.js';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { RULES } from './lint.js';
+import { NPX } from './init.js';
+
+// the rule range the help names, from the catalogue itself — a literal went stale at L15
+const RULE_RANGE = `${RULES.filter((r) => /^L\d+$/.test(r)).sort()[0]}–${RULES.filter((r) => /^L\d+$/.test(r)).sort().at(-1)}`;
 
 const USAGE = `doan — screens as files; the agent draws, you say what to change.
 
 usage: doan <verb> …
 
-  init <project-dir> [--base none|antd]
-        start a project: conventions, sections, tokens, screens/. --base none (default) copies the
+  init <project-dir> [--base none|antd|mui] [--language en|ko]
+        start a project: conventions, sections, tokens, screens/, patterns/. --base none (default) copies the
         component set into <project-dir>/components so it is yours; a library base maps kinds to it.
+        --language sets the viewer's words and the starter's (default en).
   bases  list the component bases and whether each is ready
   components <project-dir> [--json]
         every kind in the registry (components/<kind>.yaml) — props, slots, token bindings, compound or not.
@@ -32,9 +39,13 @@ usage: doan <verb> …
         every pattern under patterns/ — what it binds, its skeleton, and which screens follow it or break it (L29).
   requests <project-dir> [--all] [--json]
         what the person asked for from the viewer (Apply comments) — open ones unless --all; exit 3 when one is open, for a watcher.
+  requests close <project-dir> <id> [--note "…"] [--by <name>]
+        mark a request done — what an agent does after turning the comments into proposals.
+  comments <project-dir> [--screen <name>] [--all] [--json]
+        the comments people left in the viewer — open ones unless --all; the same list an agent reads (list_comments).
 
   lint <project-dir> [--branch <name>] [--today YYYY-MM-DD] [--json]
-        validate every screen file against the schema and run rules L01–L15.
+        validate every screen file against the schema and run rules ${RULE_RANGE}.
         --branch defaults to the current git branch; pass it explicitly in CI.
         exit 0: no blocking findings · 1: blocking findings · 2: usage or load error
   prep <screen-file> [--target <element-id>] [--owner <name>] [--project <dir>]
@@ -56,9 +67,10 @@ usage: doan <verb> …
   map figma <project-dir> <file-key> --page "<page name>" [--write]
         pair the page's component masters with kinds by name and (with --write) put them into
         conventions.yaml as maps_to.figma. Run this before import figma; it is what makes kinds resolve.
-  serve <project-dir> [--port 4870] [--components antd] [--branch <name>]
+  serve <project-dir> [--port <n>] [--components antd] [--branch <name>]
         the viewer, live: pages rendered from the files on every request, comments on elements,
         Apply / Reject on a proposal page, /api/lint for a bot. The seed of the hosted service.
+        without --port it starts at 4870 and moves to the next free port; with --port a port in use is an error.
   mcp <project-dir> [--branch <name>] [--today YYYY-MM-DD]
         start the MCP server on stdio: the same verbs for an agent, plus get_screen and list_missing.
   propose <project-dir> <screen> --with <new.yaml> [--summary "…"] [--decisions <file.json>] [--comments <id,id>] [--json]
@@ -68,6 +80,34 @@ usage: doan <verb> …
         --comments names the open comments it answers; apply resolves them, undo reopens them.
   proposals <project-dir> [--status pending|applied|all]
   apply <project-dir> <id> [--by <name>]    reject <project-dir> <id> [--reason "…"]      undo <project-dir> <id>`;
+
+// One verb's lines of the help: its block, not the whole page.
+function usageOf(verb) {
+  const lines = USAGE.split('\n');
+  const out = [];
+  for (let i = 0; i < lines.length; i++) {
+    const words = lines[i].trim().split(/\s+/);
+    // a block opens on a line that starts with the verb (apply / reject / undo share one line)
+    if (!/^  \S/.test(lines[i]) || !(words[0] === verb || (lines[i].includes(`  ${verb} <`) && /^  (apply|reject|undo)/.test(lines[i])))) continue;
+    out.push(lines[i]);
+    while (lines[i + 1] && /^ {8}/.test(lines[i + 1])) out.push(lines[++i]);
+  }
+  return out.length ? `usage: doan ${out.map((l) => l.trim().startsWith(verb) || /^  \S/.test(l) ? l.trim() : l).join('\n')}` : null;
+}
+
+// The words of the CLI's own frame (an error, a hint) in the project's language, when the first
+// argument is a project that says `meta.language: ko`. What a deeper error says stays as it is.
+function langOf(opts) {
+  try {
+    const f = opts._?.[0] && join(opts._[0], 'conventions.yaml');
+    if (f && existsSync(f) && /^\s*language:\s*ko\b/m.test(readFileSync(f, 'utf8'))) return 'ko';
+  } catch {}
+  return opts.language === 'ko' ? 'ko' : 'en';
+}
+const FRAME = {
+  en: { error: 'error', more: (v) => `more: doan --help${v ? ` ${v}` : ''}`, unknown: (v) => `unknown verb "${v}"` },
+  ko: { error: '오류', more: (v) => `자세히: doan --help${v ? ` ${v}` : ''}`, unknown: (v) => `없는 동사 "${v}"` },
+};
 
 function parseArgs(argv) {
   const [verb, ...rest] = argv;
@@ -174,8 +214,11 @@ const gated = (fn, key) => async (opts) => {
 async function initCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const r = await initProject(dir, { base: opts.base ?? 'none' });
-  process.stdout.write(`${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  npx doan serve ${dir}     # open http://127.0.0.1:4870/\n  npx doan lint ${dir}\n  add the MCP server to your agent — see README\n`);
+  const r = await initProject(dir, { base: opts.base ?? 'none', language: opts.language ?? 'en' });
+  const ko = r.language === 'ko';
+  process.stdout.write(ko
+    ? `${r.dir}: 기반=${r.base} — 만든 것 ${r.created.join(', ')}\n\n다음:\n  ${NPX} serve ${dir}     # http://127.0.0.1:4870/ 열기\n  ${NPX} lint ${dir}\n  에이전트에 MCP 서버 연결 — README 참고\n`
+    : `${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  ${NPX} serve ${dir}     # open http://127.0.0.1:4870/\n  ${NPX} lint ${dir}\n  add the MCP server to your agent — see README\n`);
   return 0;
 }
 async function componentsCommand(opts) {
@@ -232,6 +275,14 @@ async function assetsCommand(opts) {
   return 0;
 }
 async function requestsCommand(opts) {
+  if (opts._[0] === 'close') {
+    const [, dir, id] = opts._;
+    if (!dir || !id) throw Object.assign(new Error(USAGE), { exit: 2 });
+    const { closeRequest } = await import('./requests.js');
+    const r = await closeRequest(dir, { id, by: opts.by ?? authorOf(dir), note: opts.note ?? '' });
+    process.stdout.write(`${r.id}  ${r.status}\n`);
+    return 0;
+  }
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
   const { listRequests } = await import('./requests.js');
@@ -239,6 +290,16 @@ async function requestsCommand(opts) {
   if (opts.json) process.stdout.write(JSON.stringify({ requests: list }, null, 2) + '\n');
   else for (const r of list) process.stdout.write(`${r.id}  ${r.kind.padEnd(16)} ${r.status.padEnd(6)} ${r.created}${r.by ? `  ${r.by}` : ''}\n`);
   return list.some((r) => r.status === 'open') ? 3 : 0;
+}
+async function commentsCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const { listComments } = await import('./comments.js');
+  const list = await listComments(dir, { screen: opts.screen ?? null, status: opts.all ? 'all' : 'open' });
+  if (opts.json) return (process.stdout.write(JSON.stringify({ comments: list }, null, 2) + '\n'), 0);
+  for (const c of list) process.stdout.write(`${c.id}  ${(c.screen ?? '(project)').padEnd(18)} ${(c.element ?? '').padEnd(14)} ${c.author ?? ''}: ${String(c.text).replace(/\s+/g, ' ')}${c.resolved ? '  (resolved)' : ''}\n`);
+  if (!list.length) process.stdout.write('no comments\n');
+  return 0;
 }
 async function patternsCommand(opts) {
   const [dir] = opts._;
@@ -291,13 +352,16 @@ async function mapCommand(opts) {
 async function serveCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
-  const s = await startServer(dir, { port: Number(opts.port) || 4870, branch: opts.branch, today: opts.today, components: opts.components ?? null });
+  const strict = opts.port !== undefined;
+  const s = await startServer(dir, { port: strict ? Number(opts.port) : 4870, strict, branch: opts.branch, today: opts.today, components: opts.components ?? null });
+  if (s.moved) process.stdout.write(`port ${s.moved} is in use — `);
   process.stdout.write(`viewer at ${s.url}  (ctrl-c to stop)\n`);
   return new Promise(() => {});
 }
 
-function helpCommand() {
-  process.stdout.write(USAGE + '\n');
+function helpCommand(opts = { _: [] }) {
+  const one = opts._?.[0] && usageOf(opts._[0]);
+  process.stdout.write((one ?? USAGE) + '\n');
   return 0;
 }
 async function versionCommand() {
@@ -309,16 +373,21 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, requests: requestsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
+  init: initCommand, bases: basesCommand, comments: commentsCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, requests: requestsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };
 const { verb, opts } = parseArgs(process.argv.slice(2));
+// An error says the one thing that went wrong and where to read more — never the whole help page.
+// A verb called without what it needs prints that verb's usage, not everyone's.
+const words = FRAME[langOf(opts)];
 try {
   if (!verb) throw Object.assign(new Error(USAGE), { exit: 2 });
-  if (!verbs[verb]) throw Object.assign(new Error(`unknown verb "${verb}"\n\n${USAGE}`), { exit: 2 });
+  if (!verbs[verb]) throw Object.assign(new Error(`${words.unknown(verb)}\n${words.more()}`), { exit: 2, framed: true });
   process.exit(await verbs[verb](opts));
 } catch (err) {
-  process.stderr.write((err.exit === 2 ? err.message : `error: ${err.message}\n${USAGE}`) + '\n');
+  if (err.message === USAGE && verb) process.stderr.write(`${usageOf(verb) ?? USAGE}\n${words.more()}\n`);
+  else if (err.message === USAGE || err.framed) process.stderr.write(err.message + '\n');
+  else process.stderr.write(`${words.error}: ${err.message}\n${words.more(verbs[verb] ? verb : '')}\n`);
   process.exit(err.exit ?? 2);
 }

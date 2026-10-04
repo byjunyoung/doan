@@ -1,0 +1,13 @@
+schema: doan/0.2
+id: scr_orders1
+screen: order-list
+section: "01. Orders - Order list"          # add this line to sections.yaml
+type: list                                  # a list must have Empty, Loading and Error
+elements:
+  - { id: header, kind: page-header, title: Orders }
+  - { id: filter, kind: filter-form, fields: [period, branch, status] }
+  - { id: table,  kind: table, columns: [order_no, branch, amount, status] }
+states:                                     # a state is what differs, not a copy
+  Empty:   [{ target: table, replace: { kind: empty-notice, text: "No orders yet" } }]
+  Loading: [{ target: table, replace: { kind: skeleton, rows: 10 } }]
+  Error:   [{ target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }]

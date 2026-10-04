@@ -51,17 +51,19 @@ Then ask the agent for a screen.
 ## A screen file
 
 ```yaml
+schema: doan/0.2
+id: scr_orders1
 screen: order-list
+section: "01. Orders - Order list"          # add this line to sections.yaml
 type: list                                  # a list must have Empty, Loading and Error
 elements:
+  - { id: header, kind: page-header, title: Orders }
   - { id: filter, kind: filter-form, fields: [period, branch, status] }
   - { id: table,  kind: table, columns: [order_no, branch, amount, status] }
 states:                                     # a state is what differs, not a copy
   Empty:   [{ target: table, replace: { kind: empty-notice, text: "No orders yet" } }]
   Loading: [{ target: table, replace: { kind: skeleton, rows: 10 } }]
   Error:   [{ target: table, replace: { kind: error-notice, text: { $tbd: { owner: pm } } } }]
-flows:
-  - { from: table, via: row, to: order-detail }
 ```
 
 `lint` reports a missing state or an undecided value (`$tbd`) with its file and line number. On `main` it blocks them.
@@ -90,12 +92,13 @@ flows:
 
 | Verb | What it does |
 |---|---|
-| `init` · `serve` · `render` | start a project, run the live viewer, write static HTML |
+| `init` · `serve` · `render` | start a project (`--language ko` for Korean), run the live viewer, write static HTML |
 | `lint` · `prep` · `diff` | check (exit 1 on a block), fill missing states, compare AS-IS / TO-BE |
-| `propose` · `apply` · `reject` · `undo` | the proposal loop |
+| `propose` · `apply` · `reject` · `undo` | the proposal loop — Undo is in the viewer too |
+| `comments` · `requests` | what people left and asked for in the viewer; `requests close <id>` once it is answered |
 | `map figma` · `import figma` | turn a Figma page into screen files |
 
-`doan --help` lists all of them. [DESIGN.md](DESIGN.md) has the design decisions and why they were made, and [CHANGELOG.md](CHANGELOG.md) has what changed.
+`doan --help` lists all of them; `doan --help <verb>` shows one. [DESIGN.md](DESIGN.md) has the design decisions and why they were made, and [CHANGELOG.md](CHANGELOG.md) has what changed.
 
 ## Development
 

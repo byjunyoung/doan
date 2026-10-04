@@ -1,0 +1,14 @@
+schema: doan/0.2
+id: scr_trust01
+screen: tracks-ok
+section: "01. Store - Trust cases"
+type: page
+elements:
+  - id: line
+    kind: group
+    children:
+      - { id: name, kind: caption, text: Item }
+      - { id: qty, kind: caption, text: "2" }
+      - { id: remove, kind: button, label: Remove }
+layout:
+  line: { kind: grid, columns: [ sm, 1fr, "minmax(sm, md)" ], gap: space.sm }

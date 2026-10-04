@@ -9,7 +9,8 @@ import { assetRefs } from './assets.js';
 import { DEFAULT_TOKENS, mergeTokens } from './render/tokens.js';
 import { SLOTS } from './slots.js';
 import { patternsFor, matchSkeleton } from './patterns.js';
-import { childKindOf } from './render/index.js';
+import { tracksOf, trackProblem } from './tracks.js';
+import { childKindOf, drawReads } from './render/index.js';
 
 // Each rule is (ctx) => findings. A finding names the file and the YAML path so an agent
 // can edit the exact line. Severity: blocking stops handoff; warning is counted.
@@ -196,6 +197,11 @@ const rules = {
         out.push(finding('L13', 'blocking', s, [...base, 'kind'], `layout container "${rule.kind}" is not in layout.containers`));
       if (rule.size && vocab.size_classes?.length && !vocab.size_classes.includes(rule.size))
         out.push(finding('L13', 'blocking', s, [...base, 'size'], `size "${rule.size}" is not in layout.size_classes`));
+      // columns written as tracks: each one a size class, a token, a share, auto or minmax over those
+      for (const track of tracksOf(rule.columns) ?? []) {
+        const why = trackProblem(track, vocab.size_classes?.length ? vocab.size_classes : undefined);
+        if (why) out.push(finding('L13', 'blocking', s, [...base, 'columns'], `columns track ${why}`));
+      }
       for (const key of ['gap', 'padding']) for (const v of [].concat(rule[key] ?? []).filter((x) => String(x) !== '0')) {
         if (BARE_UNIT.test(String(v))) out.push(finding('L13', 'blocking', s, [...base, key], `${key} "${v}" is a bare unit; use a token name`));
         else if (vocab.spacing_tokens && !String(v).startsWith(vocab.spacing_tokens))
@@ -419,6 +425,26 @@ const rules = {
         if (!Array.isArray(pattern.skeleton)) continue;
         for (const m of matchSkeleton(pattern.skeleton, s.doc.elements))
           out.push(finding('L29', 'warning', s, m.index === null ? ['elements'] : ['elements', m.index], `pattern "${pattern.pattern}": ${m.message}`));
+      }
+    return out;
+  },
+  // L30 — a prop written in the file and declared by the contract that the picture does not draw.
+  // L21 catches a prop the contract does not know; this catches the one it knows and nobody reads:
+  // lint was green while the picture ignored the value. Lint runs the bundled drawing functions;
+  // a library adapter's coverage is the contract-coverage test's job (test/coverage.test.js).
+  L30(ctx) {
+    const out = [];
+    const seen = new Set();
+    const steps = (p) => String(p).split('.').filter(Boolean).map((x) => (/^\d+$/.test(x) ? Number(x) : x));
+    for (const s of ctx.screens)
+      for (const m of drawReads(ctx, s)) {
+        const message = `prop "${m.prop}" is written but ${m.kind} does not draw it${m.state !== 'Default' ? ` (state ${m.state})` : ''}`;
+        // an element a compound declares is written in the component file, once for every instance
+        const f = m.from ? fileFinding('L30', 'warning', join(ctx.dir, m.from.file), [...steps(m.from.path), m.prop], message) : finding('L30', 'warning', s, m.path ? [...steps(m.path), m.prop] : ['elements'], message);
+        const key = `${f.file}\u0000${f.path.join('.')}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(f);
       }
     return out;
   },

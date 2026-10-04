@@ -424,3 +424,13 @@ Copy comes from the spec the screen references, from sibling screens, or from th
 );
 
 await server.connect(new StdioServerTransport());
+
+// tell the viewer an agent is here (.requests/agent.json, src/requests.js); the timer never keeps
+// the process alive on its own, and a failed write is no reason to stop serving
+{
+  const { writeHeartbeat, HEARTBEAT_MS } = await import('./requests.js');
+  const started = new Date().toISOString();
+  const beat = () => writeHeartbeat(dir, { started }).catch(() => {});
+  await beat();
+  setInterval(beat, HEARTBEAT_MS).unref();
+}

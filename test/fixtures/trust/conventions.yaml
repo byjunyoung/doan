@@ -1,0 +1,8 @@
+# The cases a product audit (2026-10-02) found silent: lint green while the picture was wrong.
+# Fictional names only. Each screen holds one case; test/trust.test.js says what each must do.
+naming:
+  screen_pattern: '^[a-z0-9-]+$'
+layout:
+  containers: [ stack, grid, columns ]
+  spacing_tokens: 'space.'
+  size_classes: [ sm, md, lg, full ]

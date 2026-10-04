@@ -32,10 +32,18 @@ test('the live viewer asks at the foot of its right panel, writes the request, a
     const base = srv.url.replace(/\/$/, '');
     await fetch(`${base}/api/comments`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ screen: 'inventory-list', path: 'elements.0', text: 'bigger' }) });
     const before = await (await fetch(`${base}/foundations.html`)).text();
-    assert.match(before, /<div class="drawer-foot"><div class="hint" id="ask-count">1 open comment\(s\)<\/div><button class="btn btn-primary" id="ask-comments" type="button" data-request="">Ask the agent to apply them<\/button>/);
+    assert.match(before, /<div class="drawer-foot"><div class="hint" id="ask-count">1 open comment\(s\)<\/div><div class="hint agent-line" id="agent-line">○ no agent connected[^<]*<\/div><button class="btn btn-primary" id="ask-comments" type="button" data-request="">Ask the agent to apply them<\/button>/);
     const r = await (await fetch(`${base}/api/requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"kind":"apply-comments"}' })).json();
     assert.equal(r.status, 'open');
+    // nobody is connected: the request is queued, and the button does not pretend an agent took it
+    const queued = await (await fetch(`${base}/foundations.html`)).text();
+    assert.match(queued, new RegExp(`class="btn btn-primary" id="ask-comments" type="button" disabled data-request="${r.id}">Queued — no agent connected`));
+    // an agent's heartbeat (what the MCP server writes every 20 s) makes it "on it"
+    const { writeHeartbeat } = await import('../src/requests.js');
+    await writeHeartbeat(dir);
+    assert.equal((await (await fetch(`${base}/api/agent`)).json()).connected, true);
     const after = await (await fetch(`${base}/foundations.html`)).text();
+    assert.match(after, /class="hint agent-line on" id="agent-line">● agent connected/);
     assert.match(after, new RegExp(`class="btn btn-primary" id="ask-comments" type="button" disabled data-request="${r.id}">The agent is on it…`));
     const closed = await (await fetch(`${base}/api/requests/${r.id}/close`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"proposals":["p_1"]}' })).json();
     assert.equal(closed.status, 'done');
@@ -124,4 +132,33 @@ test('padding may be one token or [vertical, horizontal] — Figma\'s two fields
   const p = await proposeLayout(dir, { screen: 'inventory-list', id: 'card', rule: { kind: 'stack', padding: ['space.md', '0'] } }, { branch: 'x', today: '2026-09-28' });
   assert.match(p.after, /\n  card: \{ kind: stack, padding: \[space\.md, 0\] \}\n/);
   assert.equal(p.lint.after.blocking, 0);
+});
+
+test('a heartbeat older than a minute is no agent; none at all is none', async () => {
+  const { writeHeartbeat, agentStatus } = await import('../src/requests.js');
+  const dir = copy();
+  assert.equal((await agentStatus(dir)).connected, false);
+  await writeHeartbeat(dir, { now: new Date(Date.now() - 61000) });
+  assert.equal((await agentStatus(dir)).connected, false);
+  await writeHeartbeat(dir);
+  assert.equal((await agentStatus(dir)).connected, true);
+});
+
+test('the MCP server writes the heartbeat while it runs', async () => {
+  const { spawn } = await import('node:child_process');
+  const { fileURLToPath } = await import('node:url');
+  const { agentStatus } = await import('../src/requests.js');
+  const dir = copy();
+  const child = spawn(process.execPath, [fileURLToPath(new URL('../src/mcp.js', import.meta.url)), dir], { stdio: ['pipe', 'ignore', 'ignore'] });
+  try {
+    let status = { connected: false };
+    for (let i = 0; i < 50 && !status.connected; i++) {
+      await new Promise((r) => setTimeout(r, 100));
+      status = await agentStatus(dir);
+    }
+    assert.equal(status.connected, true);
+    assert.equal(status.pid, child.pid);
+  } finally {
+    child.kill();
+  }
 });

@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.21.0 — 2026-10-04
+
+Trust round: a green lint and a drawn picture now mean what they say, and the first five minutes no longer hit a wall. Spec `docs/specs/2026-10-02-trust-round.md`.
+
+- **Every declared prop is drawn, on every path** — a CI test (`test/coverage.test.js`) drives each prop of each contract through the bundled set, antd and MUI, and fails when a path never reads it or reads it without the picture changing. On day one it found 99 gaps (40 bundled, 31 antd, 28 MUI); all are drawn now — a card's and a dialog's overlay, toast and notice, a progress bar's value, a disabled group's controls, a button's icon and note, a select's value and placeholder, a tag's colour, a table's selected row, a table column's `kind` and `align`, an empty notice's title in antd, and the rest. A prop that is documentation only says `drawn: false` with a reason (a number's `min`/`max`/`step`, an upload's `multiple`); a second name for another prop says `alias_of`.
+- **L30 not-drawn** — a prop written in the file, declared by its contract and read by nothing is a warning with its file and line, and a dot on the element in the viewer. A kind a library adapter draws is left to the coverage test.
+- **L13 checks grid tracks** — `columns: [sm, 1fr]` draws the size class as its custom property (it used to be invalid css, collapsing the grid); `320px` and a word css does not know are blocking, the track named.
+- **A list that scrolls does not wrap** — `scroll: vertical` sets `nowrap`; wrapping is asked for with `wrap: true`.
+- **init** prints and writes the published command (`npx @junyoung735/doan`), takes `--language ko|en` (the setting, a Korean starter and README), writes a `.gitignore` for the agent heartbeat, and starts `patterns/` with one pattern the starter screen follows.
+- **The README's screen example is a tested file** — it proposes and lints clean in a new project.
+- **Errors are one line** and a pointer to `doan --help <verb>`, which shows that verb alone; a verb called without what it needs prints its own usage. The help's rule range comes from the lint catalogue.
+- **`doan comments`** lists what people left in the viewer; **`doan requests close <id>`** closes a request.
+- **serve** moves to the next free port when 4870 is taken and says so; with `--port` a busy port is a one-line error.
+- **The viewer**: a proposal opens on its own section's canvas — a new section is drawn as the proposal would leave it, and without the proposal a page says it exists only there (no raw JSON); Apply lands on the applied screen's frame with an Undo toast, and an applied proposal's page has Undo; the red lint count opens its findings (rule, message, file:line) in the panel.
+- **"The agent is on it" only when one is** — the MCP server writes `.requests/agent.json` every 20 s; with no agent connected the viewer says so and how to connect one, and the request waits.
+- **Korean** reaches the remaining sample values (durations), the table's row hint, a field's reveals, and the library adapters' default words — and a self-built project's own copy of the set (`--base none`), which kept speaking English whatever the project said (found clicking through a fresh `init --language ko`).
+- **DESIGN.md** — Claude Design has had drag, resize and align since 2026-06-17 and lives inside Claude since 2026-09-16; the comparison table now keeps only what still differs. `import html`, `rename` and `export` are marked planned.
+- A test that started failing on 2026-10-02 because an example's `$tbd` fell due now pins its date, and `npm run check` lints the examples on a fixed day.
+
 ## 0.20.3 — 2026-09-28
 
 - **Stubs to other domains no longer pile up** — flows that leave one frame from the same height (a header's menu items on one line) were drawn as lines and labels one over another; each now takes a row below the one before, its line turning down at a right angle into it.

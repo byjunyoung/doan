@@ -8,6 +8,7 @@ props:
     type: string
   label:
     type: string
+    alias_of: text
   color:
     type: string
 tokens:

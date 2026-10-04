@@ -11,6 +11,8 @@ let D = dictionary('en');
 export function setLanguage(lang) {
   D = dictionary(lang);
 }
+// the words the current render speaks, for the wrapper's own marks (src/render/index.js)
+export const words = () => D;
 
 export const h = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -43,6 +45,15 @@ const props = (el) => Object.entries(el).filter(([k]) => !RESERVED.has(k));
 
 const list = (items) => (Array.isArray(items) ? items : items === undefined ? [] : [items]);
 
+// a prop that holds an element — an overlay, a toast, a preview — draws as that element; a plain
+// value draws as text in the same place
+export const part = (x, r, id) => (x && typeof x === 'object' && !isTbd(x) && x.kind ? r.element({ id, ...x }) : v(x));
+// what a state lays over a box: a busy veil, a toast, an inline notice (a card's and a modal's)
+export const layers = (el, r) =>
+  `${el.notice !== undefined ? `<div class="notice-inline">${el.notice && typeof el.notice === 'object' && !el.notice.kind && !isTbd(el.notice) ? v(el.notice.title ?? el.notice.text) : part(el.notice, r, `${el.id}-notice`)}</div>` : ''}` +
+  `${el.toast !== undefined ? `<div class="box-toast">${part(el.toast, r, `${el.id}-toast`)}</div>` : ''}` +
+  `${el.overlay !== undefined ? `<div class="box-overlay">${part(el.overlay, r, `${el.id}-overlay`)}</div>` : ''}`;
+
 // A cell with no value gets a sample made from its column name, so the picture reads as a
 // screen and not as a broken one. The inspector says the values are samples.
 export function sample(key, i = 0) {
@@ -60,8 +71,23 @@ export function sample(key, i = 0) {
   if (/email/.test(k)) return `user${n}@example.com`;
   if (/phone/.test(k)) return '010-1234-5678';
   if (/version/.test(k)) return `v2.${n}.0`;
-  if (/duration|fulfil|elapsed/.test(k)) return ['4m 12s', '3m 48s', '6m 01s'][i % 3];
+  if (/duration|fulfil|elapsed/.test(k)) return D.s_duration[i % 3];
   return D.s_sample(n);
+}
+
+// A table column's own `align` (left · center · right, or start · end) and `kind` — what each cell
+// is drawn as: a progress bar, a tag, a button… any kind the set draws, filled with a sample value.
+const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
+export const alignOf = (c) => (typeof c === 'object' && c && ALIGN[c.align] ? ` style="text-align:${ALIGN[c.align]}"` : '');
+export function cellOf(el, c, i, ci, r) {
+  const k = typeof c === 'object' && c ? c.kind : null;
+  if (k === 'progress') return `<div class="bar"><span style="width:${[62, 38, 84][i % 3]}%"></span></div>`;
+  if (k && kinds[k] && r) {
+    const val = sample(c, i);
+    return r.element({ id: `${el.id}/c${ci}-r${i}`, kind: k, text: val, label: val, $cell: true });
+  }
+  if (typeof c === 'object' && c?.sub) return `${h(sample(c, i))}<div class="sub">${v(c.sub)}</div>`;
+  return h(sample(c, i));
 }
 
 export const kinds = {
@@ -75,7 +101,8 @@ export const kinds = {
     return `<div class="ph-left"><h2>${v(el.title)}</h2>${tabs ? `<div class="tabs">${tabs}</div>` : ''}</div><div class="ph-actions">${actions}${r.children(el)}</div>`;
   },
   card(el, r) {
-    return `${el.title ? `<div class="card-title">${v(el.title)}${el.hint ? ` <span class="hint">${v(el.hint)}</span>` : ''}</div>` : ''}${r.children(el)}`;
+    const hint = el.hint ? ` <span class="hint">${v(el.hint)}</span>` : '';
+    return `${el.title || hint ? `<div class="card-title">${v(el.title)}${hint}</div>` : ''}${r.children(el)}${layers(el, r)}`;
   },
   section(el, r) {
     return `${el.title ? `<div class="section-title">${v(el.title)}</div>` : ''}${r.children(el)}`;
@@ -83,11 +110,14 @@ export const kinds = {
   fieldset(el, r) {
     return `${r.children(el)}${el.hint ? `<div class="hint">${v(el.hint)}</div>` : ''}`;
   },
+  // a disabled group draws every control inside it disabled, as its contract promises
   group(el, r) {
-    return r.children(el);
+    return el.disabled === true ? r.disabledInside(() => r.children(el)) : r.children(el);
   },
+  // a bar written as a list of field names, not as children, draws each as a labelled control
   'filter-bar'(el, r) {
-    return r.children(el);
+    const fields = list(el.fields).map((f) => `<label class="fld"><span>${v(label(f))}</span><input readonly placeholder="${h(label(f))}"></label>`).join('');
+    return `${fields}${r.children(el)}`;
   },
   'filter-form'(el) {
     return list(el.fields).map((f) => `<label class="fld"><span>${v(label(f))}</span><input readonly placeholder="${h(label(f))}"></label>`).join('');
@@ -100,10 +130,11 @@ export const kinds = {
   },
   button(el) {
     const variant = el.variant ?? 'default';
-    return `<button class="btn btn-${h(variant)}"${el.disabled ? ' disabled' : ''}>${v(el.label ?? el.title ?? el.id)}</button>`;
+    const icon = el.icon ? `<span class="btn-ico">${ico(el.icon)}</span>` : '';
+    return `<button class="btn btn-${h(variant)}"${el.disabled ? ' disabled' : ''}>${icon}${v(el.label ?? el.title ?? el.id)}</button>${el.note ? `<span class="btn-note">${v(el.note)}</span>` : ''}`;
   },
   caption(el) {
-    return `<span class="caption">${v(el.text)}</span>`;
+    return `<span class="caption style-${h(el.style ?? 'plain')}">${v(el.text)}</span>`;
   },
   hint(el) {
     return `<span class="hint">${el.icon ? `<span class="ico">${ico(el.icon)}</span> ` : ''}${v(el.text)}</span>`;
@@ -111,19 +142,18 @@ export const kinds = {
   divider() {
     return `<hr>`;
   },
-  table(el) {
+  table(el, r) {
     const cols = list(el.columns);
-    const head = cols.map((c) => `<th>${v(label(c))}${typeof c === 'object' && c?.sortable ? ' ↕' : ''}</th>`).join('');
-    const cell = (c, i) => {
-      if (typeof c === 'object' && c?.kind === 'progress') return `<td><div class="bar"><span style="width:${[62, 38, 84][i % 3]}%"></span></div></td>`;
-      if (typeof c === 'object' && c?.sub) return `<td>${h(sample(c, i))}<div class="sub">${v(c.sub)}</div></td>`;
-      return `<td>${h(sample(c, i))}</td>`;
-    };
-    const rows = Array.from({ length: 3 }, (_, i) => `<tr>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map((c) => cell(c, i)).join('')}</tr>`).join('');
-    return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">row → ${v(el.row_action)}</div>` : ''}`;
+    const head = cols.map((c) => `<th${alignOf(c)}>${v(label(c))}${typeof c === 'object' && c?.sortable ? ' ↕' : ''}</th>`).join('');
+    const cell = (c, i, ci) => `<td${alignOf(c)}>${cellOf(el, c, i, ci, r)}</td>`;
+    // the row a Selected state highlights: a row number, or the first row
+    const sel = el.selected_row === undefined || el.selected_row === null ? -1 : Number.isInteger(Number(el.selected_row)) ? Math.max(Number(el.selected_row) - 1, 0) : 0;
+    const rows = Array.from({ length: 3 }, (_, i) => `<tr${i === sel ? ' class="row-sel"' : ''}>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map((c, ci) => cell(c, i, ci)).join('')}</tr>`).join('');
+    return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">${D.rowTo} ${v(el.row_action)}</div>` : ''}`;
   },
   pagination(el) {
-    return `<div class="pager">‹ <span class="on">1</span> 2 3 ›${el.page_size ? ` <span class="hint">${h(el.page_size)}${D.perPage}</span>` : ''}</div>`;
+    const pages = el.compact ? `<span class="on">1</span> / 3` : `<span class="on">1</span> 2 3`;
+    return `<div class="pager">‹ ${pages} ›${el.page_size ? ` <span class="hint">${h(el.page_size)}${D.perPage}</span>` : ''}</div>`;
   },
   'empty-notice'(el) {
     return `<div class="notice"><div class="notice-icon">○</div><div class="notice-title">${v(el.title ?? D.nothingHere)}</div><div class="notice-text">${v(el.text)}</div></div>`;
@@ -144,7 +174,7 @@ export const kinds = {
     return `<div class="ph-label">${D.undesigned}</div><div class="ph-text">${v(el.text)}</div>`;
   },
   modal(el, r) {
-    return `<div class="modal-title">${v(el.title)}</div><div class="modal-body">${r.children(el)}</div>${el.notice ? `<div class="notice-inline">${v(el.notice.title ?? el.notice)}</div>` : ''}`;
+    return `<div class="modal-title">${v(el.title)}</div><div class="modal-body">${r.children(el)}</div>${layers(el, r)}`;
   },
   confirm(el) {
     return `<div class="confirm"><div class="modal-title">${v(el.title)}</div><div>${v(el.text)}</div><div class="row end">${list(el.buttons).map((b) => `<button class="btn">${v(b)}</button>`).join('')}</div></div>`;
@@ -152,7 +182,9 @@ export const kinds = {
   field(el, r) {
     const c = el.control;
     const control = c && typeof c === 'object' && !isTbd(c) ? r.element({ id: `${el.id}-control`, ...c }) : `<input readonly>`;
-    return `<div class="fld-label">${v(el.label)}${el.caption ? `<div class="hint">${v(el.caption)}</div>` : ''}</div><div class="fld-control">${control}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${el.reveals ? `<div class="hint">reveals: ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
+    const tip = el.tooltip !== undefined ? ` <span class="hint fld-tip" title="${h(list(el.tooltip).map((t) => (isTbd(t) ? 'TBD' : label(t))).join(' · '))}">ⓘ</span>` : '';
+    const preview = el.preview !== undefined ? `<div class="fld-preview">${part(el.preview, r, `${el.id}-preview`)}</div>` : '';
+    return `<div class="fld-label">${v(el.label)}${tip}${el.caption ? `<div class="hint">${v(el.caption)}</div>` : ''}</div><div class="fld-control">${control}${preview}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${el.reveals ? `<div class="hint">${D.revealsLabel} ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
   },
   input(el) {
     return `<input readonly${el.readonly ? ' class="ro"' : ''} value="${h(el.text ?? el.value ?? '')}" placeholder="${h(el.placeholder ?? '')}">`;
@@ -161,32 +193,42 @@ export const kinds = {
     return `<input readonly type="number" value="${h(el.value ?? '')}">`;
   },
   textarea(el) {
-    return `<textarea readonly rows="2" placeholder="${h(el.placeholder ?? '')}"></textarea>${el.counter ? `<div class="hint">${v(el.counter)}</div>` : ''}`;
+    return `<textarea readonly rows="${h(Math.min(Number(el.rows) || 2, 12))}" placeholder="${h(el.placeholder ?? '')}"></textarea>${el.counter ? `<div class="hint">${v(el.counter)}</div>` : ''}`;
   },
+  // the chosen value; with none, the placeholder (muted), else the first option
   select(el) {
+    if (el.value !== undefined) return `<div class="select">${v(el.value)} ▾</div>`;
+    if (el.placeholder !== undefined) return `<div class="select is-placeholder">${v(el.placeholder)} ▾</div>`;
     return `<div class="select">${v(Array.isArray(el.options) ? el.options[0] : el.options ?? D.select)} ▾</div>`;
   },
   radio(el) {
-    return `<div class="radio">${list(el.options).map((o, i) => `<label><span class="dot-r${i === 0 ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
+    const opts = list(el.options);
+    const on = el.value === undefined ? 0 : opts.findIndex((o) => String(label(o)) === String(el.value));
+    return `<div class="radio">${opts.map((o, i) => `<label><span class="dot-r${i === on ? ' on' : ''}"></span>${v(o)}</label>`).join('')}</div>`;
   },
   date(el) {
-    return `<div class="select">${h(el.format ?? 'YYYY.MM.DD')} ▾</div>`;
+    return el.value !== undefined ? `<div class="select">${v(el.value)} ▾</div>` : `<div class="select is-placeholder">${h(el.format ?? 'YYYY.MM.DD')} ▾</div>`;
   },
   'date-range'(el) {
     return `<div class="row"><div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div> ~ <div class="select">${h(el.format ?? 'YYYY.MM.DD')}</div></div>`;
   },
   upload(el) {
-    return `<button class="btn">${v(el.label ?? D.chooseFile)}</button>`;
+    return `<button class="btn">${v(el.label ?? D.chooseFile)}</button>${el.accept ? ` <span class="hint">${v(el.accept)}</span>` : ''}`;
   },
   image(el) {
     // a real picture when src names a file under assets/, the placeholder otherwise
     // an svg under assets/icons/ is an icon: a mask in the text colour, on no box of its own
     if (isIcon(el.src) && /(^|\/)icons\//.test(el.src)) return `<div class="img is-icon size-${h(el.size ?? 'md')}">${iconMask(el.src, 'ico-mask ico-fill')}</div>`;
-    const pic = isAssetRef(el.src) ? `<img src="${h(el.src)}" alt="${h(el.alt ?? '')}">` : D.image;
+    // without a file, the placeholder names what picture goes there: the alt text, else the src
+    const pic = isAssetRef(el.src) ? `<img src="${h(el.src)}" alt="${h(el.alt ?? '')}">` : `<span class="img-name">${v(el.alt ?? (el.src ? String(el.src).split('/').pop() : D.image))}</span>`;
     return `<div class="img size-${h(el.size ?? 'md')} fit-${h(el.fit ?? 'cover')}">${pic}</div>`;
   },
   'kv-table'(el) {
-    const rows = Array.isArray(el.rows) ? el.rows : [];
+    // `columns` is how many label–value pairs sit on one line; the pairs reflow to it
+    const given = Array.isArray(el.rows) ? el.rows : [];
+    const per = Number(el.columns) > 0 ? Number(el.columns) : 0;
+    const flat = given.flatMap((row) => list(row));
+    const rows = per ? Array.from({ length: Math.ceil(flat.length / per) }, (_, i) => flat.slice(i * per, i * per + per)) : given;
     const body = rows.map((r, i) => `<tr>${list(r).map((k) => `<th>${v(k)}</th><td>${h(sample(k, i))}</td>`).join('')}</tr>`).join('');
     return `${el.title ? `<div class="section-title">${v(el.title)}</div>` : ''}<table class="kv">${body || `<tr><td class="hint">${v(el.rows)}</td></tr>`}</table>`;
   },
@@ -196,18 +238,24 @@ export const kinds = {
   'stat-strip'(el) {
     return `<div class="stats">${list(el.stats).map((s, i) => `<div class="stat"><div class="stat-v">${h(sample(s, i))}</div><div class="stat-l">${v(s)}</div></div>`).join('')}</div>`;
   },
-  'tile-grid'(el) {
+  // each cell is the tile element when the grid names one, else a bare coloured cell
+  'tile-grid'(el, r) {
     const n = Math.min(Number(el.per_page) || 25, 100);
-    return `<div class="tiles" style="--cols:${Number(el.columns) || 10}">${Array.from({ length: n }, (_, i) => `<span class="tile t${i % 5}"></span>`).join('')}</div>`;
+    const tile = el.tile && typeof el.tile === 'object' && el.tile.kind ? el.tile : null;
+    return `<div class="tiles" style="--cols:${Number(el.columns) || 10}">${Array.from({ length: n }, (_, i) => (tile ? r.element({ ...tile, id: `${el.id}-tile-${i}` }) : `<span class="tile t${i % 5}"></span>`)).join('')}</div>`;
   },
   tooltip(el) {
-    return `<span class="hint" title="${h(list(el.items).join(' · '))}">ⓘ</span>`;
+    return `<span class="hint" title="${h(list(el.items).join(' · '))}">${v(el.trigger ?? 'ⓘ')}</span>`;
   },
+  // the drag handle says the rows can be reordered; a fixed list draws none
   'sortable-list'(el) {
-    return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">⋮⋮ ${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
+    const handle = el.reorder === false ? '' : '⋮⋮ ';
+    return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">${handle}${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
   },
   nav(el) {
-    return `<div class="nav">${list(el.items).map((i, k) => `<div class="nav-item${k === 0 ? ' on' : ''}">${v(label(i))}</div>`).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
+    const items = list(el.items);
+    const on = el.active === undefined ? 0 : items.findIndex((i) => String(label(i)) === String(el.active));
+    return `<div class="nav">${items.map((i, k) => `<div class="nav-item${k === on ? ' on' : ''}">${v(label(i))}</div>`).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
   },
   checkbox(el) {
     return `<label class="chk-line"><span class="box${el.checked ? ' on' : ''}"></span>${v(el.label ?? el.text ?? el.id)}</label>`;
@@ -216,7 +264,9 @@ export const kinds = {
     return `<span class="sw${el.on ? ' on' : ''}"></span> ${v(el.label ?? '')}`;
   },
   tag(el) {
-    return `<span class="tag">${v(el.text ?? el.label ?? el.id)}</span>`;
+    // a colour is a status word (success, warning, danger, info) or a colour token's name
+    const color = el.color ? ` style="--tag:var(--color-${h(String(el.color).replace(/^color\./, '').replace(/\./g, '-'))})"` : '';
+    return `<span class="tag${el.color ? ' tag-colored' : ''}"${color}>${v(el.text ?? el.label ?? el.id)}</span>`;
   },
   // mobile
   'app-bar'(el, r) {
@@ -266,7 +316,10 @@ export const kinds = {
   tile(el) {
     return `<span class="tile t${(String(el.status ?? el.id).length) % 5}" title="${h(el.label ?? el.id)}"></span>`;
   },
-  progress() {
-    return `<div class="bar"><span style="width:62%"></span></div>`;
+  // the fill is the value, as a percentage (0–100); with none, a sample fill
+  progress(el) {
+    const n = Number(el.value);
+    const pct = Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 62;
+    return `<div class="bar"><span style="width:${pct}%"></span></div>`;
   },
 };

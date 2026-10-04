@@ -4,15 +4,17 @@ import { lint, summarize, bindingsOf } from '../lint.js';
 import { tokenNames, getToken, hasToken, getGroup } from '../tokens.js';
 import { assetsSummary } from '../assets.js';
 import { resolveFlowTarget } from '../flows.js';
-import { kinds, h, v, isTbd, setLanguage } from './kinds.js';
+import { kinds, h, v, isTbd, setLanguage, words } from './kinds.js';
 import { dictionary, languageOf, pageStrings } from './i18n.js';
 import { DEFAULT_TOKENS, mergeTokens, tokenVar, tokensToCss } from './tokens.js';
 import { CSS, INSPECTOR_JS, PROTO_JS, CANVAS_JS, PROPOSAL_VIEW_JS } from './page.js';
 import { parseScreenText } from '../project.js';
 import { enumAttrs } from '../components.js';
+import { tracksOf, trackCss } from '../tracks.js';
+import { recordReads, wrapperDrawn, cssBound, writtenProps, notDrawn } from './reads.js';
 import { expandComponents } from '../expand.js';
 import { flowGraph } from '../flowmap.js';
-import { canvasPages } from '../canvas.js';
+import { canvasPages, domainOf, slugOf } from '../canvas.js';
 import { appliesTo, matchSkeleton } from '../patterns.js';
 import { describeChanges, OP_MARK, opWord } from './changes.js';
 import { specOf, specMarkdown, codeOf } from '../spec.js';
@@ -64,8 +66,9 @@ function axisCss(rule) {
 function gridColumns(rule) {
   const c = rule.columns;
   if (c === 'auto') return `grid-template-columns:repeat(auto-fill,minmax(var(--size-${rule.min ?? 'sm'}),1fr))`;
-  if (Array.isArray(c)) return `grid-template-columns:${c.join(' ')}`;
-  if (typeof c === 'string') return `grid-template-columns:${c}`;
+  // a track that names a size class or a token draws as its custom property, never as a bare word
+  const tracks = tracksOf(c);
+  if (tracks) return `grid-template-columns:${tracks.map(trackCss).join(' ')}`;
   return `grid-template-columns:repeat(${c ?? 2},minmax(0,1fr))`;
 }
 
@@ -94,7 +97,8 @@ export function layoutStyle(rule, { container = true } = {}) {
   if (rule.scroll === 'horizontal') s.push('overflow-x:auto', 'flex-wrap:nowrap');
   // a list that is longer than the frame scrolls inside it — a kiosk menu board — and whatever
   // grows toward it may shrink, so the bar below stays on the screen
-  if (rule.scroll === 'vertical') s.push('overflow-y:auto', 'min-height:0');
+  // a list that scrolls does not wrap into a second column as well; wrapping is asked for (`wrap: true`)
+  if (rule.scroll === 'vertical') s.push('overflow-y:auto', 'min-height:0', ...(rule.wrap ? [] : ['flex-wrap:nowrap']));
   // one token for every side, or [vertical, horizontal] as Figma's two padding fields
   if (rule.padding) s.push(`padding:${[].concat(rule.padding).map((x) => (String(x) === '0' ? '0' : tokenVar(x))).join(' ')}`);
   if (rule.grow) s.push('flex:1 1 auto', 'min-height:0');
@@ -104,8 +108,9 @@ export function layoutStyle(rule, { container = true } = {}) {
 
 // Meta information stays off the picture: a dot per fact, the fact itself in the title and
 // in the drawer. Grey = a condition, yellow = an undecided value somewhere in the element.
-function dots(el) {
+function dots(el, missing = []) {
   const out = [];
+  if (missing.length) out.push(`<i class="dot undrawn" title="${h(words().notDrawn(missing.join(', ')))}"></i>`);
   if (el.show_when) out.push(`<i class="dot cond" title="shown when: ${h(el.show_when)}"></i>`);
   if (el.disabled_when) out.push(`<i class="dot cond" title="disabled when: ${h(el.disabled_when)}"></i>`);
   if (el.reveals) out.push(`<i class="dot cond" title="reveals: ${h(Object.keys(el.reveals).join(', '))}"></i>`);
@@ -113,8 +118,16 @@ function dots(el) {
   return out.length ? `<span class="dots">${out.join('')}</span>` : '';
 }
 
+// kind → data attributes the bundled stylesheet binds (a variant drawn by css, not by the function)
+let BOUND = null;
+const boundFor = (kind) => (BOUND ??= cssBound(CSS)).get(kind);
+
 function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
   const lines = new Map();
+  // element id → what its drawing function read of what the file wrote (src/render/reads.js)
+  const reads = new Map();
+  // inside a disabled group every control is drawn disabled (group.yaml: "every control inside is disabled")
+  let off = 0;
   for (const { el, path } of walkElements(screen.doc.elements ?? [], ['elements'])) lines.set(el.id, { path: path.join('.'), line: screen.lineOf(path) });
 
   const r = {
@@ -126,7 +139,8 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       // and an enum value it does not declare falls back to the declared default, for the bundled
       // set and a library adapter alike — nothing draws from a default of its own
       // a compound's wrapper takes its defaults too, so a variant on it (selected: false) is an attribute
-      const drawn = contract ? withContract(contract, el) : el;
+      let drawn = contract ? withContract(contract, el) : el;
+      if (off) drawn = { ...drawn, disabled: true };
       // a project's own copy of the set (base: none) is the bundled set, not a library: it takes the
       // bundled css as it is (a card's box, a fieldset's frame), so it carries no data-drawn mark
       const byAdapter = !el.$expanded && !!adapter?.kinds?.[el.kind] && adapter.name !== 'own';
@@ -136,20 +150,72 @@ function makeRenderer(screen, layout, maps, adapter = null, components = {}) {
       // the panel's layout editor reads the rule; a compound's parts are arranged by its contract, not the screen
       const layoutAttr = el.$from || String(el.id).includes('/') ? ' data-layout-owner="component"' : ` data-layout="${h(JSON.stringify(layout[el.id] ?? {}))}"`;
       const propsJson = h(JSON.stringify(Object.fromEntries(Object.entries(el).filter(([k]) => k !== 'children' && !k.startsWith('$')))));
-      const cls = ['el', `el-${el.kind}`, kinds[el.kind] || el.$expanded ? '' : 'el-unknown', el.disabled_when ? 'is-disabled' : ''].filter(Boolean).join(' ');
+      const cls = ['el', `el-${el.kind}`, kinds[el.kind] || el.$expanded ? '' : 'el-unknown', el.disabled_when || off ? 'is-disabled' : ''].filter(Boolean).join(' ');
       // `repeat: N` (what an import writes for a run of identical instances) draws the element N times in a row.
-      const once = fn(drawn, r);
+      const rec = recordReads(drawn);
+      const once = fn(rec.el, r);
+      let missing = [];
+      // a compound draws the tree its contract declares (its props are spent by the expansion), and
+      // `generic` lists every prop by design; neither is judged here
+      if (!el.$expanded && !el.$cell && fn !== kinds.generic && contract) {
+        const written = writtenProps(el);
+        missing = notDrawn({ written, read: rec.reads, wrapper: wrapperDrawn(contract, boundFor(el.kind)), contract });
+        reads.set(el.id, { kind: el.kind, written, read: rec.reads, enumerated: rec.enumerated, missing, by: byAdapter ? adapter.name : 'bundled', path: known?.path ?? path ?? '', line: known?.line ?? null, from: el.$from ?? null });
+      }
       const inner = el.repeat > 1 ? `<div class="repeat">${Array.from({ length: Math.min(Number(el.repeat), 200) }, () => `<div class="rep">${once}</div>`).join('')}</div>` : once;
       // each enum prop the contract declares becomes data-<prop>, which is what a variant's css binds to
       const code = contract && !el.$expanded ? codeOf(contract, el) : null;
       const attrs = Object.entries(enumAttrs(contract, drawn)).map(([k, val]) => ` data-${attrName(k)}="${h(val)}"`).join('') + (byAdapter ? ` data-drawn="${h(adapter.name)}"` : '') + (code ? ` data-code="${h(code.snippet)}"` : '');
-      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${layoutAttr}${attrs}${style ? ` style="${style}"` : ''}>${dots(el)}${inner}</div>`;
+      return `<div class="${cls}" data-id="${h(el.id)}" data-kind="${h(el.kind)}" data-path="${h(known?.path ?? path ?? '')}" data-line="${known?.line ?? ''}" data-maps="${h(maps[el.kind] ?? '')}" data-props="${propsJson}"${layoutAttr}${attrs}${style ? ` style="${style}"` : ''}>${dots(el, missing)}${inner}</div>`;
     },
     children(el) {
       return (el.children ?? []).map((c) => r.element(c)).join('');
     },
+    disabledInside(draw) {
+      off += 1;
+      try {
+        return draw();
+      } finally {
+        off -= 1;
+      }
+    },
+    reads,
   };
   return r;
+}
+
+// One element drawn on its own, through the same wrapper a screen uses: what a test of a contract
+// needs — the inside of the wrapper (what the drawing function returned, dots and data attributes
+// aside) and the record of what it read.
+export function drawElement(el, { components = {}, adapter = null } = {}) {
+  const screen = { doc: { elements: [el] }, lineOf: () => null };
+  const r = makeRenderer(screen, {}, {}, adapter, components);
+  const html = r.element(el);
+  const open = html.indexOf('>') + 1;
+  const inner = html.slice(open, html.lastIndexOf('</div>')).replace(/^<span class="dots">.*?<\/span>(?=<|$)/, '');
+  return { html, inner, record: r.reads.get(el.id) ?? null };
+}
+
+// What the bundled set leaves out of a screen: per state, each element's props that are written in
+// the file, declared by its contract, and read by no drawing path (lint L30). A kind the project draws
+// through a library adapter is left to the contract-coverage test; lint does not run the adapters.
+export function drawReads(project, screen) {
+  const base = project.conventions?.render?.base;
+  const library = base && base !== 'none' ? base : null;
+  const out = new Map();
+  for (const state of stateOrder(project, screen)) {
+    const view = expandComponents(mergeState(screen.doc, state), project.components ?? {});
+    const r = makeRenderer(screen, view.layout, {}, null, project.components ?? {});
+    for (const el of view.elements) r.element(el);
+    for (const [id, rec] of r.reads) {
+      if (library && project.components?.[rec.kind]?.maps_to?.[library]) continue;
+      for (const prop of rec.missing) {
+        const key = `${id}\u0000${prop}`;
+        if (!out.has(key)) out.set(key, { id, kind: rec.kind, prop, path: rec.path, from: rec.from, state });
+      }
+    }
+  }
+  return [...out.values()];
 }
 
 // One drawn view of a screen: a stage (what the page gives it) holding a frame at the
@@ -231,10 +297,32 @@ function placeOf(project, screenName, state = null) {
 }
 
 // where a pending proposal is looked at in the live viewer: the canvas of the domain its screen is in
+// A screen the project does not have yet is looked at on the canvas of the section the proposal
+// names (the canvas the TO-BE project draws); never on whatever canvas happens to be first.
 function proposalHref(project, p) {
-  const pages = canvasPages(project);
-  const slug = (p.screen && placeOf(project, p.screen).domain) || pages[0]?.slug;
+  const slug = (p.screen && placeOf(project, p.screen).domain) || (p.section ? slugOf(domainOf(p.section).domain) : null);
   return slug ? `canvas-${h(slug)}.html?proposal=${h(p.id)}` : `proposal-${h(p.id)}.html`;
+}
+
+// Where the person lands after Apply: the applied screen's frame on its canvas.
+export function appliedHref(project, screenName) {
+  const { domain } = placeOf(project, screenName);
+  return domain ? `canvas-${domain}.html#${screenName}` : `${screenName}.html`;
+}
+
+// A page in the viewer's frame that says one thing — a section that exists only in a proposal,
+// a domain that is not there — instead of a line of JSON.
+export function renderNotice(project, { title, text, links = [], status = '' } = {}) {
+  const lang = languageOf(project);
+  const D = dictionary(lang);
+  setLanguage(lang);
+  const tokens = mergeTokens(DEFAULT_TOKENS, project.tokens);
+  const body = shellOf(project, D, {
+    title: h(title),
+    meta: h(status),
+    content: `<div class="notice-page"><p>${h(text)}</p>${links.length ? `<p>${links.map((l) => `<a class="btn${l.primary ? ' btn-primary' : ''}" href="${h(l.href)}">${h(l.label)}</a>`).join(' ')}</p>` : ''}</div>`,
+  });
+  return page({ title, tokens, modeCss: modeCss(project), componentCss: componentCss(project), fonts: fontLinks(project), body, api: true, screen: '', comments: [], lang });
 }
 
 function navSidebar(project, D, place = {}, { findings = null, comments = [], proposals = [] } = {}) {
@@ -246,7 +334,10 @@ function navSidebar(project, D, place = {}, { findings = null, comments = [], pr
     const tbd = mine.filter((f) => f.id === 'L08').length;
     const open = comments.filter((c) => c.screen === screen).length;
     const st = s?.doc.status;
-    return [st === 'ready' || st === 'done' ? `<span class="pill ok">${st}</span>` : '', block ? `<span class="pill block">${block}</span>` : '', tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
+    // the red count opens the findings it counts in the panel: rule, message, file:line
+    const list = mine.map((f) => ({ id: f.id, severity: f.severity, message: f.message, where: `${String(f.file).split('/').slice(-2).join('/')}${f.line ? `:${f.line}` : ''}` }));
+    const badge = block ? `<button type="button" class="pill block lint-pill" title="${h(D.lintPillTitle(block))}" data-screen="${h(screen)}" data-findings="${h(JSON.stringify(list))}">${block}</button>` : '';
+    return [st === 'ready' || st === 'done' ? `<span class="pill ok">${st}</span>` : '', badge, tbd ? `<span class="pill tbd">${tbd}</span>` : '', open ? `<span class="pill cm">${open}</span>` : ''].join('');
   };
   // one domain is no level of its own: its sections stand at the top of the tree
   const pages = canvasPages(project);
@@ -318,16 +409,34 @@ function decisionFoot(D, id) {
   return `<div class="drawer-foot"><div class="hint">${D.decideHint}</div><div class="foot-row"><button class="btn btn-danger" id="reject" type="button" data-id="${h(id)}">${D.reject}</button><button class="btn btn-primary" id="approve" type="button" data-id="${h(id)}">${D.apply}</button></div><div class="hint" id="verdict"></div></div>`;
 }
 
+// an applied proposal can be taken back from the viewer — the same undo the CLI runs, which refuses
+// when the file changed since
+function undoFoot(D, id) {
+  return `<div class="drawer-foot"><div class="hint">${D.appliedHint}</div><div class="foot-row"><button class="btn" id="undo" type="button" data-id="${h(id)}">${D.undo}</button></div><div class="hint" id="verdict"></div></div>`;
+}
+
 function askFoot(project, D) {
   if (!project.live) return '';
   const n = project.live.openComments ?? 0;
   const open = (project.live.requests ?? []).find((r) => r.kind === 'apply-comments' && r.status === 'open');
-  return `<div class="drawer-foot"><div class="hint" id="ask-count">${n ? `${D.openCommentsN.replace('{n}', n)}` : D.askNone}</div><button class="btn btn-primary" id="ask-comments" type="button"${open || !n ? ' disabled' : ''} data-request="${open ? h(open.id) : ''}">${h(open ? D.askWaiting : D.askComments)}</button><script>(function () {
+  // "the agent is on it" only when one is: with none connected the request is queued, and the foot says
+  // how to connect one (the heartbeat, src/requests.js)
+  const agent = project.live.agent?.connected;
+  const waitText = agent ? D.askWaiting : D.askQueued;
+  return `<div class="drawer-foot"><div class="hint" id="ask-count">${n ? `${D.openCommentsN.replace('{n}', n)}` : D.askNone}</div><div class="hint agent-line${agent ? ' on' : ''}" id="agent-line">${agent ? D.agentOn : D.agentOff}</div><button class="btn btn-primary" id="ask-comments" type="button"${open || !n ? ' disabled' : ''} data-request="${open ? h(open.id) : ''}">${h(open ? waitText : D.askComments)}</button><script>(function () {
   var b = document.getElementById('ask-comments'); if (!b) return;
-  var T = ${JSON.stringify({ waiting: D.askWaiting, done: D.askDone })};
+  var line = document.getElementById('agent-line');
+  var T = ${JSON.stringify({ waiting: D.askWaiting, queued: D.askQueued, done: D.askDone, on: D.agentOn, off: D.agentOff })};
+  var connected = ${agent ? 'true' : 'false'};
+  function waitingText() { return connected ? T.waiting : T.queued; }
   function wait(id) {
-    b.disabled = true; b.textContent = T.waiting;
+    b.disabled = true; b.textContent = waitingText();
     var t = setInterval(function () {
+      fetch('/api/agent').then(function (r) { return r.json(); }).then(function (a) {
+        connected = !!a.connected;
+        if (line) { line.textContent = connected ? T.on : T.off; line.classList.toggle('on', connected); }
+        if (b.disabled) b.textContent = waitingText();
+      }).catch(function () {});
       fetch('/api/requests?status=all').then(function (r) { return r.json(); }).then(function (j) {
         var r = (j.requests || []).filter(function (x) { return x.id === id; })[0];
         if (!r || r.status === 'open') return;
@@ -916,7 +1025,7 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
     meta: `${h(proposal.status)} · ${D.tier} ${h(proposal.tier)} · ${h(lintLine)}${branch ? ` · ${h(branch)}` : ''}`,
     place: { ...placeOf(project, proposal.screen), proposal: proposal.id },
     tools: `<label class="toggle"><input type="checkbox" id="dev"> ${D.paths}</label>`,
-    foot: api && proposal.status === 'pending' ? decisionFoot(D, proposal.id) : null,
+    foot: api && proposal.status === 'pending' ? decisionFoot(D, proposal.id) : api && proposal.status === 'applied' ? undoFoot(D, proposal.id) : null,
     content: `<p style="font-size:15px;margin:0 0 var(--space-md)">${h(proposal.summary || D.noSummary)}</p>${api && proposal.status === 'pending' ? '' : verdict}
 <div class="section-title">${D.decided}</div>${decisions}
 <div class="section-title">${D.whatChanges}</div>${changeList(describeChanges(before.doc, after.doc, lang), lang)}<details class="raw-diff"><summary>${D.showCode}</summary>${diff}</details>

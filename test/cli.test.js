@@ -3,6 +3,9 @@ import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
+import { mkdtempSync, readFileSync, appendFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const run = promisify(execFile);
 const cli = fileURLToPath(new URL('../src/cli.js', import.meta.url));
@@ -28,8 +31,8 @@ test('lint text output ends with a summary line and exits 1 on the canonical bra
   );
 });
 
-test('an unknown verb exits 2 with usage', async () => {
-  await assert.rejects(run('node', [cli, 'draw']), (err) => err.code === 2 && /usage/i.test(err.stderr));
+test('an unknown verb exits 2 with one line and where to read more', async () => {
+  await assert.rejects(run('node', [cli, 'draw']), (err) => err.code === 2 && /unknown verb "draw"/.test(err.stderr) && /doan --help/.test(err.stderr));
 });
 
 test('prep via the CLI reports what it added and lint then counts the placeholders', async () => {
@@ -70,4 +73,53 @@ test('help and version exit 0; an unknown verb names itself', async () => {
   const v = await run('node', [cli, '--version']);
   assert.match(v.stdout, /^doan \d+\.\d+\.\d+/);
   await assert.rejects(run('node', [cli, 'draw']), (err) => err.code === 2 && /unknown verb "draw"/.test(err.stderr));
+});
+
+// The first five minutes (trust round, A)
+const readmeScreen = fileURLToPath(new URL('./fixtures/trust/readme-screen.yaml', import.meta.url));
+
+test('the README\'s screen example is the tested fixture, and it proposes and lints clean in a new project', async () => {
+  const readme = readFileSync(fileURLToPath(new URL('../README.md', import.meta.url)), 'utf8');
+  const block = /## A screen file\n\n```yaml\n([\s\S]*?)```/.exec(readme)[1];
+  assert.equal(block, readFileSync(readmeScreen, 'utf8'), 'README.md shows exactly test/fixtures/trust/readme-screen.yaml');
+  const dir = join(mkdtempSync(join(tmpdir(), 'doan-readme-')), 'design');
+  await run('node', [cli, 'init', dir]);
+  appendFileSync(join(dir, 'sections.yaml'), '- "01. Orders - Order list"\n'); // as the example's comment says
+  const { stdout } = await run('node', [cli, 'propose', dir, 'order-list', '--with', readmeScreen, '--json']);
+  const p = JSON.parse(stdout);
+  assert.equal(p.lint.after.blocking, 0);
+  await run('node', [cli, 'apply', dir, p.id, '--by', 'tester']);
+  const lint = JSON.parse((await run('node', [cli, 'lint', dir, '--branch', 'feature/x', '--json'])).stdout);
+  assert.equal(lint.summary.blocking, 0);
+});
+
+test('an error is one line and a hint to the verb\'s help, never the whole help page; --help <verb> is that verb alone', async () => {
+  await assert.rejects(run('node', [cli, 'lint', '/no/such/project']), (err) => {
+    assert.match(err.stderr, /^error: /);
+    assert.match(err.stderr, /more: doan --help lint/);
+    assert.doesNotMatch(err.stderr, /usage: doan <verb>/);
+    return true;
+  });
+  await assert.rejects(run('node', [cli, 'lint']), (err) => (assert.match(err.stderr, /^usage: doan lint <project-dir>/), assert.doesNotMatch(err.stderr, /\binit <project-dir>/), true));
+  const { stdout } = await run('node', [cli, '--help', 'serve']);
+  assert.match(stdout, /^usage: doan serve/);
+  assert.doesNotMatch(stdout, /\blint <project-dir>/);
+});
+
+test('the help names the rule range the catalogue has', async () => {
+  const { RULES } = await import('../src/lint.js');
+  const last = RULES.filter((r) => /^L\d+$/.test(r)).sort().at(-1);
+  const { stdout } = await run('node', [cli, '--help', 'lint']);
+  assert.match(stdout, new RegExp(`run rules L01–${last}\\.`));
+});
+
+test('comments lists what people left in the viewer; requests close marks a request done', async () => {
+  const dir = join(mkdtempSync(join(tmpdir(), 'doan-cm-')), 'design');
+  await run('node', [cli, 'init', dir]);
+  const { addComment } = await import('../src/comments.js');
+  await addComment(dir, { screen: 'sample-list', path: 'elements.0', element: 'header', text: 'Make the title shorter', author: 'kim' });
+  assert.match((await run('node', [cli, 'comments', dir])).stdout, /sample-list\s+header\s+kim: Make the title shorter/);
+  const { addRequest } = await import('../src/requests.js');
+  const r = await addRequest(dir, { by: 'kim' });
+  assert.match((await run('node', [cli, 'requests', 'close', dir, r.id, '--note', 'done'])).stdout, new RegExp(`${r.id}\\s+done`));
 });

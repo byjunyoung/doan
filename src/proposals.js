@@ -192,6 +192,8 @@ export async function propose(dir, { screen, after, summary = '', decisions = []
   const proposal = {
     id: newId(),
     screen,
+    // the section the new version puts the screen in: where the viewer shows it before it exists
+    section: parsed.doc.section ?? null,
     file: relative(dir, file),
     creates, // true when applying writes a file the project did not have; undo removes it
     summary,

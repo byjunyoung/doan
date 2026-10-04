@@ -8,10 +8,16 @@ props:
     type: number
   min:
     type: number
+    drawn: false
+    drawn_reason: a rule on what can be entered; a still picture does not show it (the spec page lists it)
   max:
     type: number
+    drawn: false
+    drawn_reason: a rule on what can be entered; a still picture does not show it (the spec page lists it)
   step:
     type: number
+    drawn: false
+    drawn_reason: a rule on what can be entered; a still picture does not show it (the spec page lists it)
 tokens:
   bg: color.bg
   text: color.text
