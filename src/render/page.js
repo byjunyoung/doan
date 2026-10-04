@@ -428,6 +428,12 @@ td .sub { color: var(--color-muted); font-size: 11px; }
   .top .views { grid-row: 2; grid-column: 1 / -1; justify-self: center; }
   .vars { grid-template-columns: 1fr; } .vars-side { position: static; }
 }
+/* a phone: the title keeps its line; the tools (a canvas has six) take the next one instead of squeezing it to nothing */
+@media (max-width: 600px) {
+  .top { grid-template-columns: minmax(0, 1fr); }
+  .top .tools { grid-row: 2; grid-column: 1; justify-content: flex-start; }
+  .top .views { grid-row: 3; grid-column: 1; }
+}
 .nav { display: flex; flex-direction: column; gap: var(--space-xs); min-width: var(--size-sm); } .nav-item { padding: 6px 10px; border-radius: var(--radius-sm); color: var(--color-muted); } .nav-item.on { background: var(--color-surface); color: var(--color-text); }
 .chk-line { display: inline-flex; align-items: center; gap: var(--space-xs); } .box { width: 14px; height: 14px; border: 1px solid var(--color-border); border-radius: 3px; display: inline-block; } .box.on { background: var(--color-primary); border-color: var(--color-primary); }
 .sw { display: inline-block; width: 28px; height: 16px; border-radius: 8px; background: var(--color-border); vertical-align: middle; } .sw.on { background: var(--color-primary); }
@@ -1033,6 +1039,9 @@ export const INSPECTOR_JS = `
         return '<li class="' + (f.severity === 'blocking' ? 'is-block' : 'is-warn') + '"><b>' + esc(f.id) + '</b> ' + esc(f.message) + '<div class="hint"><code>' + esc(f.where) + '</code></div></li>';
       }).join('') + '</ul></section>';
       if (shell) shell.classList.add('drawer-open');
+      // on a narrow screen the panel is a sheet of its own: open it, and close the menu the badge sat in
+      document.body.classList.remove('side-open');
+      if (window.doanPanelOpen) window.doanPanelOpen();
     });
   });
 

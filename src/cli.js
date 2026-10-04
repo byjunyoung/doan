@@ -12,6 +12,7 @@ import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { RULES } from './lint.js';
 import { NPX } from './init.js';
+import { sayError } from './cli-messages.js';
 
 // the rule range the help names, from the catalogue itself — a literal went stale at L15
 const RULE_RANGE = `${RULES.filter((r) => /^L\d+$/.test(r)).sort()[0]}–${RULES.filter((r) => /^L\d+$/.test(r)).sort().at(-1)}`;
@@ -380,7 +381,8 @@ const verbs = {
 const { verb, opts } = parseArgs(process.argv.slice(2));
 // An error says the one thing that went wrong and where to read more — never the whole help page.
 // A verb called without what it needs prints that verb's usage, not everyone's.
-const words = FRAME[langOf(opts)];
+const lang = langOf(opts);
+const words = FRAME[lang];
 try {
   if (!verb) throw Object.assign(new Error(USAGE), { exit: 2 });
   if (!verbs[verb]) throw Object.assign(new Error(`${words.unknown(verb)}\n${words.more()}`), { exit: 2, framed: true });
@@ -388,6 +390,6 @@ try {
 } catch (err) {
   if (err.message === USAGE && verb) process.stderr.write(`${usageOf(verb) ?? USAGE}\n${words.more()}\n`);
   else if (err.message === USAGE || err.framed) process.stderr.write(err.message + '\n');
-  else process.stderr.write(`${words.error}: ${err.message}\n${words.more(verbs[verb] ? verb : '')}\n`);
+  else process.stderr.write(`${words.error}: ${sayError(err.message, lang)}\n${words.more(verbs[verb] ? verb : '')}\n`);
   process.exit(err.exit ?? 2);
 }

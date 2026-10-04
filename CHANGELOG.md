@@ -17,6 +17,8 @@ Trust round: a green lint and a drawn picture now mean what they say, and the fi
 - **"The agent is on it" only when one is** — the MCP server writes `.requests/agent.json` every 20 s; with no agent connected the viewer says so and how to connect one, and the request waits.
 - **Korean** reaches the remaining sample values (durations), the table's row hint, a field's reveals, and the library adapters' default words — and a self-built project's own copy of the set (`--base none`), which kept speaking English whatever the project said (found clicking through a fresh `init --language ko`).
 - **DESIGN.md** — Claude Design has had drag, resize and align since 2026-06-17 and lives inside Claude since 2026-09-16; the comparison table now keeps only what still differs. `import html`, `rename` and `export` are marked planned.
+- **CLI errors in the project's language** — in a `meta.language: ko` project the errors a person meets from a terminal (not a project, port in use, a proposal that does not parse or fit the schema, nothing to apply or undo, a request or comment that is not there) say themselves in Korean (`src/cli-messages.js`); in English, a path that is no project now says so and how to start one instead of a raw ENOENT. What an agent reads over MCP is unchanged.
+- **On a phone** the top bar keeps the title on its line and puts a canvas's six tools on the next, where they had covered the title and the menu button; the lint badge, which sits in the menu there, closes it and opens the panel as a sheet.
 - A test that started failing on 2026-10-02 because an example's `$tbd` fell due now pins its date, and `npm run check` lints the examples on a fixed day.
 
 ## 0.20.3 — 2026-09-28

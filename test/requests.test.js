@@ -152,7 +152,7 @@ test('the MCP server writes the heartbeat while it runs', async () => {
   const child = spawn(process.execPath, [fileURLToPath(new URL('../src/mcp.js', import.meta.url)), dir], { stdio: ['pipe', 'ignore', 'ignore'] });
   try {
     let status = { connected: false };
-    for (let i = 0; i < 50 && !status.connected; i++) {
+    for (let i = 0; i < 150 && !status.connected; i++) { // up to 15 s: a loaded machine starts node slowly
       await new Promise((r) => setTimeout(r, 100));
       status = await agentStatus(dir);
     }

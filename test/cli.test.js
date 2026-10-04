@@ -123,3 +123,16 @@ test('comments lists what people left in the viewer; requests close marks a requ
   const r = await addRequest(dir, { by: 'kim' });
   assert.match((await run('node', [cli, 'requests', 'close', dir, r.id, '--note', 'done'])).stdout, new RegExp(`${r.id}\\s+done`));
 });
+
+test('in a Korean project an error says itself in Korean; a path that is no project says so and how to start one', async () => {
+  const dir = join(mkdtempSync(join(tmpdir(), 'doan-ko-')), 'design');
+  await run('node', [cli, 'init', dir, '--language', 'ko']);
+  await assert.rejects(run('node', [cli, 'apply', dir, 'p_nope', '--by', 'me']), (err) => (assert.match(err.stderr, /^오류: "p_nope" 제안이 없습니다/), assert.match(err.stderr, /자세히: doan --help apply/), true));
+  await assert.rejects(run('node', [cli, 'lint', '/no/where']), (err) => (assert.match(err.stderr, /^error: no conventions\.yaml in \/no\/where — it is not a doan project, or the path is wrong\. To start one: doan init \/no\/where/), true));
+});
+
+test('a message with no row passes through as it was', async () => {
+  const { sayError } = await import('../src/cli-messages.js');
+  assert.equal(sayError('something new went wrong', 'ko'), 'something new went wrong');
+  assert.equal(sayError('port 4870 is in use', 'en'), 'port 4870 is in use');
+});

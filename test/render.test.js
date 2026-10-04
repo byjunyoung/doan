@@ -315,3 +315,10 @@ test('the components page reads in two levels — used here by category, the bun
   assert.match(f, /<div class="b-role">Base<\/div>/);
   assert.match(f, /<a class="side-link subsub" href="#f-text"><span class="name">Text styles<\/span>/);
 });
+
+test('on a phone the title keeps its line and the tools take the next; the lint badge opens the panel sheet', async () => {
+  const { CSS, INSPECTOR_JS } = await import('../src/render/page.js');
+  assert.match(CSS, /@media \(max-width: 600px\) \{\s*\.top \{ grid-template-columns: minmax\(0, 1fr\); \}\s*\.top \.tools \{ grid-row: 2;/);
+  const handler = INSPECTOR_JS.slice(INSPECTOR_JS.indexOf(".lint-pill')"));
+  assert.match(handler, /classList\.remove\('side-open'\)[\s\S]*doanPanelOpen\(\)/);
+});
