@@ -98,7 +98,9 @@ export const kinds = {
   'page-header'(el, r) {
     const actions = list(el.actions).map((a) => (typeof a === 'object' && a.kind ? r.element(a) : `<button class="btn">${v(a)}</button>`)).join('');
     const tabs = list(el.tabs).map((t, i) => `<span class="tab${i === 0 ? ' active' : ''}" data-ui-tab>${v(t)}</span>`).join('');
-    return `<div class="ph-left"><h2>${v(el.title)}</h2>${tabs ? `<div class="tabs">${tabs}</div>` : ''}</div><div class="ph-actions">${actions}${r.children(el)}</div>`;
+    // back: the page this one is under, as a "← parent" line over the title (a detail page's path)
+    const back = el.back !== undefined ? `<div class="ph-back">← ${v(el.back)}</div>` : '';
+    return `<div class="ph-left">${back}<h2>${v(el.title)}</h2>${tabs ? `<div class="tabs">${tabs}</div>` : ''}</div><div class="ph-actions">${actions}${r.children(el)}</div>`;
   },
   card(el, r) {
     const hint = el.hint ? ` <span class="hint">${v(el.hint)}</span>` : '';
@@ -184,7 +186,12 @@ export const kinds = {
     const control = c && typeof c === 'object' && !isTbd(c) ? r.element({ id: `${el.id}-control`, ...c }) : `<input readonly>`;
     const tip = el.tooltip !== undefined ? ` <span class="hint fld-tip" title="${h(list(el.tooltip).map((t) => (isTbd(t) ? 'TBD' : label(t))).join(' · '))}">ⓘ</span>` : '';
     const preview = el.preview !== undefined ? `<div class="fld-preview">${part(el.preview, r, `${el.id}-preview`)}</div>` : '';
-    return `<div class="fld-label">${v(el.label)}${tip}${el.caption ? `<div class="hint">${v(el.caption)}</div>` : ''}</div><div class="fld-control">${control}${preview}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${el.reveals ? `<div class="hint">${D.revealsLabel} ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
+    // labels: top puts the label over the control and the caption under it (an admin form's vertical layout); left is the two-column default
+    const top = el.labels === 'top';
+    const span = top ? ' style="grid-column:1/-1"' : '';
+    const star = el.required ? ' <span class="fld-req">*</span>' : '';
+    const caption = el.caption ? `<div class="hint">${v(el.caption)}</div>` : '';
+    return `<div class="fld-label"${span}>${v(el.label)}${star}${tip}${top ? '' : caption}</div><div class="fld-control"${span}>${control}${preview}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${top ? caption : ''}${el.reveals ? `<div class="hint">${D.revealsLabel} ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
   },
   input(el) {
     return `<input readonly${el.readonly ? ' class="ro"' : ''} value="${h(el.text ?? el.value ?? '')}" placeholder="${h(el.placeholder ?? '')}">`;
@@ -253,9 +260,18 @@ export const kinds = {
     return `<div class="sortable">${Array.from({ length: 3 }, (_, i) => `<div class="sort-item">${handle}${v(el.item ?? 'item')} ${i + 1}</div>`).join('')}</div>`;
   },
   nav(el) {
-    const items = list(el.items);
-    const on = el.active === undefined ? 0 : items.findIndex((i) => String(label(i)) === String(el.active));
-    return `<div class="nav">${items.map((i, k) => `<div class="nav-item${k === on ? ' on' : ''}">${v(label(i))}</div>`).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
+    // an item is a label, or { group, items } — a heading over its items (a console's 상품 / 지점 / 설정)
+    const flat = [];
+    for (const i of list(el.items)) {
+      if (i && typeof i === 'object' && !isTbd(i) && i.group !== undefined) {
+        flat.push({ heading: i.group });
+        for (const j of list(i.items)) flat.push({ item: j });
+      } else flat.push({ item: i });
+    }
+    const leaves = flat.filter((f) => f.item !== undefined);
+    const on = el.active === undefined ? leaves[0] : leaves.find((f) => String(label(f.item)) === String(el.active));
+    const logo = el.logo !== undefined ? `<div class="nav-logo">${v(el.logo)}</div>` : '';
+    return `<div class="nav">${logo}${flat.map((f) => (f.heading !== undefined ? `<div class="nav-group">${v(f.heading)}</div>` : `<div class="nav-item${f === on ? ' on' : ''}">${v(label(f.item))}</div>`)).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
   },
   checkbox(el) {
     return `<label class="chk-line"><span class="box${el.checked ? ' on' : ''}"></span>${v(el.label ?? el.text ?? el.id)}</label>`;

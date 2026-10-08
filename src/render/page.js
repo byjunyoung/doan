@@ -57,6 +57,8 @@ a { color: inherit; text-decoration: none; }
 .states.compare .state { display: block; min-width: 0; }
 .states.compare .state h3 { display: block; }
 .section-title { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--color-muted); margin: var(--space-lg) 0 var(--space-xs); }
+/* a section inside a form's box is a heading over its fields (기본 정보 · 권한), not a label */
+.el-card .el-section > .section-title, .el-fieldset .el-section > .section-title { font-size: var(--font-size-lg); font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--color-text); margin: 0 0 var(--space-sm); }
 .list { margin: 0; padding-left: var(--space-lg); font-size: 13px; }
 .list li { margin: 2px 0; }
 .list code { background: var(--color-bg); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
@@ -334,6 +336,10 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .fld { display: flex; flex-direction: column; font-size: var(--k-field-font-size, 12px); color: var(--color-muted); gap: var(--space-xs); }
 .el-field { display: grid; grid-template-columns: 160px 1fr; gap: var(--space-sm); align-items: start; }
 .fld-label { font-weight: 500; }
+.fld-req { color: var(--color-danger); }
+.ph-back { font-size: var(--font-size-sm); color: var(--color-primary); margin-bottom: var(--space-xs); }
+.nav-logo { font-weight: 700; font-size: var(--font-size-md); color: var(--color-text); padding: 6px 10px; margin-bottom: var(--space-sm); }
+.nav-group { font-size: var(--font-size-xs); color: var(--color-muted); padding: 8px 10px 2px; }
 input, textarea, .select { width: 100%; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg); font: inherit; color: var(--color-text); }
 input.ro { background: var(--color-surface); color: var(--color-muted); }
 .select { display: inline-block; width: auto; min-width: 120px; }

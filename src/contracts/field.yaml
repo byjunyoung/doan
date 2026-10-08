@@ -18,6 +18,15 @@ props:
   preview:
     type: element
     description: what the control shows after a choice — a thumbnail, a summary
+  required:
+    type: boolean
+    default: false
+    description: a * after the label
+  labels:
+    type: enum
+    options: [left, top]
+    default: left
+    description: "left: label beside the control (two columns); top: label over it, caption under it — an admin form"
 tokens:
   text: color.text
   muted: color.muted

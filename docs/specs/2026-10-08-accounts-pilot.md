@@ -35,6 +35,21 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 18 | **Patterns check the top level only.** Once the shell is the top level, list-frame and form-frame (header → body → footer order) cannot be checked; they were switched off and the order written as prose | patterns | lint |
 | 19 | **`icon:` on a button takes an asset path; a bare name (`menu`) is drawn as its text.** Nothing says so until the picture shows "menu" | shell top bar | A |
 | 20 | **`import tokens` has no MCP tool** (§9: one set, three surfaces) | tokens | verbs |
+| 21 | **`reveals` is a hint line, not the revealed control.** "지정 지점 → a select of branches" draws as "펼쳐지는 것: 지정 지점"; to show the select the file had to put radio and select in one `group` as the control | 계정상세 관리지점 | F |
+| 22 | **`serve` keeps the code it started with.** Edits to kinds.js/page.js showed up only after a restart — forty minutes of "why is the picture unchanged". A dev flag that re-imports on each request, or a line in the serve banner saying which build it runs | viewer | A |
+| 23 | **A `select` is as wide as its value.** The handoff draws every control full-width in a vertical form; the tags select came out a third of the row | 계정상세 | F |
+
+## Fixed on the owner's second look ("ㅈㄴ 다르잖아 피그마랑", 2026-10-08)
+
+Side by side with the Figma frame, the content-only picture was wrong in nine places. Four were the file's (section headings, required marks, the branch radio, the soft button); five were vocabulary. Added, with the project's copies updated and 298 tests passing:
+
+- `field.labels: top` — label over the control, caption under it (an admin form); `field.required` — a `*` after the label
+- `page-header.back` — "← parent" over the title
+- `nav.logo` and `nav.items` entries of `{ group, items }` — a word mark and headings over their items
+- a `section` inside a card or fieldset is drawn as a heading (기본 정보 · 권한), not a label
+- the project binds `page-header` `font-size`/`font-weight` to `font.size.xl` / `font.weight.bold`
+
+Still apart from the handoff: the sider's icons and right border, the fixed footer toolbar, the top bar's bottom border, the tags select's width (#23).
 
 ## Not doan's
 

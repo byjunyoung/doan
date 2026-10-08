@@ -5,9 +5,12 @@ anchors:
 props:
   items:
     type: list
-    description: item labels; a nav with children instead lists them as elements
+    description: item labels, or { group, items } for a heading over its items; a nav with children instead lists them as elements
   active:
     type: string
+  logo:
+    type: string
+    description: a word mark at the top of the menu
 tokens:
   bg: color.surface
   text: color.text

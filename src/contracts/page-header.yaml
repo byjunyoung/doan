@@ -12,6 +12,9 @@ props:
   actions:
     type: list
     description: buttons on the right, as elements or labels
+  back:
+    type: string
+    description: the page this one is under — drawn as "← parent" over the title
 tokens:
   text: color.text
 sample:
