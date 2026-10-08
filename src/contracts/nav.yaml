@@ -5,7 +5,7 @@ anchors:
 props:
   items:
     type: list
-    description: item labels, or { group, items } for a heading over its items; a nav with children instead lists them as elements
+    description: item labels or { label, icon }, or { group, items } for a heading over its items; a nav with children instead lists them as elements
   active:
     type: string
   logo:

@@ -42,7 +42,10 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 25 | **Author notes leaked into the picture.** `button.note` drew as small print beside the button ("메뉴 접기", "내 정보 · 비밀번호 변경 · 로그아웃" sat on the top bar as screen copy); `table.row_action` drew "행 → 계정 상세로" under the table. Fixed — both are a `title` on the element now; the inspector and the spec still carry them | top bar, every table | F |
 | 26 | **A region has no colour of its own.** The handoff paints the content area page-grey under white cards and a white sider; a layout rule could not say so. Fixed — `surface:` on a layout rule (`surface: surface.page`); the bundled nav also wears `color.bg` and a right hairline | content, sider | layout |
 | 27 | **An `icon` button under antd kept its border** — the contract's `border` token is bound onto every antd button, and antd's text button could not shed it. Fixed in page.js | top bar | adapter |
-| 28 | **`propose` applies by itself on a work branch?** The second `apply` of the round said the proposal was already applied; the file had changed. Not chased — check whether `propose --with` on a branch writes through | loop | ? |
+| 28 | ~~`propose` applies by itself?~~ By design: the project's `conventions.edit.auto_apply: [text]` applies a text-tier proposal as soon as it lints clean. `apply` then says "already applied" — the message could say *who* applied it | loop | docs |
+| 29 | **`nav` items had no icon.** The console's sider draws one before every item. Fixed — an item may be `{ label, icon }`; the project exported the frontend's icon paths to `assets/icons/` | sider | F |
+| 30 | **A layout `surface:` painted only the background.** The handoff's footer toolbar is a white bar with a shadow. Fixed — bg, border, radius, shadow, each falling back when the surface has no such slot | form footers | layout |
+| 31 | **The canvas reads as overlapping at 6 %** — measured, the sections do not overlap; 240 px between 1440-wide frames is 14 px on screen. The gap could scale with the widest frame | canvas | viewer |
 
 ## Fixed on the owner's second look ("ㅈㄴ 다르잖아 피그마랑", 2026-10-08)
 
@@ -78,3 +81,9 @@ Round 2 reported "same bones, the rest is trim" from a 47 % canvas. At 100 %, be
 Still apart: sider item icons (an asset set the project does not have yet), the fixed footer toolbar (ours ends the page), the search bar's filled style, the chips' pill shape.
 
 Rule for the check, now in memory: compare at the handoff's own scale with the handoff beside it, one of each page type, and put the pair in the reply — never "뼈대 일치" from a thumbnail.
+
+## Round 4 (2026-10-09, "go"): the leftovers
+
+Sider icons (#29), the footer toolbar (#30), the canvas measured rather than eyeballed (#31), #28 explained, and the five screens not yet seen at 100 % captured beside their frames — all five read as the handoff. 300 tests.
+
+Still apart: the search bar's filled style, the chips' pill shape, the word mark's italic *brew*.

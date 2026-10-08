@@ -289,7 +289,9 @@ export const kinds = {
     const leaves = flat.filter((f) => f.item !== undefined);
     const on = el.active === undefined ? leaves[0] : leaves.find((f) => String(label(f.item)) === String(el.active));
     const logo = el.logo !== undefined ? `<div class="nav-logo">${v(el.logo)}</div>` : '';
-    return `<div class="nav">${logo}${flat.map((f) => (f.heading !== undefined ? `<div class="nav-group">${v(f.heading)}</div>` : `<div class="nav-item${f === on ? ' on' : ''}">${v(label(f.item))}</div>`)).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
+    // an item may be { label, icon } — the icon (an asset) sits before the label
+    const iconOf = (it) => (it && typeof it === 'object' && !isTbd(it) && it.icon ? `<span class="nav-ico">${ico(it.icon)}</span>` : '');
+    return `<div class="nav">${logo}${flat.map((f) => (f.heading !== undefined ? `<div class="nav-group">${v(f.heading)}</div>` : `<div class="nav-item${f === on ? ' on' : ''}">${iconOf(f.item)}${v(label(f.item))}</div>`)).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
   },
   checkbox(el) {
     return `<label class="chk-line"><span class="box${el.checked ? ' on' : ''}"></span>${v(el.label ?? el.text ?? el.id)}</label>`;

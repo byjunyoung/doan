@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { loadProject } from '../src/index.js';
+import * as kindsModule from '../src/render/kinds.js';
 import { renderScreen, renderIndex, layoutStyle, renderFoundations } from '../src/render/index.js';
 
 const orders = fileURLToPath(new URL('../examples/orders', import.meta.url));
@@ -386,4 +387,11 @@ test('on a phone the title keeps its line and the tools take the next; the lint 
   assert.match(CSS, /@media \(max-width: 600px\) \{\s*\.top \{ grid-template-columns: minmax\(0, 1fr\); \}\s*\.top \.tools \{ grid-row: 2;/);
   const handler = INSPECTOR_JS.slice(INSPECTOR_JS.indexOf(".lint-pill')"));
   assert.match(handler, /classList\.remove\('side-open'\)[\s\S]*doanPanelOpen\(\)/);
+});
+
+test('a nav item may be { label, icon }: the icon asset is drawn before the label, and the active match still goes by label', () => {
+  const { kinds } = kindsModule;
+  const html = kinds.nav({ id: 'n', kind: 'nav', active: 'B', items: [{ group: 'G', items: [{ label: 'A', icon: 'assets/icons/a.svg' }, 'B'] }] });
+  assert.match(html, /nav-ico[^>]*><span class="ico-mask"/);
+  assert.match(html, /nav-item on">B</);
 });

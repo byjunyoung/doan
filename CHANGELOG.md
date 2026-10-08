@@ -6,6 +6,7 @@
 - `button.note` and `table.row_action` are a `title` on the element, not small print in the picture; the inspector and the spec still list them.
 - A layout rule's `surface:` paints the region with a surface token group (`surface: surface.page`); the bundled nav wears `color.bg` and a right hairline.
 - antd: an `icon` button is a text button with no border.
+- `nav.items` entries may be `{ label, icon }` — an asset icon before the label. A layout `surface:` paints border, radius and shadow too, each falling back when the surface lacks the slot.
 
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 

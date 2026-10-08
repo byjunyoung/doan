@@ -102,7 +102,10 @@ export function layoutStyle(rule, { container = true } = {}) {
   // one token for every side, or [vertical, horizontal] as Figma's two padding fields
   if (rule.padding) s.push(`padding:${[].concat(rule.padding).map((x) => (String(x) === '0' ? '0' : tokenVar(x))).join(' ')}`);
   // a surface token group the region wears — `surface: surface.page` paints the content area the page colour
-  if (rule.surface) s.push(`background:${tokenVar(`${rule.surface}.bg`)}`);
+  if (rule.surface) {
+    const sv = (slot, fb) => `var(--${String(rule.surface).replace(/\./g, '-')}-${slot}, ${fb})`;
+    s.push(`background:${sv('bg', 'transparent')}`, `border:1px solid ${sv('border', 'transparent')}`, `border-radius:${sv('radius', '0')}`, `box-shadow:${sv('shadow', 'none')}`);
+  }
   if (rule.grow) s.push('flex:1 1 auto', 'min-height:0');
   if (rule.size) s.push(`width:var(--size-${rule.size})`);
   return s.filter(Boolean).join(';');
