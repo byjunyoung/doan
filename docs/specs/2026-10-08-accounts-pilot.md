@@ -30,6 +30,11 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 13 | **Arrow labels sit on frames** ('필수 값이 다 있으면', '계정 그룹 탭' over the top section) | 계정관리 canvas | viewer |
 | 14 | **`import tokens` pairs names by guess.** Three pairings (muted → text/tertiary, border → border/tertiary, control.xl → space/700) are heuristics; a project should write its own `--map` and the import should print the pairing it chose | tokens | import |
 | 15 | **Typography modes come through as a modifier (Default/Compact/Large)** — works, but the adapters theme from the default context only (§13) | tokens | known |
+| 16 | **No shared shell.** The owner's first look at the canvas: "why not the whole screen? the Figma frames are different" — the frames had only the page content. An admin console's sider + top bar had to be pasted into seven files (`sider` nav + `main` group), so a menu change is seven edits — the very thing the Figma shell component was made to stop (2026-09-23). Wanted: a `shell:` the conventions name once (nav items, top bar, content slot) that every screen of a type wears, with `except:` for the login-less ones | all admin screens | F |
+| 17 | **`nav` has no group headers** (상품 / 지점 / 앱 / 설정 over their items), so the sider lists ten leaves | shell | D |
+| 18 | **Patterns check the top level only.** Once the shell is the top level, list-frame and form-frame (header → body → footer order) cannot be checked; they were switched off and the order written as prose | patterns | lint |
+| 19 | **`icon:` on a button takes an asset path; a bare name (`menu`) is drawn as its text.** Nothing says so until the picture shows "menu" | shell top bar | A |
+| 20 | **`import tokens` has no MCP tool** (§9: one set, three surfaces) | tokens | verbs |
 
 ## Not doan's
 
