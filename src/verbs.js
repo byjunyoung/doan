@@ -24,6 +24,7 @@ import { addComment, listComments, resolveComment } from './comments.js';
 import { resolveAdapter } from './render/adapters/index.js';
 import { initProject, componentBases } from './init.js';
 import { importFigmaTree, writeImport, fetchFigmaPage } from './import/figma.js';
+export { importTokens } from './import/tokens.js';
 import { masterNames, suggestFigmaMap, writeFigmaMap } from './import/map.js';
 
 // One implementation per verb, returning plain JSON. The CLI prints it, the MCP server

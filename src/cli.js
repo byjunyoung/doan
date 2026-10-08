@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, mapFigma, listTokens, migrateKinds, listComponents, listAssets, listPatterns, specScreen, exportTokens } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, importFigma, importTokens, mapFigma, listTokens, migrateKinds, listComponents, listAssets, listPatterns, specScreen, exportTokens } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
@@ -62,6 +62,11 @@ usage: doan <verb> …
   import figma <project-dir> <file-key> --page "<page name>" [--force]
         one screen file per {screen}-{state} frame group on that page; other states become patches;
         kinds by maps_to.figma on the master name, then by node name; unresolved → $tbd. Needs FIGMA_TOKEN.
+  import tokens <project-dir> <variables-dir> [--prefix ds] [--primitive <collection>] [--map <file.json>] [--family "<css font stack>"]
+        the project's tokens/ from a Figma Variables export (one JSON per collection: collection, modes,
+        variables). Names stay the design system's under <prefix>; a collection with several modes becomes
+        a resolver modifier, one file per mode; doan's own names (color.bg, space.md, text.body…) are written
+        as aliases into it — by --map (doan name → design-system name) over a default pairing.
   migrate kinds <project-dir>
         move every row of conventions.kinds into components/<kind>.yaml — the bundled contract where one
         exists, the row's anchors and maps_to laid over it — and drop the block. A project from before 0.4.
@@ -322,6 +327,18 @@ function basesCommand() {
 
 async function importCommand(opts) {
   const [source, dir, fileKey] = opts._;
+  if (source === 'tokens') {
+    const [, , src] = opts._;
+    if (!dir || !src) throw Object.assign(new Error(USAGE), { exit: 2 });
+    const r = await importTokens(dir, src, { prefix: opts.prefix ?? 'ds', primitive: opts.primitive ?? null, map: opts.map ?? null, family: opts.family ?? null });
+    if (opts.json) return (process.stdout.write(JSON.stringify(r, null, 2) + '\n'), 0);
+    const counts = Object.entries(r.counts).map(([c, n]) => `${c} ${n}${c === r.primitive ? ' (primitive)' : ''}`).join(', ');
+    process.stdout.write(`${counts} → ${r.written.join(', ')}${r.removed.length ? `; removed the starter's ${r.removed.join(', ')}` : ''}\n`);
+    for (const [m, ctx] of Object.entries(r.modifiers)) process.stdout.write(`  modifier ${m}: ${ctx.join(' · ')}\n`);
+    if (r.kept.length) process.stdout.write(`  kept the bundled value (nothing in the export matched; pair it in --map): ${r.kept.join(', ')}\n`);
+    for (const n of r.notes) process.stdout.write(`  ${n}\n`);
+    return 0;
+  }
   if (source !== 'figma' || !dir || !fileKey || !opts.page) throw Object.assign(new Error(USAGE), { exit: 2 });
   const r = await importFigma(dir, { fileKey, page: opts.page, force: opts.force === 'true' || opts.force === true });
   process.stdout.write(`page "${r.page}": ${r.screens.length} screen(s) → ${r.files.map((f) => relative(process.cwd(), f)).join(', ')}\n${r.tbd} $tbd left for a person; run lint to see them\n`);

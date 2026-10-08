@@ -138,6 +138,36 @@ test('with the antd adapter, mapped kinds render as real antd components and unm
   assert.match(html, /data-rc-order/, 'antd styles are extracted into the page');
 });
 
+test('with the antd adapter, a table column whose kind is itself antd-mapped (tag) draws without a nested render', async () => {
+  // a project whose base is antd maps tag → antd Tag; a cell of that kind inside an antd Table was a renderToString
+  // inside the Table's render callback — "Invalid hook call" (found drawing a store's account list, 2026-10-08)
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const { initProject } = await import('../src/init.js');
+  const { mkdtemp, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'doan-antd-cell-'));
+  await initProject(dir, { base: 'antd' });
+  await writeFile(
+    join(dir, 'screens', 'accounts.yaml'),
+    [
+      'schema: doan/0.2', 'id: scr_cell1', 'screen: accounts', 'section: "00. Sample"', 'type: list',
+      'elements:',
+      '  - { id: table, kind: table, columns: [{ key: name, label: Name }, { key: status, label: Status, kind: tag }] }',
+      'states:',
+      '  Empty: [{ target: table, replace: { kind: empty-notice, text: none } }]',
+      '  Loading: [{ target: table, replace: { kind: skeleton } }]',
+      '  Error: [{ target: table, replace: { kind: error-notice, text: failed } }]',
+    ].join('\n'),
+  );
+  const project = await loadProject(dir);
+  const adapter = await createAdapter('antd', project);
+  const screen = project.screens.find((s) => s.doc.screen === 'accounts');
+  const html = renderScreen(project, screen, { adapter });
+  assert.match(html, /ant-table/);
+  assert.match(html, /ant-tag/, 'the status cells are antd Tags, drawn before the Table rendered');
+});
+
 test('the antd adapter takes its theme from the project tokens', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);

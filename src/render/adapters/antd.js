@@ -53,12 +53,21 @@ const components = {
   // a column's align is antd's; a column's kind draws each cell as the bundled set draws that kind
   Table: (el, r) => {
     const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
-    const columns = list(el.columns).map((c, i) => {
+    const cols = list(el.columns);
+    const columns = cols.map((c, i) => {
       const obj = typeof c === 'object' && c ? c : {};
-      return { title: text(label(c)), dataIndex: `c${i}`, sorter: !!obj.sortable, align: ALIGN[obj.align], render: obj.kind ? (_, __, row) => raw(cellOf(el, c, row, i, r)) : undefined };
+      return { title: text(label(c)), dataIndex: `c${i}`, sorter: !!obj.sortable, align: ALIGN[obj.align] };
+    });
+    const rows = dummyRows(columns);
+    // a column's kind is drawn per cell *before* the Table renders: a mapped kind (tag → antd Tag) is itself
+    // a renderToString, and one nested inside the Table's render callback is an invalid hook call
+    cols.forEach((c, i) => {
+      if (!(typeof c === 'object' && c && c.kind)) return;
+      const cells = rows.map((_, ri) => cellOf(el, c, ri, i, r));
+      columns[i].render = (_, __, ri) => raw(cells[ri]);
     });
     const sel = el.selected_row === undefined || el.selected_row === null ? -1 : Number.isInteger(Number(el.selected_row)) ? Math.max(Number(el.selected_row) - 1, 0) : 0;
-    return both(e(antd.Table, { size: 'small', columns, dataSource: dummyRows(columns), pagination: false, rowSelection: el.selectable ? {} : undefined, rowClassName: (_, i) => (i === sel ? 'row-sel' : '') }), el.row_action ? e('div', { className: 'hint' }, `${words().rowTo} ${text(el.row_action)}`) : null);
+    return both(e(antd.Table, { size: 'small', columns, dataSource: rows, pagination: false, rowSelection: el.selectable ? {} : undefined, rowClassName: (_, i) => (i === sel ? 'row-sel' : '') }), el.row_action ? e('div', { className: 'hint' }, `${words().rowTo} ${text(el.row_action)}`) : null);
   },
   Pagination: (el) => e(antd.Pagination, { total: 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false, simple: !!el.compact }),
   Empty: (el) => e(antd.Empty, { description: el.title !== undefined ? e('div', null, e('strong', null, text(el.title)), el.text !== undefined ? e('div', null, text(el.text)) : null) : text(el.text ?? words().noData) }),

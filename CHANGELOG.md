@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.22.0 — 2026-10-08
+
+Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
+
+- **`import tokens`** — a Figma Variables export becomes the project's `tokens/`: primitives bare, the design system's names kept under a prefix, a collection with several modes a resolver modifier with one file per mode, and doan's own names (`color.bg`, `space.md`, `text.body`…) an alias layer into it, paired by `--map` over a default guess. `--family` for the font the export does not carry; what nothing in the export covers keeps the bundled value and is listed.
+- **antd adapter: a table column whose `kind` is antd-mapped (tag) draws again** — the cell was a `renderToString` nested inside the Table's render callback, an invalid hook call that took the whole page down. Cells are drawn before the Table renders; a regression test covers it.
+
 ## 0.21.0 — 2026-10-04
 
 Trust round: a green lint and a drawn picture now mean what they say, and the first five minutes no longer hit a wall. Spec `docs/specs/2026-10-02-trust-round.md`.
