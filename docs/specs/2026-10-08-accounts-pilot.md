@@ -55,3 +55,13 @@ Still apart from the handoff: the sider's icons and right border, the fixed foot
 
 - The spec rows leave empty-field, format and confirm-dialog copy undefined. doan left five `$tbd`; the code invented its own. That is a planning gap the file made visible.
 - The code's empty/error copy departs from the team's shared loading/empty/error rule; the file follows the rule. A diff the handoff spec can carry.
+
+## Round 2 (2026-10-09, "go"): foundations first
+
+The owner asked why the picture was so far from the handoff. Three causes, in order: the loop's ② foundations step was skipped (the console's shell, page types and form rules live in the Figma `[UI] 공통` / `[패턴]` pages and in the team's notes, not in the spec rows — only the spec rows were fed in); the bundled vocabulary did not know an admin console; the check was lint and the tool's own picture, never the handoff frame beside it.
+
+Done: the eight handoff frames were pulled as PNGs and read; four patterns written from them (`shell-frame`, `list-frame`, `form-frame`, `auth-frame`) with the rules as prose; all nine screens regenerated to those rules (title + action + tabs + titled card + "조회결과 N건" + centred paging on lists; "← parent" + title + one card of headed sections + vertical labelled fields + footer 삭제 | 취소·저장 on forms; centred 480 form with title, subtitle, full-width button and a login line on the login-less pair). `field.labels: top` now also makes the control fill the row (#23, bundled and antd). Side by side with the handoff, every one of the nine now has the same bones.
+
+Still apart from the handoff: sider icons and its right border, the fixed footer toolbar (ours sits under the card), the top bar's bottom border, tabs inside the page header (ours is a `tabs` element under it), page background grey vs white. All F — vocabulary and chrome, none of them structure.
+
+Lesson for the loop: ② is not optional and it is not tokens alone. A team's shell, page types and form rules must be read from where they live (a Figma page, a notes file) and written into `patterns/` before ③. The `draw` prompt should refuse to draw a screen type that has no pattern.

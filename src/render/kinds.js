@@ -191,7 +191,7 @@ export const kinds = {
     const span = top ? ' style="grid-column:1/-1"' : '';
     const star = el.required ? ' <span class="fld-req">*</span>' : '';
     const caption = el.caption ? `<div class="hint">${v(el.caption)}</div>` : '';
-    return `<div class="fld-label"${span}>${v(el.label)}${star}${tip}${top ? '' : caption}</div><div class="fld-control"${span}>${control}${preview}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${top ? caption : ''}${el.reveals ? `<div class="hint">${D.revealsLabel} ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
+    return `<div class="fld-label"${span}>${v(el.label)}${star}${tip}${top ? '' : caption}</div><div class="fld-control${top ? ' fld-top' : ''}"${span}>${control}${preview}${el.error ? `<div class="err">${v(el.error)}</div>` : ''}${top ? caption : ''}${el.reveals ? `<div class="hint">${D.revealsLabel} ${v(Object.keys(el.reveals).join(', '))}</div>` : ''}</div>`;
   },
   input(el) {
     return `<input readonly${el.readonly ? ' class="ro"' : ''} value="${h(el.text ?? el.value ?? '')}" placeholder="${h(el.placeholder ?? '')}">`;

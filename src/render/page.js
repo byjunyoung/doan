@@ -337,6 +337,8 @@ body.show-hotspots .hotspot-cond { outline-style: dashed; }
 .el-field { display: grid; grid-template-columns: 160px 1fr; gap: var(--space-sm); align-items: start; }
 .fld-label { font-weight: 500; }
 .fld-req { color: var(--color-danger); }
+/* label over the control: the control fills the row, as a vertical admin form draws it */
+.fld-top > .el-input input, .fld-top > .el-select .select, .fld-top > .el-number input, .fld-top > .el-textarea textarea, .fld-top .el-group .el-select .select, .fld-top .el-group .el-input input, .fld-top .ant-select, .fld-top .ant-input, .fld-top .ant-input-affix-wrapper { width: 100%; box-sizing: border-box; }
 .ph-back { font-size: var(--font-size-sm); color: var(--color-primary); margin-bottom: var(--space-xs); }
 .nav-logo { font-weight: 700; font-size: var(--font-size-md); color: var(--color-text); padding: 6px 10px; margin-bottom: var(--space-sm); }
 .nav-group { font-size: var(--font-size-xs); color: var(--color-muted); padding: 8px 10px 2px; }
