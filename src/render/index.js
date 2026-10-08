@@ -101,6 +101,8 @@ export function layoutStyle(rule, { container = true } = {}) {
   if (rule.scroll === 'vertical') s.push('overflow-y:auto', 'min-height:0', ...(rule.wrap ? [] : ['flex-wrap:nowrap']));
   // one token for every side, or [vertical, horizontal] as Figma's two padding fields
   if (rule.padding) s.push(`padding:${[].concat(rule.padding).map((x) => (String(x) === '0' ? '0' : tokenVar(x))).join(' ')}`);
+  // a surface token group the region wears — `surface: surface.page` paints the content area the page colour
+  if (rule.surface) s.push(`background:${tokenVar(`${rule.surface}.bg`)}`);
   if (rule.grow) s.push('flex:1 1 auto', 'min-height:0');
   if (rule.size) s.push(`width:var(--size-${rule.size})`);
   return s.filter(Boolean).join(';');

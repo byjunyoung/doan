@@ -168,6 +168,41 @@ test('with the antd adapter, a table column whose kind is itself antd-mapped (ta
   assert.match(html, /ant-tag/, 'the status cells are antd Tags, drawn before the Table rendered');
 });
 
+test('a table draws the rows the file gives — a list per row, or a map by column key — in the bundled set and in antd; a note or a row action is a title, not a line of copy', async () => {
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const { initProject } = await import('../src/init.js');
+  const { mkdtemp, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const dir = await mkdtemp(join(tmpdir(), 'doan-rows-'));
+  await initProject(dir, { base: 'antd' });
+  await writeFile(
+    join(dir, 'screens', 'members.yaml'),
+    [
+      'schema: doan/0.2', 'id: scr_rows1', 'screen: members', 'section: "00. Sample"', 'type: list',
+      'elements:',
+      '  - { id: table, kind: table, row_action: to the member, columns: [{ key: login, label: 아이디 }, { key: status, label: 상태, kind: tag }], rows: [[minsu.k, 활성], { login: gildong, status: 비활성 }] }',
+      '  - { id: go, kind: button, label: Save, note: costs a credit }',
+      'states:',
+      '  Empty: [{ target: table, replace: { kind: empty-notice, text: none } }]',
+      '  Loading: [{ target: table, replace: { kind: skeleton } }]',
+      '  Error: [{ target: table, replace: { kind: error-notice, text: failed } }]',
+    ].join('\n'),
+  );
+  const project = await loadProject(dir);
+  const screen = project.screens.find((s) => s.doc.screen === 'members');
+  for (const adapter of [null, await createAdapter('antd', project)]) {
+    const html = renderScreen(project, screen, adapter ? { adapter } : {});
+    assert.match(html, /minsu\.k/);
+    assert.match(html, /gildong/);
+    assert.match(html, /비활성/);
+    assert.doesNotMatch(html, /샘플 \d|Sample \d/, 'no sample cell once the file gives rows — not a third row either');
+    assert.doesNotMatch(html, /class="btn-note"/, 'the note is a title on the button, not text beside it (the inspector still lists it)');
+    assert.doesNotMatch(html, /class="hint">(row →|행 →)/, 'the row action is a title on the table, not a line under it');
+    assert.match(html, /title="[^"]*costs a credit"/);
+  }
+});
+
 test('the antd adapter takes its theme from the project tokens', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);

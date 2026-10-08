@@ -3,7 +3,7 @@ import { renderToString } from 'react-dom/server';
 import { createCache, extractStyle, StyleProvider } from '@ant-design/cssinjs';
 import * as antd from 'antd';
 import dayjs from 'dayjs';
-import { h, v, isTbd, sample, layers, cellOf, words } from '../kinds.js';
+import { h, v, isTbd, sample, layers, cellOf, cellValue, rowCount, words } from '../kinds.js';
 import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
 import { isAssetRef } from '../../assets.js';
 
@@ -25,7 +25,7 @@ const over = (el, r) => (el.overlay !== undefined || el.toast !== undefined || e
 const note = (cls, x) => (x === undefined || x === null ? null : e('span', { className: cls }, text(x)));
 const both = (...parts) => e(React.Fragment, null, ...parts.filter(Boolean));
 const STATUS = { success: 'success', warning: 'warning', danger: 'error', error: 'error', info: 'processing' };
-const dummyRows = (cols) => Array.from({ length: 3 }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c) => [c.dataIndex, sample(c.title, i)])]));
+const dummyRows = (el, cols) => Array.from({ length: rowCount(el) }, (_, i) => Object.fromEntries([['key', i], ...cols.map((c, ci) => [c.dataIndex, v(cellValue(el, c.src, i, ci))])]));
 
 function themeFrom(tokens) {
   const t = mergeTokens(DEFAULT_TOKENS, tokens);
@@ -49,16 +49,17 @@ function themeFrom(tokens) {
 // (for children), and each returns a React element.
 const components = {
   // size: sm · md · full → antd small · middle · large, and full is a block button, as the bundled set draws it
-  Button: (el) => both(e(antd.Button, { type: el.variant === 'primary' ? 'primary' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)), note('btn-note', el.note)),
+  Button: (el) => e(antd.Button, { title: el.note !== undefined && el.note !== null ? text(el.note) : undefined, type: el.variant === 'primary' ? 'primary' : el.variant === 'icon' ? 'text' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)),
   // a column's align is antd's; a column's kind draws each cell as the bundled set draws that kind
   Table: (el, r) => {
     const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
     const cols = list(el.columns);
     const columns = cols.map((c, i) => {
       const obj = typeof c === 'object' && c ? c : {};
-      return { title: text(label(c)), dataIndex: `c${i}`, sorter: !!obj.sortable, align: ALIGN[obj.align] };
+      return { title: text(label(c)), dataIndex: `c${i}`, sorter: !!obj.sortable, align: ALIGN[obj.align], src: c };
     });
-    const rows = dummyRows(columns);
+    const rows = dummyRows(el, columns);
+    columns.forEach((c) => delete c.src);
     // a column's kind is drawn per cell *before* the Table renders: a mapped kind (tag → antd Tag) is itself
     // a renderToString, and one nested inside the Table's render callback is an invalid hook call
     cols.forEach((c, i) => {
@@ -67,7 +68,9 @@ const components = {
       columns[i].render = (_, __, ri) => raw(cells[ri]);
     });
     const sel = el.selected_row === undefined || el.selected_row === null ? -1 : Number.isInteger(Number(el.selected_row)) ? Math.max(Number(el.selected_row) - 1, 0) : 0;
-    return both(e(antd.Table, { size: 'small', columns, dataSource: rows, pagination: false, rowSelection: el.selectable ? {} : undefined, rowClassName: (_, i) => (i === sel ? 'row-sel' : '') }), el.row_action ? e('div', { className: 'hint' }, `${words().rowTo} ${text(el.row_action)}`) : null);
+    const table = e(antd.Table, { size: 'small', columns, dataSource: rows, pagination: false, rowSelection: el.selectable ? {} : undefined, rowClassName: (_, i) => (i === sel ? 'row-sel' : '') });
+    // what a tap on a row does is a title on the table (the inspector and the spec say it), not a caption antd would draw
+    return el.row_action ? e('div', { title: `${words().rowTo} ${text(el.row_action)}` }, table) : table;
   },
   Pagination: (el) => e(antd.Pagination, { total: 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false, simple: !!el.compact }),
   Empty: (el) => e(antd.Empty, { description: el.title !== undefined ? e('div', null, e('strong', null, text(el.title)), el.text !== undefined ? e('div', null, text(el.text)) : null) : text(el.text ?? words().noData) }),

@@ -319,6 +319,10 @@
         "justify": {
           "type": "string",
           "description": "vertical: start · center · end · space-between · stretch — whatever the direction"
+        },
+        "surface": {
+          "type": "string",
+          "description": "a surface token group the region wears — surface.page paints a content area the page colour, surface.card a box"
         }
       },
       "additionalProperties": false

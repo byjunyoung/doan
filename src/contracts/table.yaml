@@ -5,8 +5,9 @@ maps_to: { antd: Table, mui: Table }
 
 props:
   columns: { type: list }
+  rows: { type: list, description: 'the rows to draw — each a list of cells in column order, or a map by column key; without it three sample rows' }
   selectable: { type: boolean, default: false, description: a checkbox column first }
-  row_action: { type: string, description: what a tap on a row does }
+  row_action: { type: string, description: 'what a tap on a row does — read in the inspector and the spec, not drawn as a line under the table' }
   selected_row: { type: string, description: which row a Selected state highlights }
 
 tokens:

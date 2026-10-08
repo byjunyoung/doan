@@ -5,7 +5,7 @@ import { CacheProvider } from '@emotion/react';
 import createEmotionServer from '@emotion/server/create-instance';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import * as mui from '@mui/material';
-import { h, v, isTbd, sample, layers, cellOf, words } from '../kinds.js';
+import { h, v, isTbd, sample, layers, cellOf, cellValue, rowCount, words } from '../kinds.js';
 import { DEFAULT_TOKENS, mergeTokens, baseFontSize } from '../tokens.js';
 
 // The second adapter, and the model for the next one: same contract as antd.js — a map of
@@ -34,18 +34,18 @@ function themeFrom(tokens) {
 
 const components = {
   // size: sm · md · full → small · medium · a full-width large button, as the bundled set draws it
-  Button: (el) => both(e(mui.Button, { variant: el.variant === 'primary' ? 'contained' : 'outlined', color: el.variant === 'danger' ? 'error' : 'primary', size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'medium', fullWidth: el.size === 'full', disabled: !!el.disabled || !!el.disabled_when, startIcon: el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)), note('btn-note', el.note), el.accept ? note('hint', ` ${text(el.accept)}`) : null), // an upload maps here too: its accepted types beside it
+  Button: (el) => both(e(mui.Button, { title: el.note !== undefined && el.note !== null ? text(el.note) : undefined, variant: el.variant === 'primary' ? 'contained' : 'outlined', color: el.variant === 'danger' ? 'error' : 'primary', size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'medium', fullWidth: el.size === 'full', disabled: !!el.disabled || !!el.disabled_when, startIcon: el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)), el.accept ? note('hint', ` ${text(el.accept)}`) : null), // an upload maps here too: its accepted types beside it
   // a column's align is the cell's; a column's kind draws each cell as the bundled set draws that kind
   Table: (el, r) => {
     const cols = list(el.columns);
     const sel = selRow(el);
     const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
     const align = (c) => (typeof c === 'object' && c ? ALIGN[c.align] : undefined);
-    const cell = (c, row, i) => (typeof c === 'object' && c?.kind ? raw(cellOf(el, c, row, i, r)) : sample(c, row));
-    return both(e(mui.Table, { size: 'small' },
+    const cell = (c, row, i) => (typeof c === 'object' && c?.kind ? raw(cellOf(el, c, row, i, r)) : v(cellValue(el, c, row, i)));
+    return e(mui.Table, { size: 'small', title: el.row_action ? `${words().rowTo} ${text(el.row_action)}` : undefined },
       e(mui.TableHead, null, e(mui.TableRow, null, ...(el.selectable ? [e(mui.TableCell, { key: 'c', padding: 'checkbox' }, e(mui.Checkbox, { size: 'small' }))] : []), ...cols.map((c, i) => e(mui.TableCell, { key: i, align: align(c) }, text(label(c)))))),
-      e(mui.TableBody, null, ...Array.from({ length: 3 }, (_, r) => e(mui.TableRow, { key: r, selected: r === sel, className: r === sel ? 'row-sel' : undefined }, ...(el.selectable ? [e(mui.TableCell, { key: 'c', padding: 'checkbox' }, e(mui.Checkbox, { size: 'small' }))] : []), ...cols.map((c, i) => e(mui.TableCell, { key: i, align: align(c) }, cell(c, r, i)))))),
-    ), el.row_action ? e('div', { className: 'hint' }, `${words().rowTo} ${text(el.row_action)}`) : null);
+      e(mui.TableBody, null, ...Array.from({ length: rowCount(el) }, (_, r) => e(mui.TableRow, { key: r, selected: r === sel, className: r === sel ? 'row-sel' : undefined }, ...(el.selectable ? [e(mui.TableCell, { key: 'c', padding: 'checkbox' }, e(mui.Checkbox, { size: 'small' }))] : []), ...cols.map((c, i) => e(mui.TableCell, { key: i, align: align(c) }, cell(c, r, i)))))),
+    );
   },
   // compact is the arrows and the page alone; page_size is the rows a page holds, beside it
   Pagination: (el) => both(el.compact ? e('span', { className: 'pager' }, '‹ 1 / 5 ›') : e(mui.Pagination, { count: 5, page: 1, size: 'small' }), el.page_size ? note('hint', ` ${text(el.page_size)}${words().perPageWord}`) : null),

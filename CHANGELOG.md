@@ -2,6 +2,11 @@
 
 ## 0.22.0 — 2026-10-08
 
+- `table.rows` — the rows a table draws: a list per row in column order, or a map by column key; a cell of a `kind` column may be `{ text, color }`. Without it, three sample rows as before.
+- `button.note` and `table.row_action` are a `title` on the element, not small print in the picture; the inspector and the spec still list them.
+- A layout rule's `surface:` paints the region with a surface token group (`surface: surface.page`); the bundled nav wears `color.bg` and a right hairline.
+- antd: an `icon` button is a text button with no border.
+
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 
 - **`import tokens`** — a Figma Variables export becomes the project's `tokens/`: primitives bare, the design system's names kept under a prefix, a collection with several modes a resolver modifier with one file per mode, and doan's own names (`color.bg`, `space.md`, `text.body`…) an alias layer into it, paired by `--map` over a default guess. `--family` for the font the export does not carry; what nothing in the export covers keeps the bundled value and is listed.

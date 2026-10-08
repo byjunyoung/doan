@@ -38,6 +38,11 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 21 | **`reveals` is a hint line, not the revealed control.** "지정 지점 → a select of branches" draws as "펼쳐지는 것: 지정 지점"; to show the select the file had to put radio and select in one `group` as the control | 계정상세 관리지점 | F |
 | 22 | **`serve` keeps the code it started with.** Edits to kinds.js/page.js showed up only after a restart — forty minutes of "why is the picture unchanged". A dev flag that re-imports on each request, or a line in the serve banner saying which build it runs | viewer | A |
 | 23 | **A `select` is as wide as its value.** The handoff draws every control full-width in a vertical form; the tags select came out a third of the row | 계정상세 | F |
+| 24 | **A table had no rows of its own.** Every table drew three rows of `샘플 1/2/3`, and a Korean column name (아이디 · 이메일 · 등록일) matched none of the English sample regexes; a status column drew the store set's 결제완료 · 대기 · 환불 on an accounts table. The owner's word for the result: "엉망". Fixed — `table.rows` (a list per row, or a map by column key; a cell may be `{ text, color }` for a tag column) | all four tables | F |
+| 25 | **Author notes leaked into the picture.** `button.note` drew as small print beside the button ("메뉴 접기", "내 정보 · 비밀번호 변경 · 로그아웃" sat on the top bar as screen copy); `table.row_action` drew "행 → 계정 상세로" under the table. Fixed — both are a `title` on the element now; the inspector and the spec still carry them | top bar, every table | F |
+| 26 | **A region has no colour of its own.** The handoff paints the content area page-grey under white cards and a white sider; a layout rule could not say so. Fixed — `surface:` on a layout rule (`surface: surface.page`); the bundled nav also wears `color.bg` and a right hairline | content, sider | layout |
+| 27 | **An `icon` button under antd kept its border** — the contract's `border` token is bound onto every antd button, and antd's text button could not shed it. Fixed in page.js | top bar | adapter |
+| 28 | **`propose` applies by itself on a work branch?** The second `apply` of the round said the proposal was already applied; the file had changed. Not chased — check whether `propose --with` on a branch writes through | loop | ? |
 
 ## Fixed on the owner's second look ("ㅈㄴ 다르잖아 피그마랑", 2026-10-08)
 
@@ -65,3 +70,11 @@ Done: the eight handoff frames were pulled as PNGs and read; four patterns writt
 Still apart from the handoff: sider icons and its right border, the fixed footer toolbar (ours sits under the card), the top bar's bottom border, tabs inside the page header (ours is a `tabs` element under it), page background grey vs white. All F — vocabulary and chrome, none of them structure.
 
 Lesson for the loop: ② is not optional and it is not tokens alone. A team's shell, page types and form rules must be read from where they live (a Figma page, a notes file) and written into `patterns/` before ③. The `draw` prompt should refuse to draw a screen type that has no pattern.
+
+## Round 3 (2026-10-09, "엉망인데"): the check was wrong, not only the picture
+
+Round 2 reported "same bones, the rest is trim" from a 47 % canvas. At 100 %, beside the handoff PNG, the picture was a mess for reasons the element tree cannot show: three rows of `샘플 1` with payment statuses on an accounts table (#24), author notes drawn as screen copy on the top bar (#25), a white page where the handoff is grey (#26), bordered "text" buttons (#27). Fixed in doan (299 tests), then the project: handoff rows in all four tables, tag colours, `surface.page` on every content area, the nav's active item in the team's selected-blue, footers right-aligned or stacked as the handoff has them.
+
+Still apart: sider item icons (an asset set the project does not have yet), the fixed footer toolbar (ours ends the page), the search bar's filled style, the chips' pill shape.
+
+Rule for the check, now in memory: compare at the handoff's own scale with the handoff beside it, one of each page type, and put the pair in the reply — never "뼈대 일치" from a thumbnail.

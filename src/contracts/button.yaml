@@ -8,7 +8,7 @@ props:
   size: { type: enum, options: [sm, md, full], default: md }
   disabled: { type: boolean, default: false }
   icon: { type: string, description: a glyph or icon name drawn before the label }
-  note: { type: string, description: a line of small print next to the button — what pressing it costs or needs }
+  note: { type: string, description: 'small print for the reader — what pressing it costs or needs; a tooltip on the picture, a line in the spec' }
 
 # what the picture reads: slot → semantic token. A variant overrides slots for its option.
 tokens:

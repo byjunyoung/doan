@@ -79,15 +79,31 @@ export function sample(key, i = 0) {
 // is drawn as: a progress bar, a tag, a button… any kind the set draws, filled with a sample value.
 const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
 export const alignOf = (c) => (typeof c === 'object' && c && ALIGN[c.align] ? ` style="text-align:${ALIGN[c.align]}"` : '');
+// A cell's value: the file's `rows` (a row is a list in column order, or a map by column key/label),
+// else a sample made from the column name
+export function cellValue(el, c, i, ci) {
+  const rows = Array.isArray(el?.rows) ? el.rows : null;
+  const row = rows ? rows[i] : undefined;
+  if (row === undefined || row === null) return sample(c, i);
+  if (Array.isArray(row)) return row[ci] ?? '';
+  if (typeof row === 'object' && !isTbd(row)) {
+    const k = typeof c === 'object' && c ? c.key : c;
+    return row[k] ?? row[label(c)] ?? '';
+  }
+  return row;
+}
+export const rowCount = (el) => (Array.isArray(el?.rows) && el.rows.length ? el.rows.length : 3);
 export function cellOf(el, c, i, ci, r) {
   const k = typeof c === 'object' && c ? c.kind : null;
   if (k === 'progress') return `<div class="bar"><span style="width:${[62, 38, 84][i % 3]}%"></span></div>`;
   if (k && kinds[k] && r) {
-    const val = sample(c, i);
-    return r.element({ id: `${el.id}/c${ci}-r${i}`, kind: k, text: val, label: val, $cell: true });
+    const val = cellValue(el, c, i, ci);
+    // a cell may be { text, color } — the value plus how the kind draws it (a tag's colour)
+    const extra = val && typeof val === 'object' && !isTbd(val) && !Array.isArray(val) ? val : { text: val };
+    return r.element({ id: `${el.id}/c${ci}-r${i}`, kind: k, ...extra, text: extra.text, label: extra.text, $cell: true });
   }
-  if (typeof c === 'object' && c?.sub) return `${h(sample(c, i))}<div class="sub">${v(c.sub)}</div>`;
-  return h(sample(c, i));
+  if (typeof c === 'object' && c?.sub) return `${v(cellValue(el, c, i, ci))}<div class="sub">${v(c.sub)}</div>`;
+  return v(cellValue(el, c, i, ci));
 }
 
 export const kinds = {
@@ -133,7 +149,8 @@ export const kinds = {
   button(el) {
     const variant = el.variant ?? 'default';
     const icon = el.icon ? `<span class="btn-ico">${ico(el.icon)}</span>` : '';
-    return `<button class="btn btn-${h(variant)}"${el.disabled ? ' disabled' : ''}>${icon}${v(el.label ?? el.title ?? el.id)}</button>${el.note ? `<span class="btn-note">${v(el.note)}</span>` : ''}`;
+    // the note is small print for the reader (what pressing costs or needs) — a tooltip, not screen copy
+    return `<button class="btn btn-${h(variant)}"${el.disabled ? ' disabled' : ''}${el.note ? ` title="${h(v(el.note))}"` : ''}>${icon}${v(el.label ?? el.title ?? el.id)}</button>`;
   },
   caption(el) {
     return `<span class="caption style-${h(el.style ?? 'plain')}">${v(el.text)}</span>`;
@@ -150,8 +167,9 @@ export const kinds = {
     const cell = (c, i, ci) => `<td${alignOf(c)}>${cellOf(el, c, i, ci, r)}</td>`;
     // the row a Selected state highlights: a row number, or the first row
     const sel = el.selected_row === undefined || el.selected_row === null ? -1 : Number.isInteger(Number(el.selected_row)) ? Math.max(Number(el.selected_row) - 1, 0) : 0;
-    const rows = Array.from({ length: 3 }, (_, i) => `<tr${i === sel ? ' class="row-sel"' : ''}>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map((c, ci) => cell(c, i, ci)).join('')}</tr>`).join('');
-    return `<table><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>${el.row_action ? `<div class="hint">${D.rowTo} ${v(el.row_action)}</div>` : ''}`;
+    const rows = Array.from({ length: rowCount(el) }, (_, i) => `<tr${i === sel ? ' class="row-sel"' : ''}>${el.selectable ? '<td class="chk">☐</td>' : ''}${cols.map((c, ci) => cell(c, i, ci)).join('')}</tr>`).join('');
+    // what a tap on a row does is the inspector's and the spec's, not a line in the picture
+    return `<table${el.row_action ? ` title="${h(`${D.rowTo} ${v(el.row_action)}`)}"` : ''}><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>`;
   },
   pagination(el) {
     const pages = el.compact ? `<span class="on">1</span> / 3` : `<span class="on">1</span> 2 3`;
