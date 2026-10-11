@@ -171,8 +171,10 @@ export const kinds = {
     // what a tap on a row does is the inspector's and the spec's, not a line in the picture
     return `<table${el.row_action ? ` title="${h(`${D.rowTo} ${v(el.row_action)}`)}"` : ''}><thead><tr>${el.selectable ? '<th class="chk"></th>' : ''}${head}</tr></thead><tbody>${rows}</tbody></table>`;
   },
+  // pages: how many the control shows (a list of eight rows has one page), three when the file is silent
   pagination(el) {
-    const pages = el.compact ? `<span class="on">1</span> / 3` : `<span class="on">1</span> 2 3`;
+    const n = Math.max(1, Number(el.pages) || 3);
+    const pages = el.compact ? `<span class="on">1</span> / ${n}` : `<span class="on">1</span>${Array.from({ length: n - 1 }, (_, i) => ` ${i + 2}`).join('')}`;
     return `<div class="pager">‹ ${pages} ›${el.page_size ? ` <span class="hint">${h(el.page_size)}${D.perPage}</span>` : ''}</div>`;
   },
   'empty-notice'(el) {

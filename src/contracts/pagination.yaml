@@ -9,6 +9,9 @@ props:
   compact:
     type: boolean
     default: false
+  pages:
+    type: number
+    description: how many pages the control shows; three when absent
 tokens:
   text: color.primary
 sample:

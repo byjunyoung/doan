@@ -49,6 +49,8 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 32 | **A search bar had no icon of its own and wore the surface grey.** `search-bar` drew a bundled ⌕, antd's Input none at all; the contract's `bg: color.surface` painted the handoff's white bordered field grey. Fixed — `search-bar.icon` (a glyph or an asset, antd prefix / MUI adornment), a `border` slot; the project binds `bg` to `color.bg` | 계정 목록 | F |
 | 33 | **A chip under antd was a Tag** — 6 px corners, 12 px type — where the contract says pill. Fixed — the drawn chip wears the bundled pill's metrics (`.el-chip[data-drawn] > *`); the project's selected variant is `brand.subtle` / `brand.on-subtle`, so the chosen chip is the team's light blue under every set | 계정 목록 filters | adapter |
 | 34 | **`nav.logo` was text only.** The console's word mark is a picture (Baris*brew*) with a small INTERNAL beside it. Fixed — `logo:` takes an asset path, or `{ image, text }`; the picture is drawn as it is (not masked), the mark small, spaced, muted | sider | F |
+| 35 | **An auth frame is viewport-tall with its form centred; a doan frame is as tall as its content.** The handoff's 가입 신청 / 비밀번호 정하기 sit in the middle of a 926-tall frame with a 400-wide form; ours start at the top at `size: md` (480), and a layout `size:` has three stops and takes no token | 가입신청 · 비밀번호정하기 | layout |
+| 36 | **`pagination` always drew three pages** (antd `total: 50`), where the handoff's eight-row list shows `‹ 1 ›`. Fixed — `pagination.pages` (three when absent), read by the bundled set and both adapters | all lists | F |
 
 ## Fixed on the owner's second look ("ㅈㄴ 다르잖아 피그마랑", 2026-10-08)
 
@@ -93,8 +95,8 @@ Still apart: the search bar's filled style, the chips' pill shape, the word mark
 
 ## Round 5 (2026-10-11, "go"): the last three, and two that were not doan's
 
-The search bar (#32), the chip (#33) and the word mark (#34) — fixed in doan, 301 tests, and the project: `magnifyingGlass.svg` joined the icon set, the frontend's `logo-barisbrew.png` sits in `assets/`, eight screens went through propose → apply (structure tier). 계정 목록, 계정 추가 and 가입 신청 captured at 100 % beside their frames.
+The search bar (#32), the chip (#33) and the word mark (#34) — fixed in doan, 301 tests, and the project: `magnifyingGlass.svg` joined the icon set, the frontend's `logo-barisbrew.png` sits in `assets/`, seven screens went through propose → apply (structure tier; 계정 목록 carried the search icon too). 계정 목록, 계정 추가 and 가입 신청 captured whole-frame at 100 % beside their frames — and the pair showed two more that the round-3 check had passed: the 비활성 tag is neutral in the handoff, not the `info` blue the file gave it (pixel-checked, fixed in the file), and the pager shows one page (#36).
 
 Two leftovers were the handoff's, not the tool's: the 계정 상세 frame ends after 관리지점 — it has no 「상태」 field, while the PRD rule says 상태 is a saved field (the file keeps it; TBD for the owner). The 승인 대기 상세 frame's 매장 line reads 미네르바 라운지1, 2 — invented branch names the team already corrected once (2026-08-21); the file keeps real ones.
 
-Still apart: the chips' ▾ is a glyph where the handoff draws a chevron icon.
+Still apart: the auth frame's height and form width (#35); the chips' ▾ is a glyph where the handoff draws a chevron icon.

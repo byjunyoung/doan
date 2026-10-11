@@ -49,7 +49,7 @@ const components = {
     );
   },
   // compact is the arrows and the page alone; page_size is the rows a page holds, beside it
-  Pagination: (el) => both(el.compact ? e('span', { className: 'pager' }, '‹ 1 / 5 ›') : e(mui.Pagination, { count: 5, page: 1, size: 'small' }), el.page_size ? note('hint', ` ${text(el.page_size)}${words().perPageWord}`) : null),
+  Pagination: (el) => both(el.compact ? e('span', { className: 'pager' }, `‹ 1 / ${Math.max(1, Number(el.pages) || 3)} ›`) : e(mui.Pagination, { count: Math.max(1, Number(el.pages) || 3), page: 1, size: 'small' }), el.page_size ? note('hint', ` ${text(el.page_size)}${words().perPageWord}`) : null),
   Alert: (el) => e(mui.Alert, { severity: el.kind === 'error-notice' || el.level === 'error' ? 'error' : 'info' }, text(el.text ?? el.title ?? '')),
   Skeleton: (el) => e('div', null, ...Array.from({ length: Math.min(Number(el.rows) || 3, 6) }, (_, i) => e(mui.Skeleton, { key: i, variant: 'text' }))),
   ToggleButtonGroup: (el) => e(mui.ToggleButtonGroup, { size: 'small', exclusive: true, value: text(el.selected ?? list(el.options)[0]) }, ...list(el.options).map((o, i) => e(mui.ToggleButton, { key: i, value: text(o) }, text(o)))),

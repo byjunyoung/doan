@@ -76,7 +76,8 @@ const components = {
     // what a tap on a row does is a title on the table (the inspector and the spec say it), not a caption antd would draw
     return el.row_action ? e('div', { title: `${words().rowTo} ${text(el.row_action)}` }, table) : table;
   },
-  Pagination: (el) => e(antd.Pagination, { total: 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false, simple: !!el.compact }),
+  // pages given: that many; otherwise antd's old guess of 50 rows, so the page size still shows in the count
+  Pagination: (el) => e(antd.Pagination, { total: el.pages ? Math.max(1, Number(el.pages)) * (Number(el.page_size) || 10) : 50, pageSize: Number(el.page_size) || 10, size: 'small', showSizeChanger: false, simple: !!el.compact }),
   Empty: (el) => e(antd.Empty, { description: el.title !== undefined ? e('div', null, e('strong', null, text(el.title)), el.text !== undefined ? e('div', null, text(el.text)) : null) : text(el.text ?? words().noData) }),
   Result: (el) => e(antd.Result, { status: 'error', title: text(el.title ?? words().wentWrong), subTitle: text(el.text) }),
   Skeleton: (el) => e(antd.Skeleton, { active: false, paragraph: { rows: Math.min(Number(el.rows) || 3, 6) } }),
