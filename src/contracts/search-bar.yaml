@@ -6,9 +6,13 @@ maps_to:
 props:
   placeholder:
     type: string
+  icon:
+    type: string
+    description: the magnifier — a glyph, or an svg under assets/ (a set's own icon); ⌕ when absent
 tokens:
   bg: color.surface
   text: color.text
+  border: color.border
   muted: color.muted
   radius: radius.md
 sample:

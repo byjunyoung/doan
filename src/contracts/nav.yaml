@@ -9,8 +9,8 @@ props:
   active:
     type: string
   logo:
-    type: string
-    description: a word mark at the top of the menu
+    type: any
+    description: 'a word mark at the top of the menu: text, a picture under assets/, or { image, text } — a picture with a small mark beside it'
 tokens:
   bg: color.surface
   text: color.text

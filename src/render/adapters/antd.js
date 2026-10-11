@@ -47,9 +47,13 @@ function themeFrom(tokens) {
 
 // One renderer per antd component name. `el` is the screen element, `r` the bundled renderer
 // (for children), and each returns a React element.
+// an icon prop as a node: an svg under assets/ is a mask in the text colour, another asset a picture,
+// anything else its text
+const icoNode = (x) => (/\.svg$/i.test(x ?? '') && isAssetRef(x) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${x}')` } }) : isAssetRef(x) ? e('img', { src: x, alt: '', className: 'ico-img' }) : x ? e('span', { className: 'btn-ico' }, text(x)) : undefined);
+
 const components = {
   // size: sm · md · full → antd small · middle · large, and full is a block button, as the bundled set draws it
-  Button: (el) => e(antd.Button, { title: el.note !== undefined && el.note !== null ? text(el.note) : undefined, type: el.variant === 'primary' ? 'primary' : el.variant === 'icon' ? 'text' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: /\.svg$/i.test(el.icon ?? '') && isAssetRef(el.icon) ? e('span', { className: 'ico-mask', role: 'img', style: { '--ico': `url('${el.icon}')` } }) : isAssetRef(el.icon) ? e('img', { src: el.icon, alt: '', className: 'ico-img' }) : el.icon ? e('span', { className: 'btn-ico' }, text(el.icon)) : undefined }, text(el.label ?? el.title ?? el.id)),
+  Button: (el) => e(antd.Button, { title: el.note !== undefined && el.note !== null ? text(el.note) : undefined, type: el.variant === 'primary' ? 'primary' : el.variant === 'icon' ? 'text' : 'default', danger: el.variant === 'danger', disabled: !!el.disabled || !!el.disabled_when, size: el.size === 'sm' ? 'small' : el.size === 'full' ? 'large' : 'middle', block: el.size === 'full', icon: icoNode(el.icon) }, text(el.label ?? el.title ?? el.id)),
   // a column's align is antd's; a column's kind draws each cell as the bundled set draws that kind
   Table: (el, r) => {
     const ALIGN = { left: 'left', start: 'left', center: 'center', right: 'right', end: 'right' };
@@ -83,7 +87,8 @@ const components = {
   Segmented: (el) => e(antd.Segmented, { options: list(el.options).map(text), value: text(el.selected ?? list(el.options)[0]) }),
   Statistic: (el) => e(antd.Space, { size: 'large', wrap: true }, ...list(el.stats).map((s, i) => e(antd.Statistic, { key: i, title: text(s), value: sample(s, i) }))),
   Form: (el) => e(antd.Form, { layout: 'inline', size: 'small' }, ...list(el.fields).map((f, i) => e(antd.Form.Item, { key: i, label: text(label(f)) }, e(antd.Input, { placeholder: text(label(f)), readOnly: true })))),
-  Input: (el) => e(antd.Input, { readOnly: true, value: text(el.text ?? el.value ?? ''), placeholder: text(el.placeholder), disabled: !!el.readonly }),
+  // a search bar is an Input with its icon in front (a set's own magnifier, or the bundled ⌕)
+  Input: (el) => e(antd.Input, { readOnly: true, value: text(el.text ?? el.value ?? ''), placeholder: text(el.placeholder), disabled: !!el.readonly, prefix: el.kind === 'search-bar' ? icoNode(el.icon) ?? e('span', { className: 'search-icon' }, '⌕') : undefined }),
   'Input.TextArea': (el) => both(e(antd.Input.TextArea, { readOnly: true, rows: Math.min(Number(el.rows) || 2, 12), placeholder: text(el.placeholder), showCount: !!el.max, maxLength: el.max ? Number(el.max) : undefined }), el.counter !== undefined ? e('div', { className: 'hint' }, text(el.counter)) : null),
   InputNumber: (el) => e(antd.InputNumber, { readOnly: true, value: el.value }),
   // the chosen value; with none, the placeholder, else the first option
@@ -100,7 +105,11 @@ const components = {
   Alert: (el) => e(antd.Alert, { type: el.level === 'error' ? 'error' : 'info', message: text(el.text), showIcon: true }),
   message: (el) => e(antd.Alert, { type: el.level === 'error' ? 'error' : 'success', message: text(el.text), showIcon: true, banner: true }),
   Spin: (el) => e(antd.Spin, { tip: text(el.text ?? words().loading) }, e('div', { style: { height: 48 } })),
-  Tag: (el) => e(antd.Tag, { color: el.color ? STATUS[el.color] ?? text(el.color) : undefined }, text(el.text ?? el.label)),
+  // a chip is a pill (the contract's word) in the contract's colours — its selected variant paints the
+  // drawn tag like any binding; a tag keeps antd's corners and status colours
+  Tag: (el) => el.kind === 'chip'
+    ? e(antd.Tag, { bordered: !el.selected }, text(el.label ?? el.text ?? el.id))
+    : e(antd.Tag, { color: el.color ? STATUS[el.color] ?? text(el.color) : undefined }, text(el.text ?? el.label)),
   Checkbox: (el) => e(antd.Checkbox, { checked: !!el.checked }, text(el.label ?? el.text ?? el.id)),
   Switch: (el) => both(e(antd.Switch, { checked: !!el.on }), el.label !== undefined ? e('span', { className: 'sw-label' }, ` ${text(el.label)}`) : null),
   // the contract's padding slot lands on the card root, so the body adds none of its own

@@ -204,6 +204,42 @@ test('a table draws the rows the file gives — a list per row, or a map by colu
   }
 });
 
+test('a search bar draws its icon asset in front, a chip is a pill under antd, and a nav logo may be a picture with a mark', async () => {
+  const { kinds } = kindsModule;
+  assert.match(kinds['search-bar']({ id: 's', kind: 'search-bar', icon: 'assets/icons/magnifier.svg' }), /search-icon"><span class="ico-mask"/);
+  assert.match(kinds['search-bar']({ id: 's', kind: 'search-bar' }), /search-icon">⌕</);
+  const logo = kinds.nav({ id: 'n', kind: 'nav', logo: { image: 'assets/logo.png', text: 'INTERNAL' }, items: ['A'] });
+  assert.match(logo, /<img class="nav-logo-img" src="assets\/logo.png"[^>]*><span class="nav-logo-mark">INTERNAL<\/span>/);
+  assert.match(kinds.nav({ id: 'n', kind: 'nav', logo: 'assets/logo.png', items: ['A'] }), /<img class="nav-logo-img" src="assets\/logo.png"/);
+  assert.match(kinds.nav({ id: 'n', kind: 'nav', logo: 'Acme', items: ['A'] }), /nav-logo">Acme</);
+
+  const { mkdtemp, writeFile } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { createAdapter } = await import('../src/render/adapters/index.js');
+  const { initProject } = await import('../src/init.js');
+  const dir = await mkdtemp(join(tmpdir(), 'doan-pill-'));
+  await initProject(dir, { base: 'antd' });
+  await writeFile(
+    join(dir, 'screens', 'finder.yaml'),
+    [
+      'schema: doan/0.2', 'id: scr_pill1', 'screen: finder', 'section: "00. Sample"', 'type: list',
+      'elements:',
+      '  - { id: search, kind: search-bar, placeholder: find, icon: assets/icons/magnifier.svg }',
+      '  - { id: role, kind: chip, label: 역할 ▾ }',
+      '  - { id: picked, kind: chip, label: "역할: 점주 ⊗", selected: true }',
+      '  - { id: status, kind: tag, text: 활성, color: success }',
+    ].join('\n'),
+  );
+  const project = await loadProject(dir);
+  const screen = project.screens.find((s) => s.doc.screen === 'finder');
+  const html = renderScreen(project, screen, { adapter: await createAdapter('antd', project) });
+  assert.match(html, /ant-input-prefix[^>]*><span class="ico-mask"/, 'the icon is the antd Input prefix');
+  assert.match(html, /\.el-chip\[data-drawn\] > \* \{ border-radius: 999px/, 'the drawn chip is a pill');
+  assert.match(html, /el-chip[^>]*data-selected="true"[^>]*data-drawn/, 'the chosen chip carries its variant, so the contract paints it');
+  assert.doesNotMatch(html, /ant-tag-success[^"]*"[^>]*>역할/, 'a tag keeps its own colour, a chip has none');
+});
+
 test('the antd adapter takes its theme from the project tokens', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);

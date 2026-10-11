@@ -46,6 +46,9 @@ Ranked by how often the pilot hit them. Cluster letters are the 2026-10-02 audit
 | 29 | **`nav` items had no icon.** The console's sider draws one before every item. Fixed — an item may be `{ label, icon }`; the project exported the frontend's icon paths to `assets/icons/` | sider | F |
 | 30 | **A layout `surface:` painted only the background.** The handoff's footer toolbar is a white bar with a shadow. Fixed — bg, border, radius, shadow, each falling back when the surface has no such slot | form footers | layout |
 | 31 | **The canvas reads as overlapping at 6 %** — measured, the sections do not overlap; 240 px between 1440-wide frames is 14 px on screen. The gap could scale with the widest frame | canvas | viewer |
+| 32 | **A search bar had no icon of its own and wore the surface grey.** `search-bar` drew a bundled ⌕, antd's Input none at all; the contract's `bg: color.surface` painted the handoff's white bordered field grey. Fixed — `search-bar.icon` (a glyph or an asset, antd prefix / MUI adornment), a `border` slot; the project binds `bg` to `color.bg` | 계정 목록 | F |
+| 33 | **A chip under antd was a Tag** — 6 px corners, 12 px type — where the contract says pill. Fixed — the drawn chip wears the bundled pill's metrics (`.el-chip[data-drawn] > *`); the project's selected variant is `brand.subtle` / `brand.on-subtle`, so the chosen chip is the team's light blue under every set | 계정 목록 filters | adapter |
+| 34 | **`nav.logo` was text only.** The console's word mark is a picture (Baris*brew*) with a small INTERNAL beside it. Fixed — `logo:` takes an asset path, or `{ image, text }`; the picture is drawn as it is (not masked), the mark small, spaced, muted | sider | F |
 
 ## Fixed on the owner's second look ("ㅈㄴ 다르잖아 피그마랑", 2026-10-08)
 
@@ -87,3 +90,11 @@ Rule for the check, now in memory: compare at the handoff's own scale with the h
 Sider icons (#29), the footer toolbar (#30), the canvas measured rather than eyeballed (#31), #28 explained, and the five screens not yet seen at 100 % captured beside their frames — all five read as the handoff. 300 tests.
 
 Still apart: the search bar's filled style, the chips' pill shape, the word mark's italic *brew*.
+
+## Round 5 (2026-10-11, "go"): the last three, and two that were not doan's
+
+The search bar (#32), the chip (#33) and the word mark (#34) — fixed in doan, 301 tests, and the project: `magnifyingGlass.svg` joined the icon set, the frontend's `logo-barisbrew.png` sits in `assets/`, eight screens went through propose → apply (structure tier). 계정 목록, 계정 추가 and 가입 신청 captured at 100 % beside their frames.
+
+Two leftovers were the handoff's, not the tool's: the 계정 상세 frame ends after 관리지점 — it has no 「상태」 field, while the PRD rule says 상태 is a saved field (the file keeps it; TBD for the owner). The 승인 대기 상세 frame's 매장 line reads 미네르바 라운지1, 2 — invented branch names the team already corrected once (2026-08-21); the file keeps real ones.
+
+Still apart: the chips' ▾ is a glyph where the handoff draws a chevron icon.

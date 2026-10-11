@@ -288,7 +288,13 @@ export const kinds = {
     }
     const leaves = flat.filter((f) => f.item !== undefined);
     const on = el.active === undefined ? leaves[0] : leaves.find((f) => String(label(f.item)) === String(el.active));
-    const logo = el.logo !== undefined ? `<div class="nav-logo">${v(el.logo)}</div>` : '';
+    // the logo is a word mark (text), a picture (an asset path), or { image, text } — a picture with a
+    // mark beside it (a console's INTERNAL); the picture is drawn as it is, never masked
+    const logoOf = (l) => {
+      if (l && typeof l === 'object' && !isTbd(l)) return `${l.image ? `<img class="nav-logo-img" src="${h(l.image)}" alt="">` : ''}${l.text !== undefined && l.text !== null ? `<span class="nav-logo-mark">${v(l.text)}</span>` : ''}`;
+      return isAssetRef(l) ? `<img class="nav-logo-img" src="${h(l)}" alt="">` : v(l);
+    };
+    const logo = el.logo !== undefined ? `<div class="nav-logo">${logoOf(el.logo)}</div>` : '';
     // an item may be { label, icon } — the icon (an asset) sits before the label
     const iconOf = (it) => (it && typeof it === 'object' && !isTbd(it) && it.icon ? `<span class="nav-ico">${ico(it.icon)}</span>` : '');
     return `<div class="nav">${logo}${flat.map((f) => (f.heading !== undefined ? `<div class="nav-group">${v(f.heading)}</div>` : `<div class="nav-item${f === on ? ' on' : ''}">${iconOf(f.item)}${v(label(f.item))}</div>`)).join('') || `<div class="nav-item on">${D.menu}</div>`}</div>`;
@@ -333,8 +339,9 @@ export const kinds = {
   chip(el) {
     return `<span class="chip${el.selected ? ' on' : ''}">${v(el.label ?? el.text ?? el.id)}</span>`;
   },
+  // the icon is a glyph or an asset (a set's own magnifier); ⌕ when the file names none
   'search-bar'(el) {
-    return `<div class="search"><span class="search-icon">⌕</span><input readonly placeholder="${h(el.placeholder ?? D.select)}"></div>`;
+    return `<div class="search"><span class="search-icon">${el.icon ? ico(el.icon) : '⌕'}</span><input readonly placeholder="${h(el.placeholder ?? D.select)}"></div>`;
   },
   // no selected is nothing chosen yet (a required option the person has not picked), not the first
   segment(el) {
