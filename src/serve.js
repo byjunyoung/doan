@@ -7,7 +7,7 @@ import { layoutStyle, changedIds, renderPatterns, renderScreen, renderIndex, ren
 import { canvasPages, domainOf, slugOf } from './canvas.js';
 import { assetFile, assetType } from './assets.js';
 import { resolveAdapter } from './render/adapters/index.js';
-import { lintProject, currentBranch, specScreen } from './verbs.js';
+import { lintProject, currentBranch, specScreen, getScreen } from './verbs.js';
 import { listProposals, applyProposal, rejectProposal, undoProposal, projectWith, proposeLayout } from './proposals.js';
 import { rm } from 'node:fs/promises';
 import { authorOf, addComment, listComments, resolveComment } from './comments.js';
@@ -20,7 +20,7 @@ import { languageOf } from './render/i18n.js';
 // per branch and the layer table there is what you get.
 
 const json = (res, status, body) => {
-  res.writeHead(status, { 'content-type': 'application/json; charset=utf-8' });
+  res.writeHead(status, { 'access-control-allow-origin': '*', 'content-type': 'application/json; charset=utf-8' });
   res.end(JSON.stringify(body));
 };
 const html = (res, body, status = 200) => {
@@ -160,6 +160,8 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
     const method = req.method;
     let m;
     try {
+      // the merged tree of one screen state — what a harness in the team's own build draws from (2026-10-11 pivot spike)
+      if (method === 'GET' && path === '/api/screen') return json(res, 200, await getScreen(dir, { screen: url.searchParams.get('screen'), state: url.searchParams.get('state') ?? 'Default' }));
       if (method === 'GET' && path === '/api/lint') return json(res, 200, await lintProject(dir, { ...opts, cwd: dir }));
       if (method === 'GET' && path === '/api/proposals') return json(res, 200, { proposals: await listProposals(dir, { status: url.searchParams.get('status') ?? 'pending' }) });
       if (method === 'GET' && path === '/api/spec') return json(res, 200, await specScreen(dir, { screen: url.searchParams.get('screen'), format: url.searchParams.get('format') ?? 'json', branch: opts.branch }));

@@ -9,6 +9,7 @@
 - `nav.items` entries may be `{ label, icon }` — an asset icon before the label. A layout `surface:` paints border, radius and shadow too, each falling back when the surface lacks the slot.
 - `search-bar.icon` — a glyph or an asset in front of the field (antd prefix, MUI adornment); the contract has a `border` slot. A chip drawn by antd is a pill in the contract's colours. `nav.logo` takes a picture under assets/, or `{ image, text }` — a word mark with a small mark beside it.
 - `pagination.pages` — how many pages the control shows; three when absent.
+- `serve`: `GET /api/screen?screen=&state=` — the merged tree of one state, with CORS, for a harness in the team's own build (pivot spike, `docs/specs/2026-10-11-pivot-spike.md`).
 
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 
