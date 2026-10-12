@@ -25,7 +25,9 @@ export function useScreen({ screen, state, api }) {
     let live = true;
     setView(null);
     setError(null);
-    fetch(`${api}/api/screen?screen=${encodeURIComponent(screen)}&state=${encodeURIComponent(state)}`)
+    // the viewer's extra frames ride along: variants=axis:opt,…  bp=<name>  proposal=<id>&side=asis|tobe
+    const extra = typeof window !== 'undefined' ? ['variants', 'bp', 'proposal', 'side'].map((k) => [k, new URLSearchParams(window.location.search).get(k)]).filter(([, v]) => v).map(([k, v]) => `&${k}=${encodeURIComponent(v)}`).join('') : '';
+    fetch(`${api}/api/screen?screen=${encodeURIComponent(screen)}&state=${encodeURIComponent(state)}${extra}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((v) => live && setView(v), (err) => live && setError(String(err)));
     return () => {

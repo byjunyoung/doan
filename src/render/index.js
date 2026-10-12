@@ -239,7 +239,7 @@ export function platformOf(project, screen) {
   return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
 }
 
-function renderView(project, screen, merged, maps, adapter = null, { width = null, state = null, lazy = false } = {}) {
+function renderView(project, screen, merged, maps, adapter = null, { width = null, state = null, lazy = false, variants = null, bp = null, proposal = null } = {}) {
   const view = expandComponents(merged, project.components ?? {});
   const r = makeRenderer(screen, view.layout, maps, adapter, project.components ?? {});
   const body = view.elements.map((el) => r.element(el)).join('');
@@ -259,7 +259,11 @@ function renderView(project, screen, merged, maps, adapter = null, { width = nul
   // hidden beside it so the inspector and the comments anchor the same element ids as before
   const harness = project.conventions?.render?.harness?.url;
   if (harness && state !== null && !device) {
-    const src = `${String(harness).replace(/\/$/, '')}/${encodeURIComponent(screen.doc.screen)}?state=${encodeURIComponent(state)}`;
+    const q = [`state=${encodeURIComponent(state)}`];
+    if (variants && Object.keys(variants).length) q.push(`variants=${encodeURIComponent(Object.entries(variants).map(([k, v]) => `${k}:${v}`).join(','))}`);
+    if (bp) q.push(`bp=${encodeURIComponent(bp)}`);
+    if (proposal) q.push(`proposal=${encodeURIComponent(proposal.id)}&side=${proposal.side}`);
+    const src = `${String(harness).replace(/\/$/, '')}/${encodeURIComponent(screen.doc.screen)}?${q.join('&')}`;
     // on the canvas the frames are many: the src waits (data-src) until the frame comes near the viewport
     return `<div class="stage"><div class="frame device-web harness" style="${style}" data-harness="${h(src)}"><iframe class="harness-frame" ${lazy ? 'data-src' : 'src'}="${h(src)}" title="${h(screen.doc.screen)} · ${h(state)}" loading="lazy"></iframe><div class="harness-shadow" hidden>${content}</div></div></div>`;
   }
@@ -677,7 +681,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     .map((state, i) => `<section class="state${i === 0 ? ' active' : ''}" id="state-${h(state)}"><h3>${h(state)}</h3>${renderView(project, screen, mergeState(doc, state), maps, adapter, { state })}</section>`)
     .join('');
   const variantPanels = Object.entries(doc.variants ?? {})
-    .map(([axis, options]) => Object.keys(options ?? {}).map((opt) => `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(axis)} · ${h(opt)}</h3>${renderView(project, screen, mergeState(doc, 'Default', { [axis]: opt }), maps, adapter)}</section>`).join(''))
+    .map(([axis, options]) => Object.keys(options ?? {}).map((opt) => `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(axis)} · ${h(opt)}</h3>${renderView(project, screen, mergeState(doc, 'Default', { [axis]: opt }), maps, adapter, { state: 'Default', variants: { [axis]: opt } })}</section>`).join(''))
     .join('');
 
   // a screen with a breakpoints block is drawn once per named width, its patches for that
@@ -686,7 +690,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
   const bpNames = Object.keys(bpTable);
   const bpTabs = bpNames.map((bp) => `<button class="tab" data-state="bp=${h(bp)}" data-target="bp-${h(bp)}">${h(bp)} <span class="n">${bpTable[bp]}</span></button>`).join('');
   const bpPanels = bpNames
-    .map((bp) => `<section class="state" id="bp-${h(bp)}"><h3>${h(bp)} · ${bpTable[bp]}px</h3>${renderView(project, screen, mergeState(doc, 'Default', {}, bp), maps, adapter, { width: bpTable[bp] })}</section>`)
+    .map((bp) => `<section class="state" id="bp-${h(bp)}"><h3>${h(bp)} · ${bpTable[bp]}px</h3>${renderView(project, screen, mergeState(doc, 'Default', {}, bp), maps, adapter, { width: bpTable[bp], state: 'Default', bp })}</section>`)
     .join('');
 
   const flows = (doc.flows ?? [])
@@ -939,8 +943,8 @@ export function renderProto(project, { branch = null, adapter = null, api = fals
       // prototype's breakpoint select picks among them, the base is the fallback
       const bps = s.doc.breakpoints ? Object.entries(project.conventions.breakpoints ?? {}) : [];
       return stateOrder(project, s).flatMap((state) => [
-        `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter)}</section>`,
-        ...bps.map(([bp, width]) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" data-bp="${h(bp)}" hidden>${renderView(project, s, mergeState(s.doc, state, {}, bp), maps, adapter, { width })}</section>`),
+        `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" hidden>${renderView(project, s, mergeState(s.doc, state), maps, adapter, { state, lazy: true })}</section>`,
+        ...bps.map(([bp, width]) => `<section class="proto-view" data-screen="${h(s.doc.screen)}" data-state="${h(state)}" data-bp="${h(bp)}" hidden>${renderView(project, s, mergeState(s.doc, state, {}, bp), maps, adapter, { width, state, bp, lazy: true })}</section>`),
       ]);
     })
     .join('');
@@ -1012,8 +1016,8 @@ export function renderProposal(project, proposal, { branch = null, adapter = nul
   const tabs = states.map((s, i) => `<button class="tab${i === 0 ? ' active' : ''}" data-state="${h(s)}" data-target="pair-${h(s)}">${h(s)}</button>`).join('');
   const panels = states
     .map((state, i) => {
-      const a = creates ? `<div class="hint">${D.newScreen}</div>` : before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter) : `<div class="hint">${D.notInAsis}</div>`;
-      const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter) : `<div class="hint">${D.removedInTobe}</div>`;
+      const a = creates ? `<div class="hint">${D.newScreen}</div>` : before.doc.states?.[state] || state === 'Default' ? renderView(project, before, mergeState(before.doc, state), maps, adapter, { state, proposal: { id: proposal.id, side: 'asis' } }) : `<div class="hint">${D.notInAsis}</div>`;
+      const b = after.doc.states?.[state] || state === 'Default' ? renderView(project, after, mergeState(after.doc, state), maps, adapter, { state, proposal: { id: proposal.id, side: 'tobe' } }) : `<div class="hint">${D.removedInTobe}</div>`;
       return `<section class="state${i === 0 ? ' active' : ''}" id="pair-${h(state)}"><div class="states compare"><div class="state active" id="asis-${h(state)}" style="display:block"><h3 style="display:block">${D.asis}</h3>${a}</div><div class="state active" id="tobe-${h(state)}" style="display:block"><h3 style="display:block">${D.tobe}</h3>${b}</div></div></section>`;
     })
     .join('');

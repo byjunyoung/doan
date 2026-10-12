@@ -9,6 +9,7 @@ The pen changes: a screen is drawn with the team's own components, not with doan
 - The canvas frames states the same way when a harness is set, lazily: a frame's `src` is set when it comes within two screens of the viewport, and a height message redraws the arrows.
 - `@junyoung735/doan/react` — a harness runtime for a React build: `drawScreen(view, { registry, joins, space, onSelect })` walks the tree, folds joined siblings (`el.joined`), wraps every element in an anchor that posts a click, and draws an unmapped kind as a dashed box; `createHarness(config)` adds the fetch, the team's `shell` / `bare` / `modal` wrappers and the viewer bridge. The team writes the registry: one line per kind, its own component.
 - `doan harness <dir>` (and `init --harness react`) — writes `harness/registry.example.tsx` listing the kinds the project's screens use, one TODO each, plus the joins and a README with the three steps.
+- The harness reaches every frame the viewer draws: variant and breakpoint panels (`?variants=axis:opt`, `?bp=`), the prototype (a view loads when shown; a click in the frame is the hotspot press), and a proposal's AS-IS / TO-BE (`?proposal=<id>&side=asis|tobe` — the TO-BE side is the project as it would be, from a temporary copy). `/api/screen` takes the same parameters.
 
 ## 0.22.0 — 2026-10-08
 

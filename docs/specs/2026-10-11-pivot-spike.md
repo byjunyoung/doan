@@ -74,6 +74,11 @@ Left on the bundled drawing on purpose: the canvas (nine screens × states would
 
 `doan harness <dir>` / `init --harness react` writes `harness/registry.example.tsx` (one TODO per kind the screens use — 20 for the accounts set — with each kind's declared props and where it is used) and a README with the three steps. The app consumes the checkout through a Vite alias with `resolve.dedupe: ['react', 'react-dom']` (doan's node_modules has React 19, the app 18; one hook call from the wrong copy throws "Invalid hook call") and `server.fs.allow`; tsconfig `paths` pins `react` to the app's types so the runtime's `.d.ts` agrees with them.
 
+
+## Every frame (2026-10-12, later)
+
+The remaining bundled pictures went over: variant and breakpoint panels on the screen page (`variants=axis:opt,…`, `bp=`), the prototype (views load when shown, since a hidden view never intersects; a `doan:select` from a prototype frame is dispatched as a click on the hidden twin, so the hotspot logic is untouched), and a proposal's AS-IS / TO-BE pair (`proposal=<id>&side=` — the TO-BE side is served from `projectWith`, the project as the proposal would leave it, in a temporary copy per request). The harness forwards those four query parameters to `/api/screen` untouched. Checked in Chrome with a structure-tier proposal on 계정 목록 (a hint line added, then rejected) and the prototype's 계정 추가 hotspot through a probe.
+
 ## What this says about the overhaul
 
 1. The screen file already carries what the engine needs (states, flows, refs, `$tbd`, notes) and what a harness needs (kinds, props, rows, layout tokens). The format survives the pivot; the bundled drawings and the per-library adapters are what it leaves behind.

@@ -928,7 +928,13 @@ export const INSPECTOR_JS = `
   // a harness frame (an iframe of the team's build) talks by messages: its height, and the element
   // the person clicked; the hidden bundled drawing beside it carries the data the drawer reads
   // a canvas holds many harness frames: each loads when it comes within two screens of the viewport
+  // load the harness frames under a root now — the prototype calls this when it shows a view
+  window.doanLoadHarness = function (root) {
+    (root || document).querySelectorAll('.harness-frame[data-src]').forEach(function (f) { f.src = f.getAttribute('data-src'); f.removeAttribute('data-src'); });
+  };
   function lazyHarness() {
+    // the prototype shows its first view before this script runs: load what is on screen right away
+    window.doanLoadHarness(document.querySelector('.proto-view:not([hidden])') || document.createElement('div'));
     var pending = document.querySelectorAll('.harness-frame[data-src]'); if (!pending.length) return;
     if (!('IntersectionObserver' in window)) { pending.forEach(function (f) { f.src = f.getAttribute('data-src'); }); return; }
     var io = new IntersectionObserver(function (entries) {
@@ -947,6 +953,8 @@ export const INSPECTOR_JS = `
     if (m.type === 'doan:select') {
       var shadow = frame.parentElement.querySelector('.harness-shadow');
       var el = shadow && m.id ? shadow.querySelector('.el[data-id="' + String(m.id).replace(/"/g, '') + '"]') : null;
+      // on the prototype the click is a hotspot press: hand it to the hidden twin's own listener
+      if (el && frame.closest('.proto-view')) { el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })); return; }
       if (el) openDrawer(el); else window.doanClearSelection();
       frames.forEach(function (f) { f.contentWindow.postMessage({ type: 'doan:selected', id: el ? m.id : null }, '*'); });
     }
@@ -1179,11 +1187,11 @@ export const PROTO_JS = `
     var t = top(); if (!t) return;
     var bases = stack.filter(function (x) { return !x.overlay; }); var base = bases[bases.length - 1] || t;
     views.forEach(function (v) { v.hidden = true; });
-    var bv = viewOf(base.screen, base.state); if (bv) bv.hidden = false;
+    var bv = viewOf(base.screen, base.state); if (bv) { bv.hidden = false; if (window.doanLoadHarness) window.doanLoadHarness(bv); }
     overlay.innerHTML = ''; overlay.hidden = true;
     if (t.overlay) {
       var ov = viewOf(t.screen, t.state);
-      if (ov) { var c = ov.cloneNode(true); c.hidden = false; overlay.appendChild(c); overlay.hidden = false; arm(c, t.screen, t.state); }
+      if (ov) { var c = ov.cloneNode(true); c.hidden = false; overlay.appendChild(c); overlay.hidden = false; arm(c, t.screen, t.state); if (window.doanLoadHarness) window.doanLoadHarness(c); }
     }
     screenSel.value = base.screen;
     stateSel.innerHTML = statesOf(base.screen).map(function (s) { return '<option value="' + s + '"' + (s === base.state ? ' selected' : '') + '>' + s + '</option>'; }).join('');

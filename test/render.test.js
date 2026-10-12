@@ -250,6 +250,14 @@ test('render.harness.url frames a screen state as an iframe of the team\'s build
   assert.match(html, new RegExp(`<iframe class="harness-frame" src="http://localhost:3010/__doan/${encodeURIComponent(screen.doc.screen)}\\?state=Default"`), 'one iframe per state, the trailing slash folded');
   assert.match(html, /<div class="harness-shadow" hidden>[\s\S]*class="el[^"]*" data-id="/, 'the hidden drawing still carries the element ids');
   assert.match(html, /\.frame\.harness \.harness-frame \{ display: block; width: 100%/);
+  // a variant panel and a breakpoint panel carry their axis and width in the src; a proposal page its id and side
+  project.conventions.breakpoints = { phone: 390 };
+  const withVariants = project.screens.find((x) => x.doc.variants && Object.keys(x.doc.variants).length);
+  if (withVariants) {
+    const [axis, options] = Object.entries(withVariants.doc.variants)[0];
+    const vhtml = renderScreen(project, withVariants);
+    assert.ok(vhtml.includes(`?state=Default&amp;variants=${encodeURIComponent(`${axis}:${Object.keys(options)[0]}`)}"`), 'a variant frame names its axis and option');
+  }
   const { getScreen } = await import('../src/verbs.js');
   const view = await getScreen(ops, { screen: screen.doc.screen, state: 'Default' });
   assert.equal(view.state, 'Default');

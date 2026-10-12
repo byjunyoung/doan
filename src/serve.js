@@ -2,6 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { loadProject } from './project.js';
+import { mergeState } from './merge.js';
 import { renderFilesProposal, renderNotice, appliedHref } from './render/index.js';
 import { layoutStyle, changedIds, renderPatterns, renderScreen, renderIndex, renderProposal, renderLibrary, renderProto, renderCanvas, renderTokens, renderAssets, renderSpec, renderFoundations } from './render/index.js';
 import { canvasPages, domainOf, slugOf } from './canvas.js';
@@ -161,7 +162,28 @@ export async function startServer(dir, { port = 4870, host = '127.0.0.1', branch
     let m;
     try {
       // the merged tree of one screen state — what a harness in the team's own build draws from (2026-10-11 pivot spike)
-      if (method === 'GET' && path === '/api/screen') return json(res, 200, await getScreen(dir, { screen: url.searchParams.get('screen'), state: url.searchParams.get('state') ?? 'Default' }));
+      if (method === 'GET' && path === '/api/screen') {
+        const q = url.searchParams;
+        const variants = Object.fromEntries((q.get('variants') ?? '').split(',').filter(Boolean).map((pair) => pair.split(':')).filter(([k, v]) => k && v));
+        const args = { screen: q.get('screen'), state: q.get('state') ?? 'Default', variants, breakpoint: q.get('bp') || null };
+        // a pending proposal's TO-BE side: the project as it would be, loaded from a temporary copy
+        if (q.get('proposal') && q.get('side') !== 'asis') {
+          const pid = q.get('proposal');
+          const full = /^p_[a-z0-9]+$/.test(pid) ? await readFile(join(dir, '.proposals', `${pid}.json`), 'utf8').then(JSON.parse, () => null) : null;
+          if (!full || full.status !== 'pending') return json(res, 404, { error: `no pending proposal ${pid}` });
+          const files = full.kind === 'files' ? full.files : [{ path: full.file, after: full.after }];
+          const { project: after, tmp } = await projectWith(dir, files);
+          try {
+            const found = after.screens.find((s) => s.doc.screen === args.screen);
+            if (!found) return json(res, 404, { error: `no screen named "${args.screen}" in the proposal` });
+            const view = mergeState(found.doc, args.state, variants, args.breakpoint);
+            return json(res, 200, { screen: args.screen, file: found.file, type: found.doc.type, refs: found.doc.refs ?? {}, ...view, flows: found.doc.flows ?? [], notes: found.doc.notes ?? [], proposal: full.id, side: 'tobe' });
+          } finally {
+            await rm(tmp, { recursive: true, force: true });
+          }
+        }
+        return json(res, 200, await getScreen(dir, args));
+      }
       if (method === 'GET' && path === '/api/lint') return json(res, 200, await lintProject(dir, { ...opts, cwd: dir }));
       if (method === 'GET' && path === '/api/proposals') return json(res, 200, { proposals: await listProposals(dir, { status: url.searchParams.get('status') ?? 'pending' }) });
       if (method === 'GET' && path === '/api/spec') return json(res, 200, await specScreen(dir, { screen: url.searchParams.get('screen'), format: url.searchParams.get('format') ?? 'json', branch: opts.branch }));
