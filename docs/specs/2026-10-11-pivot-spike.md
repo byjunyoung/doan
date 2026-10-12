@@ -25,6 +25,35 @@ One screen, the real components, nothing else.
 
 Harness: ~330 lines, written in one pass, no new vocabulary. What round 3–5 spent three days on — search bar, chips, logo, tag colours, pager — came for free, because the app's components are what the handoff was drawn from.
 
+
+## Nine screens (2026-10-12)
+
+The owner's bar, restated the same morning: *to replace Figma, a screen that already has a frame must come across completely* — the "no Figma yet" test is an addition, not a substitute. So the spike was extended to all nine accounts screens before anything else.
+
+Harness additions: an `AuthPage` route (`/__doan-bare/:screen`) for the login-less pair, using the app's own frame (white, centred, 480); a modal as an antd `Modal` left open; `group#footer` after a form card drawn inside that card as the app's sticky `FooterToolbar`; a field's control group taking the field's layout rule; prose in `select.options` tolerated; `soft-primary` as the app's light-blue button; a tag-list value as a multi-select. ~380 lines in all.
+
+| Screen | Type | Unmapped kinds | Beside the frame |
+|---|---|---|---|
+| 계정 목록 | list | 0 | same |
+| 승인 대기 목록 | list | 0 | same (the 매장명 cell reads the frame's sample) |
+| 계정 그룹 목록 | fixed-list | 0 | same |
+| 계정 추가 | form | 0 | same, toolbar on the card's edge as the app draws it |
+| 계정 상세 | form | 0 | same; the file keeps 「상태」 (PRD) which the frame lacks |
+| 승인 대기 상세 | form | 0 | same; 반려 left, 취소·승인 right |
+| 계정 그룹 상세 | form | 0 | same; domain tags, three-way branch radio, member table |
+| 임시 비밀번호 | modal | 0 | a real `Modal`; no frame PNG was pulled for it, not compared |
+| 가입 신청 · 비밀번호 정하기 | auth | 0 | same bones, now vertically centred (the app's frame) |
+
+Where the picture still differs from the frame, the difference is the **product's**, not the tool's — which is the point of drawing with the product's components:
+
+- the sider has no 상품 카테고리 (menu.ts has none; the frame has it) and shows 「준비 중」 on 상품관리
+- the auth form is 480 wide (`FORM_WIDTH`) where the frame draws 400
+- the top bar's user name needs a session, so the harness shows none
+
+Each of these is a finding a designer wants: the frame and the build disagree. None is a doan gap.
+
+What changed in doan for this: nothing beyond `/api/screen`. The nine files were not touched.
+
 ## What this says about the overhaul
 
 1. The screen file already carries what the engine needs (states, flows, refs, `$tbd`, notes) and what a harness needs (kinds, props, rows, layout tokens). The format survives the pivot; the bundled drawings and the per-library adapters are what it leaves behind.
