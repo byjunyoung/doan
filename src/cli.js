@@ -2,7 +2,7 @@
 import { relative } from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
-import { lintProject, renderProject, initProject, componentBases, importFigma, importTokens, mapFigma, listTokens, migrateKinds, listComponents, listAssets, listPatterns, specScreen, exportTokens } from './verbs.js';
+import { lintProject, renderProject, initProject, componentBases, harnessStarter, importFigma, importTokens, mapFigma, listTokens, migrateKinds, listComponents, listAssets, listPatterns, specScreen, exportTokens } from './verbs.js';
 import { startServer } from './serve.js';
 import { prepFile } from './prep.js';
 import { diffScreens, renderDiffMarkdown, readScreenAt } from './diff.js';
@@ -21,12 +21,14 @@ const USAGE = `doan — screens as files; the agent draws, you say what to chang
 
 usage: doan <verb> …
 
-  init <project-dir> [--base none|antd|mui] [--language en|ko]
+  init <project-dir> [--base none|antd|mui] [--language en|ko] [--harness react]
         start a project: conventions, sections, tokens, screens/, patterns/. --base none (default) copies the
         component set into <project-dir>/components so it is yours; a library base maps kinds to it.
         --language sets the viewer's words and the starter's (default en).
   bases  list the component bases and whether each is ready
   components <project-dir> [--json]
+  harness <project-dir> [--framework react]
+        write harness/registry.example.tsx + README: the kinds the screens use, to draw them with your own components
         every kind in the registry (components/<kind>.yaml) — props, slots, token bindings, compound or not.
   spec <project-dir> <screen> [--md | --format json|md] [--out <file>]
         the developer spec of one screen: elements with code mappings, copy, states, flows, tokens, assets,
@@ -221,10 +223,20 @@ async function initCommand(opts) {
   const [dir] = opts._;
   if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
   const r = await initProject(dir, { base: opts.base ?? 'none', language: opts.language ?? 'en' });
+  if (opts.harness) { const hs = await harnessStarter(dir, { framework: opts.harness }); r.created.push(...hs.files); }
   const ko = r.language === 'ko';
   process.stdout.write(ko
     ? `${r.dir}: 기반=${r.base} — 만든 것 ${r.created.join(', ')}\n\n다음:\n  ${NPX} serve ${dir}     # http://127.0.0.1:4870/ 열기\n  ${NPX} lint ${dir}\n  에이전트에 MCP 서버 연결 — README 참고\n`
     : `${r.dir}: base=${r.base} — created ${r.created.join(', ')}\n\nnext:\n  ${NPX} serve ${dir}     # open http://127.0.0.1:4870/\n  ${NPX} lint ${dir}\n  add the MCP server to your agent — see README\n`);
+  return 0;
+}
+// a harness starter for an existing project: the kinds its screens use, as a registry to fill
+async function harnessCommand(opts) {
+  const [dir] = opts._;
+  if (!dir) throw Object.assign(new Error(USAGE), { exit: 2 });
+  const r = await harnessStarter(dir, { framework: opts.framework ?? 'react' });
+  if (opts.json) process.stdout.write(JSON.stringify(r, null, 2) + '\n');
+  else process.stdout.write(`${r.dir}: ${r.files.join(', ')} — ${r.kinds.length} kinds: ${r.kinds.join(', ')}\n`);
   return 0;
 }
 async function componentsCommand(opts) {
@@ -391,7 +403,7 @@ async function versionCommand() {
 
 const verbs = {
   help: helpCommand, '--help': helpCommand, '-h': helpCommand, '--version': versionCommand, '-v': versionCommand,
-  init: initCommand, bases: basesCommand, comments: commentsCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, requests: requestsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
+  init: initCommand, harness: harnessCommand, bases: basesCommand, comments: commentsCommand, tokens: tokensCommand, components: componentsCommand, assets: assetsCommand, patterns: patternsCommand, requests: requestsCommand, spec: specCommand, import: importCommand, map: mapCommand, migrate: migrateCommand, serve: serveCommand,
   lint: lintCommand, prep: prepCommand, diff: diffCommand, render: renderCommand, mcp: mcpCommand,
   propose: proposeCommand, proposals: proposalsCommand, apply: gated(applyProposal), reject: gated(rejectProposal), undo: gated(undoProposal),
 };

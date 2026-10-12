@@ -67,6 +67,13 @@ Verified in Chrome on 계정 목록: the viewer page shows the product's picture
 
 Left on the bundled drawing on purpose: the canvas (nine screens × states would be thirty-odd React boots), the proto, the proposal AS-IS / TO-BE. Variant and breakpoint panels too.
 
+
+## Packaging (2026-10-12)
+
+`@junyoung735/doan/react` (`react/core.js` pure — walker, joins, anchors, unmapped fallback, `boxStyle` over a token map, a field's control taking the field's rule; `react/index.js` — `createHarness`, the fetch, the bridge; `react/index.d.ts`). Tested under `react-dom/server` (`test/react.test.js`). The barison harness shrank to its mapping table: 24 registry entries, four joins, three wrappers (`shell` = the app's `AppLayout` through a nested `Routes`, `bare` = `AuthPage` + `formStyle`, `modal` = antd `Modal`), 264 lines, no walker of its own. Pixel-diffed against the captures before the refactor: no change.
+
+`doan harness <dir>` / `init --harness react` writes `harness/registry.example.tsx` (one TODO per kind the screens use — 20 for the accounts set — with each kind's declared props and where it is used) and a README with the three steps. The app consumes the checkout through a Vite alias with `resolve.dedupe: ['react', 'react-dom']` (doan's node_modules has React 19, the app 18; one hook call from the wrong copy throws "Invalid hook call") and `server.fs.allow`; tsconfig `paths` pins `react` to the app's types so the runtime's `.d.ts` agrees with them.
+
 ## What this says about the overhaul
 
 1. The screen file already carries what the engine needs (states, flows, refs, `$tbd`, notes) and what a harness needs (kinds, props, rows, layout tokens). The format survives the pivot; the bundled drawings and the per-library adapters are what it leaves behind.

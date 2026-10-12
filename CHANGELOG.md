@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.23.0 — 2026-10-12 (unreleased)
+
+The pen changes: a screen is drawn with the team's own components, not with doan's drawing of them. The engine (states, lint, proposals, comments, lifecycle, handoff) is what the file is for; the picture is the product's. Spec: `docs/specs/2026-10-11-pivot-spike.md`.
+
+- `serve`: `GET /api/screen?screen=&state=` — the merged tree of one state, with CORS, for a harness in the team's own build (pivot spike, `docs/specs/2026-10-11-pivot-spike.md`).
+- `conventions.render.harness.url` — a page in the team's own build that draws a screen from `/api/screen`; the screen page frames each state as an iframe of it and keeps the bundled drawing hidden beside it, so the inspector and comments anchor the same element ids. The harness talks by messages: `doan:size` (its height), `doan:select` (the element clicked); the viewer answers `doan:selected` for the highlight.
+- The canvas frames states the same way when a harness is set, lazily: a frame's `src` is set when it comes within two screens of the viewport, and a height message redraws the arrows.
+- `@junyoung735/doan/react` — a harness runtime for a React build: `drawScreen(view, { registry, joins, space, onSelect })` walks the tree, folds joined siblings (`el.joined`), wraps every element in an anchor that posts a click, and draws an unmapped kind as a dashed box; `createHarness(config)` adds the fetch, the team's `shell` / `bare` / `modal` wrappers and the viewer bridge. The team writes the registry: one line per kind, its own component.
+- `doan harness <dir>` (and `init --harness react`) — writes `harness/registry.example.tsx` listing the kinds the project's screens use, one TODO each, plus the joins and a README with the three steps.
+
 ## 0.22.0 — 2026-10-08
 
 - `table.rows` — the rows a table draws: a list per row in column order, or a map by column key; a cell of a `kind` column may be `{ text, color }`. Without it, three sample rows as before.
@@ -9,9 +19,6 @@
 - `nav.items` entries may be `{ label, icon }` — an asset icon before the label. A layout `surface:` paints border, radius and shadow too, each falling back when the surface lacks the slot.
 - `search-bar.icon` — a glyph or an asset in front of the field (antd prefix, MUI adornment); the contract has a `border` slot. A chip drawn by antd is a pill in the contract's colours. `nav.logo` takes a picture under assets/, or `{ image, text }` — a word mark with a small mark beside it.
 - `pagination.pages` — how many pages the control shows; three when absent.
-- `serve`: `GET /api/screen?screen=&state=` — the merged tree of one state, with CORS, for a harness in the team's own build (pivot spike, `docs/specs/2026-10-11-pivot-spike.md`).
-- `conventions.render.harness.url` — a page in the team's own build that draws a screen from `/api/screen`; the screen page frames each state as an iframe of it and keeps the bundled drawing hidden beside it, so the inspector and comments anchor the same element ids. The harness talks by messages: `doan:size` (its height), `doan:select` (the element clicked); the viewer answers `doan:selected` for the highlight.
-- The canvas frames states the same way when a harness is set, lazily: a frame's `src` is set when it comes within two screens of the viewport, and a height message redraws the arrows.
 
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 

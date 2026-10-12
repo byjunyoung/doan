@@ -289,6 +289,91 @@ export async function listComponents(dir) {
   return { count: components.length, legacy: project.componentSet?.legacy ?? [], components };
 }
 
+// A harness starter for the team's own build (2026-10-12 pivot): the kinds the project's screens
+// actually use, each a TODO line in a registry the team fills with its components, plus the sibling
+// joins an admin console needs and a README with the three steps (route, alias, conventions).
+// Written into <dir>/harness/ — the team copies the registry into the app, next to its components.
+export async function harnessStarter(dir, { framework = 'react' } = {}) {
+  if (framework !== 'react') throw new Error(`unknown harness framework "${framework}"; react is the one that exists`);
+  const project = await loadProject(dir);
+  const used = new Map();
+  const walk = (els, screen) => {
+    for (const el of Array.isArray(els) ? els : []) {
+      if (!el || typeof el !== 'object' || !el.kind) continue;
+      if (!used.has(el.kind)) used.set(el.kind, new Set());
+      used.get(el.kind).add(screen);
+      walk(el.children, screen);
+      walk(el.actions, screen);
+      if (el.control && typeof el.control === 'object') walk([el.control], screen);
+      for (const c of Array.isArray(el.columns) ? el.columns : []) if (c && c.kind) walk([{ kind: c.kind, id: c.key }], screen);
+    }
+  };
+  for (const s of project.screens) walk(s.doc.elements, s.doc.screen);
+  const kinds = [...used.keys()].sort();
+  const propsOf = (kind) => Object.keys(project.components?.[kind]?.props ?? {}).join(', ');
+  const lines = kinds.map((k) => {
+    const where = [...used.get(k)];
+    return `  // ${k} — ${propsOf(k) || 'no declared props'} · used by ${where.slice(0, 4).join(', ')}${where.length > 4 ? ` +${where.length - 4}` : ''}\n  '${k}': (el, ctx) => TODO(el, ctx),`;
+  });
+  const registry = `// doan harness — the registry: one line per kind the screens use, each drawn with YOUR component.
+// Copy this file into the app (next to the components it names), replace every TODO, and route it:
+//   <Route path="/__doan/:screen/*" element={<DoanHarness screen={useParams().screen!} />} />   // dev only
+// el: the element from the screen file (its props as written); ctx: children(), control(), draw(el),
+// drawList(els), rule / boxStyle(), text(), list(), chipOf(), flatButtons(), shell, unmapped.
+// A kind left as TODO draws as a dashed box and is counted in the picture.
+import { createElement as h } from 'react'
+import { createHarness, type Registry, type Join, type El, type Ctx } from '@junyoung735/doan/react'
+
+const TODO = (el: El, _ctx: Ctx) => h('div', { style: { border: '1px dashed #d4380d', color: '#d4380d', padding: 4, fontSize: 12 } }, \`\${el.kind}#\${el.id}\`)
+
+/** doan spacing tokens → your dimension tokens (px). Screen files name tokens, never px */
+export const space: Record<string, number> = { 'space.xs': 4, 'space.sm': 8, 'space.md': 16, 'space.lg': 24, 'space.xl': 32 }
+
+/** siblings a console folds into one component — read them as el.joined.<kind> in the registry */
+export const joins: Join[] = [
+  { kind: 'page-header', next: 'tabs' },
+  { kind: 'search-bar', next: 'filter-bar' },
+  { kind: 'table', next: 'pagination' },
+  { kind: 'card', next: { kind: 'group', id: 'footer' }, as: 'footer', when: (_el, next) => (next.children ?? []).some((b: El) => b.variant === 'primary') },
+]
+
+export const registry: Registry = {
+${lines.join('\n')}
+}
+
+export const DoanHarness = createHarness({
+  registry,
+  joins,
+  space,
+  // shell: (view, body) => <YourAppLayout>{body}</YourAppLayout>   — a screen with a nav
+  // bare: (view, body) => <YourAuthFrame>{body}</YourAuthFrame>    — a screen without one
+  // modal: (view, body, modalEl) => <Modal open title={modalEl.title}>{body}</Modal>
+})
+`;
+  const readme = `# doan harness (react)
+
+The viewer can frame every screen with **your** components instead of its bundled drawing.
+
+1. Copy \`registry.example.tsx\` into the app next to your components and replace each \`TODO\`.
+2. Add a dev-only route: \`<Route path="/__doan/:screen/*" element={<DoanHarness screen={…} />} />\`.
+   The page reads \`GET <doan serve>/api/screen?screen=&state=\` (\`?api=\` overrides the host).
+3. In \`conventions.yaml\`: \`render.harness.url: http://localhost:<your port>/__doan\` — the viewer
+   then frames each state as an iframe of that page, and the inspector, the comments and the canvas
+   keep working on the same element ids (the harness posts \`doan:select\` on a click).
+
+Until the package is on npm, point the app at a checkout: a Vite alias
+\`'@junyoung735/doan/react': '<doan>/react/index.js'\`, \`resolve.dedupe: ['react', 'react-dom']\`
+(one React), the checkout in \`server.fs.allow\`, and a \`paths\` entry in tsconfig for the types.
+
+Kinds in use: ${kinds.length} — ${kinds.join(', ')}
+`;
+  const out = join(dir, 'harness');
+  await mkdir(out, { recursive: true });
+  await writeFile(join(out, 'registry.example.tsx'), registry);
+  await writeFile(join(out, 'README.md'), readme);
+  return { dir: out, framework, kinds, files: ['harness/registry.example.tsx', 'harness/README.md'] };
+}
+
 // The flows of the whole product as one list — edges that resolve, dead ends, orphans — for an
 // agent that wants the structure without the picture. The canvas draws the same graph as arrows.
 export async function listFlows(dir) {

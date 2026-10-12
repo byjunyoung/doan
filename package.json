@@ -35,10 +35,15 @@
     "doan": "src/cli.js"
   },
   "exports": {
-    ".": "./src/index.js"
+    ".": "./src/index.js",
+    "./react": {
+      "types": "./react/index.d.ts",
+      "default": "./react/index.js"
+    }
   },
   "files": [
     "src",
+    "react",
     "schema",
     "conventions.example.yaml",
     "README.md",
