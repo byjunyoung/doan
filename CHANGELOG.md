@@ -10,6 +10,7 @@
 - `search-bar.icon` — a glyph or an asset in front of the field (antd prefix, MUI adornment); the contract has a `border` slot. A chip drawn by antd is a pill in the contract's colours. `nav.logo` takes a picture under assets/, or `{ image, text }` — a word mark with a small mark beside it.
 - `pagination.pages` — how many pages the control shows; three when absent.
 - `serve`: `GET /api/screen?screen=&state=` — the merged tree of one state, with CORS, for a harness in the team's own build (pivot spike, `docs/specs/2026-10-11-pivot-spike.md`).
+- `conventions.render.harness.url` — a page in the team's own build that draws a screen from `/api/screen`; the screen page frames each state as an iframe of it and keeps the bundled drawing hidden beside it, so the inspector and comments anchor the same element ids. The harness talks by messages: `doan:size` (its height), `doan:select` (the element clicked); the viewer answers `doan:selected` for the highlight.
 
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 

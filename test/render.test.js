@@ -240,6 +240,22 @@ test('a search bar draws its icon asset in front, a chip is a pill under antd, a
   assert.doesNotMatch(html, /ant-tag-success[^"]*"[^>]*>역할/, 'a tag keeps its own colour, a chip has none');
 });
 
+test('render.harness.url frames a screen state as an iframe of the team\'s build, with the bundled drawing hidden beside it for the inspector', async () => {
+  const project = await loadProject(ops);
+  const screen = project.screens[0];
+  const plain = renderScreen(project, screen);
+  assert.doesNotMatch(plain, /<iframe class="harness-frame"/, 'no harness set: the bundled drawing is the frame');
+  project.conventions.render = { ...(project.conventions.render ?? {}), harness: { url: 'http://localhost:3010/__doan/' } };
+  const html = renderScreen(project, screen);
+  assert.match(html, new RegExp(`<iframe class="harness-frame" src="http://localhost:3010/__doan/${encodeURIComponent(screen.doc.screen)}\\?state=Default"`), 'one iframe per state, the trailing slash folded');
+  assert.match(html, /<div class="harness-shadow" hidden>[\s\S]*class="el[^"]*" data-id="/, 'the hidden drawing still carries the element ids');
+  assert.match(html, /\.frame\.harness \.harness-frame \{ display: block; width: 100%/);
+  const { getScreen } = await import('../src/verbs.js');
+  const view = await getScreen(ops, { screen: screen.doc.screen, state: 'Default' });
+  assert.equal(view.state, 'Default');
+  assert.ok(Array.isArray(view.elements) && view.elements.length > 0, '/api/screen gives the merged tree a harness draws from');
+});
+
 test('the antd adapter takes its theme from the project tokens', async () => {
   const { createAdapter } = await import('../src/render/adapters/index.js');
   const project = await loadProject(ops);

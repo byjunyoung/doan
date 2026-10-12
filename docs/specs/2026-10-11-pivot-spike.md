@@ -54,6 +54,19 @@ Each of these is a finding a designer wants: the frame and the build disagree. N
 
 What changed in doan for this: nothing beyond `/api/screen`. The nine files were not touched.
 
+
+## Viewer bridge (2026-10-12)
+
+`conventions.render.harness.url` (schema'd). With it set, `renderScreen` frames every state panel as `<iframe class="harness-frame" src="<url>/<screen>?state=<state>">` inside the usual `.frame`, and renders the bundled drawing *hidden* beside it (`.harness-shadow`). The drawer, the comments and the canvas links keep reading the hidden drawing's `.el[data-id]` — nothing in the inspector changed.
+
+Messages (`page.js`): the harness posts `doan:size` with its document height (the iframe takes it as `--harness-h`, then `fit()`), and `doan:select` with the id of the element clicked; the viewer opens the drawer on the hidden twin and answers every harness frame with `doan:selected` so the clicked element gets an outline in the picture.
+
+Harness side (`Harness.tsx`): one route `/__doan/:screen/*` that decides shell / bare / modal itself (a nested `Routes` puts the app's `AppLayout` around a shell screen); every drawn element sits in a `display: contents` wrapper with `data-doan-id`, whose capture-phase click posts the id when the wrapper is the nearest one to the target; a `ResizeObserver` posts the height; `?api=` points at another doan; `?bridge=1` turns the bridge on at top level for a test.
+
+Verified in Chrome on 계정 목록: the viewer page shows the product's picture at 1440 × 1064, and a `doan:probe` round trip (harness echoes a select) opened the drawer on `search` with its props and comment box, and outlined the search bar inside the iframe. A pointer click inside the iframe could not be driven from the automation tool — its clicks are synthesised in the top document and never enter a cross-origin iframe — so the click→post half was verified at top level with `?bridge=1` and a real pointer click; the message→drawer half by the probe.
+
+Left on the bundled drawing on purpose: the canvas (nine screens × states would be thirty-odd React boots), the proto, the proposal AS-IS / TO-BE. Variant and breakpoint panels too.
+
 ## What this says about the overhaul
 
 1. The screen file already carries what the engine needs (states, flows, refs, `$tbd`, notes) and what a harness needs (kinds, props, rows, layout tokens). The format survives the pivot; the bundled drawings and the per-library adapters are what it leaves behind.

@@ -239,7 +239,7 @@ export function platformOf(project, screen) {
   return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
 }
 
-function renderView(project, screen, merged, maps, adapter = null, { width = null } = {}) {
+function renderView(project, screen, merged, maps, adapter = null, { width = null, state = null } = {}) {
   const view = expandComponents(merged, project.components ?? {});
   const r = makeRenderer(screen, view.layout, maps, adapter, project.components ?? {});
   const body = view.elements.map((el) => r.element(el)).join('');
@@ -254,6 +254,14 @@ function renderView(project, screen, merged, maps, adapter = null, { width = nul
   const chrome = platform.frame === 'phone' ? { top: `<div class="status-bar"><span>9:41</span><span class="notch"></span><span>●●●</span></div>`, bottom: `<div class="home-indicator"><span></span></div>` } : { top: '', bottom: '' };
   // a breakpoint draws the same screen narrower: the width is the breakpoint's, the frame the platform's
   const style = `--ref-w:${width ?? platform.width}px${platform.height ? `;--ref-h:${platform.height}px` : ''}`;
+  // a harness (conventions.render.harness.url) is a page in the team's own build that draws the screen
+  // with the product's components; the frame holds it in an iframe, and keeps the bundled drawing
+  // hidden beside it so the inspector and the comments anchor the same element ids as before
+  const harness = project.conventions?.render?.harness?.url;
+  if (harness && state !== null && !device) {
+    const src = `${String(harness).replace(/\/$/, '')}/${encodeURIComponent(screen.doc.screen)}?state=${encodeURIComponent(state)}`;
+    return `<div class="stage"><div class="frame device-web harness" style="${style}" data-harness="${h(src)}"><iframe class="harness-frame" src="${h(src)}" title="${h(screen.doc.screen)} · ${h(state)}" loading="lazy"></iframe><div class="harness-shadow" hidden>${content}</div></div></div>`;
+  }
   return `<div class="stage${device ? ' stage-device' : ''}"><div class="frame device-${h(platform.frame === 'none' ? 'web' : platform.frame)}" style="${style}">${chrome.top}${content}${chrome.bottom}</div></div>`;
 }
 
@@ -665,7 +673,7 @@ export function renderScreen(project, screen, { branch = null, adapter = null, a
     .map(([axis, options]) => `<span class="axis">${h(axis)}</span>${Object.keys(options ?? {}).map((opt) => `<button class="tab" data-state="${h(axis)}=${h(opt)}" data-target="variant-${h(axis)}-${h(opt)}">${h(opt)}</button>`).join('')}`)
     .join('');
   const statePanels = order
-    .map((state, i) => `<section class="state${i === 0 ? ' active' : ''}" id="state-${h(state)}"><h3>${h(state)}</h3>${renderView(project, screen, mergeState(doc, state), maps, adapter)}</section>`)
+    .map((state, i) => `<section class="state${i === 0 ? ' active' : ''}" id="state-${h(state)}"><h3>${h(state)}</h3>${renderView(project, screen, mergeState(doc, state), maps, adapter, { state })}</section>`)
     .join('');
   const variantPanels = Object.entries(doc.variants ?? {})
     .map(([axis, options]) => Object.keys(options ?? {}).map((opt) => `<section class="state" id="variant-${h(axis)}-${h(opt)}"><h3>${h(axis)} · ${h(opt)}</h3>${renderView(project, screen, mergeState(doc, 'Default', { [axis]: opt }), maps, adapter)}</section>`).join(''))

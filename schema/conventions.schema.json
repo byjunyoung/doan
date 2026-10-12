@@ -203,6 +203,19 @@
             }
           ],
           "description": "webfont stylesheet URLs (https) the viewer links; files under assets/fonts/ load on their own"
+        },
+        "harness": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": {
+              "type": "string",
+              "description": "a page in the team's own build that draws a screen from GET /api/screen — the viewer frames it: <url>/<screen>?state=<state>"
+            }
+          },
+          "required": [
+            "url"
+          ]
         }
       }
     },

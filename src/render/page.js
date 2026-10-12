@@ -93,6 +93,7 @@ main.bare { padding: 16px; }
 
 /* device frames */
 .frame.device-web { width: var(--ref-w); }
+.frame.harness { background: var(--color-bg); } .frame.harness .harness-frame { display: block; width: 100%; height: var(--harness-h, 900px); border: 0; } .harness-shadow[hidden] { display: none; }
 .frame.device-phone, .frame.device-tablet { width: var(--ref-w); background: var(--color-bg); border: 10px solid #1f2328; border-radius: 44px; overflow: hidden; margin: var(--space-md) auto; box-shadow: 0 12px 40px rgba(0,0,0,.25); display: flex; flex-direction: column; }
 .frame.device-tablet { border-radius: 24px; }
 /* a dialog on a device covers the whole screen and sits in its middle, whatever its height */
@@ -924,6 +925,21 @@ export const INSPECTOR_JS = `
     var btn = document.getElementById(send); if (btn) btn.click();
   });
   window.doanSelect = openDrawer;
+  // a harness frame (an iframe of the team's build) talks by messages: its height, and the element
+  // the person clicked; the hidden bundled drawing beside it carries the data the drawer reads
+  window.addEventListener('message', function (e) {
+    var m = e.data; if (!m || typeof m !== 'object' || typeof m.type !== 'string' || m.type.indexOf('doan:') !== 0) return;
+    var frames = document.querySelectorAll('.frame.harness .harness-frame');
+    var frame = null; for (var i = 0; i < frames.length; i++) if (frames[i].contentWindow === e.source) frame = frames[i];
+    if (!frame) return;
+    if (m.type === 'doan:size' && m.height) { frame.style.setProperty('--harness-h', Math.ceil(m.height) + 'px'); fit(); }
+    if (m.type === 'doan:select') {
+      var shadow = frame.parentElement.querySelector('.harness-shadow');
+      var el = shadow && m.id ? shadow.querySelector('.el[data-id="' + String(m.id).replace(/"/g, '') + '"]') : null;
+      if (el) openDrawer(el); else window.doanClearSelection();
+      frames.forEach(function (f) { f.contentWindow.postMessage({ type: 'doan:selected', id: el ? m.id : null }, '*'); });
+    }
+  });
   window.doanClearSelection = function () {
     clearSpacing();
     if (selected) selected.classList.remove('selected');
