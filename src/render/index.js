@@ -239,7 +239,7 @@ export function platformOf(project, screen) {
   return { name, width: spec.width ?? 1280, height: spec.height ?? null, frame: spec.frame ?? 'none' };
 }
 
-function renderView(project, screen, merged, maps, adapter = null, { width = null, state = null } = {}) {
+function renderView(project, screen, merged, maps, adapter = null, { width = null, state = null, lazy = false } = {}) {
   const view = expandComponents(merged, project.components ?? {});
   const r = makeRenderer(screen, view.layout, maps, adapter, project.components ?? {});
   const body = view.elements.map((el) => r.element(el)).join('');
@@ -260,7 +260,8 @@ function renderView(project, screen, merged, maps, adapter = null, { width = nul
   const harness = project.conventions?.render?.harness?.url;
   if (harness && state !== null && !device) {
     const src = `${String(harness).replace(/\/$/, '')}/${encodeURIComponent(screen.doc.screen)}?state=${encodeURIComponent(state)}`;
-    return `<div class="stage"><div class="frame device-web harness" style="${style}" data-harness="${h(src)}"><iframe class="harness-frame" src="${h(src)}" title="${h(screen.doc.screen)} · ${h(state)}" loading="lazy"></iframe><div class="harness-shadow" hidden>${content}</div></div></div>`;
+    // on the canvas the frames are many: the src waits (data-src) until the frame comes near the viewport
+    return `<div class="stage"><div class="frame device-web harness" style="${style}" data-harness="${h(src)}"><iframe class="harness-frame" ${lazy ? 'data-src' : 'src'}="${h(src)}" title="${h(screen.doc.screen)} · ${h(state)}" loading="lazy"></iframe><div class="harness-shadow" hidden>${content}</div></div></div>`;
   }
   return `<div class="stage${device ? ' stage-device' : ''}"><div class="frame device-${h(platform.frame === 'none' ? 'web' : platform.frame)}" style="${style}">${chrome.top}${content}${chrome.bottom}</div></div>`;
 }
@@ -888,7 +889,7 @@ export function renderCanvas(project, pageSpec, { branch = null, adapter = null,
   const inDomain = pageSpec.sections.flatMap((s) => s.screens.map((x) => x.screen));
   const frame = (screen, state) => {
     const s = project.screens.find((x) => x.doc.screen === screen);
-    const html = renderView(project, s, mergeState(s.doc, state), maps, adapter).replace('<div class="stage', '<div class="cv-stage');
+    const html = renderView(project, s, mergeState(s.doc, state), maps, adapter, { state, lazy: true }).replace('<div class="stage', '<div class="cv-stage');
     const platform = platformOf(project, s);
     return `<div class="cv-frame" data-screen="${h(screen)}" data-state="${h(state)}" data-type="${h(s.doc.type)}" data-platform="${h(platform.name)}" data-file="${h(project.screenName(s))}"><a class="cv-frame-title" href="${h(screen)}.html#state-${h(state)}">${h(screen)}-${h(state)}</a><div class="cv-body">${html}</div></div>`;
   };

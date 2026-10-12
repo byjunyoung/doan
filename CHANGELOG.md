@@ -11,6 +11,7 @@
 - `pagination.pages` — how many pages the control shows; three when absent.
 - `serve`: `GET /api/screen?screen=&state=` — the merged tree of one state, with CORS, for a harness in the team's own build (pivot spike, `docs/specs/2026-10-11-pivot-spike.md`).
 - `conventions.render.harness.url` — a page in the team's own build that draws a screen from `/api/screen`; the screen page frames each state as an iframe of it and keeps the bundled drawing hidden beside it, so the inspector and comments anchor the same element ids. The harness talks by messages: `doan:size` (its height), `doan:select` (the element clicked); the viewer answers `doan:selected` for the highlight.
+- The canvas frames states the same way when a harness is set, lazily: a frame's `src` is set when it comes within two screens of the viewport, and a height message redraws the arrows.
 
 Accounts pilot: a real admin screen set (ten screens) drawn from its spec rows alone, then compared with the Figma handoff and the code. Spec `docs/specs/2026-10-08-accounts-pilot.md` — what it asked of doan, what was fixed, what is queued.
 

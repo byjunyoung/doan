@@ -927,12 +927,23 @@ export const INSPECTOR_JS = `
   window.doanSelect = openDrawer;
   // a harness frame (an iframe of the team's build) talks by messages: its height, and the element
   // the person clicked; the hidden bundled drawing beside it carries the data the drawer reads
+  // a canvas holds many harness frames: each loads when it comes within two screens of the viewport
+  function lazyHarness() {
+    var pending = document.querySelectorAll('.harness-frame[data-src]'); if (!pending.length) return;
+    if (!('IntersectionObserver' in window)) { pending.forEach(function (f) { f.src = f.getAttribute('data-src'); }); return; }
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) { if (!en.isIntersecting) return; var f = en.target; f.src = f.getAttribute('data-src'); f.removeAttribute('data-src'); io.unobserve(f); });
+    }, { root: null, rootMargin: '200% 100%' });
+    pending.forEach(function (f) { io.observe(f); });
+  }
+  // the canvas is parsed after this script: wait for the DOM, then watch
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', lazyHarness); else lazyHarness();
   window.addEventListener('message', function (e) {
     var m = e.data; if (!m || typeof m !== 'object' || typeof m.type !== 'string' || m.type.indexOf('doan:') !== 0) return;
     var frames = document.querySelectorAll('.frame.harness .harness-frame');
     var frame = null; for (var i = 0; i < frames.length; i++) if (frames[i].contentWindow === e.source) frame = frames[i];
     if (!frame) return;
-    if (m.type === 'doan:size' && m.height) { frame.style.setProperty('--harness-h', Math.ceil(m.height) + 'px'); fit(); }
+    if (m.type === 'doan:size' && m.height) { frame.style.setProperty('--harness-h', Math.ceil(m.height) + 'px'); if (typeof fit === 'function') fit(); if (window.doanCanvasDraw) window.doanCanvasDraw(); }
     if (m.type === 'doan:select') {
       var shadow = frame.parentElement.querySelector('.harness-shadow');
       var el = shadow && m.id ? shadow.querySelector('.el[data-id="' + String(m.id).replace(/"/g, '') + '"]') : null;
@@ -1628,6 +1639,7 @@ export const CANVAS_JS = `
     svg.querySelectorAll('.hot').forEach(function (m) { m.classList.remove('hot'); if (m.classList.contains('cv-arrow')) m.setAttribute('marker-end', 'url(#cv-arrow)'); });
   });
   // the inspector script runs after this one; the first selection must wait for it
+  window.doanCanvasDraw = draw;
   function start() {
     if (!fromHash()) fitAll();
     draw();
