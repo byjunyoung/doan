@@ -1,3 +1,5 @@
+> **Archived (2026-10-17).** doan is no longer maintained.
+
 <img src="docs/img/social-preview.png" alt="doan — a screen is a file. The agent draws it; you say what to change." width="100%">
 
 # doan
