@@ -1,3 +1,5 @@
+> **보관됨 (2026-10-17).** doan은 더 이상 관리하지 않습니다.
+
 <img src="docs/img/social-preview.png" alt="doan — 도안. 화면은 파일이다. 에이전트가 그리고, 당신은 무엇을 바꿀지 말한다." width="100%">
 
 # doan
